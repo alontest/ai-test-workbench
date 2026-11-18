@@ -13,7 +13,7 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import delete, func, inspect, select, text
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import DBAPIError
 
 from workbench.core.crypto import encrypt
 from workbench.db.base import utcnow
@@ -43,6 +43,22 @@ EXPECTED_TABLES = {
 
 HEAD = "0006"
 
+# CHECK/唯一/FK 违反在 SQLite 与 MySQL 上的异常类型不一致：
+# SQLite 抛 IntegrityError，MySQL 的 CHECK 违反（3819）抛 OperationalError。
+# 统一按 DBAPIError 捕获，再用原始消息确认是约束违反而非任意数据库错误。
+_CONSTRAINT_MARKERS = (
+    "check constraint",
+    "unique constraint",
+    "duplicate entry",
+    "foreign key constraint",
+)
+
+
+def _assert_constraint_violation(exc_info) -> None:  # noqa: ANN001
+    orig = getattr(exc_info.value, "orig", exc_info.value)
+    text = str(orig).lower()
+    assert any(marker in text for marker in _CONSTRAINT_MARKERS), text
+
 
 def _url(tmp_path) -> str:
     return os.environ.get(
@@ -71,8 +87,9 @@ async def _constraint_scenario(url: str) -> None:
             project_id = project.project_id
 
             db.add(ProjectContext(name="支付中心", name_key="支付中心"))
-            with pytest.raises(IntegrityError):
+            with pytest.raises(DBAPIError) as err:
                 await db.commit()
+            _assert_constraint_violation(err)
             await db.rollback()
 
             provider = ProviderConfig(
@@ -93,8 +110,9 @@ async def _constraint_scenario(url: str) -> None:
                     api_key_ciphertext=encrypt("sk-test", key=bytes(range(32))),
                 )
             )
-            with pytest.raises(IntegrityError):
+            with pytest.raises(DBAPIError) as err:
                 await db.commit()
+            _assert_constraint_violation(err)
             await db.rollback()
 
             model = ModelBinding(
@@ -131,8 +149,9 @@ async def _constraint_scenario(url: str) -> None:
                     updated_at=now,
                 )
             )
-            with pytest.raises(IntegrityError):
+            with pytest.raises(DBAPIError) as err:
                 await db.commit()
+            _assert_constraint_violation(err)
             await db.rollback()
 
             db.add(
@@ -174,9 +193,10 @@ async def _constraint_scenario(url: str) -> None:
             )
             await db.commit()
 
-            with pytest.raises(IntegrityError):
+            with pytest.raises(DBAPIError) as err:
                 await db.execute(delete(ProjectContext).where(ProjectContext.project_id == project_id))
                 await db.commit()
+            _assert_constraint_violation(err)
             await db.rollback()
 
             await db.execute(delete(AnalysisSession).where(AnalysisSession.session_id == session_id))

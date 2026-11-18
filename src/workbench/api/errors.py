@@ -9,10 +9,49 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import DBAPIError
 
 from workbench.services.errors import DomainError
 
 logger = logging.getLogger(__name__)
+
+MYSQL_CHECK_CONSTRAINT_VIOLATION = 3819
+MYSQL_DUPLICATE_ENTRY = 1062
+MYSQL_FOREIGN_KEY_VIOLATION = 1451
+MYSQL_FOREIGN_KEY_MISSING = 1452
+
+_DB_CHECK_MESSAGE = "请求参数违反数据约束。"
+_DB_CONFLICT_MESSAGE = "资源已存在或状态冲突。"
+
+
+def _dbapi_errno(exc: DBAPIError) -> int | None:
+    args = getattr(getattr(exc, "orig", None), "args", ())
+    return args[0] if args and isinstance(args[0], int) else None
+
+
+def _orig_text(exc: DBAPIError) -> str:
+    orig = getattr(exc, "orig", None)
+    return str(orig if orig is not None else exc).lower()
+
+
+def _map_dbapi_error(exc: DBAPIError) -> tuple[int, str, str] | None:
+    """把双方言的约束违反映射为 4xx；未识别的数据库错误仍走 500。"""
+    errno = _dbapi_errno(exc)
+    text = _orig_text(exc)
+    if errno == MYSQL_CHECK_CONSTRAINT_VIOLATION or "check constraint" in text:
+        return 400, "validation_error", _DB_CHECK_MESSAGE
+    if (
+        errno == MYSQL_DUPLICATE_ENTRY
+        or "unique constraint" in text
+        or "duplicate entry" in text
+    ):
+        return 409, "conflict", _DB_CONFLICT_MESSAGE
+    if (
+        errno in (MYSQL_FOREIGN_KEY_VIOLATION, MYSQL_FOREIGN_KEY_MISSING)
+        or "foreign key constraint" in text
+    ):
+        return 409, "conflict", _DB_CONFLICT_MESSAGE
+    return None
 
 
 class ApiError(Exception):
@@ -83,6 +122,32 @@ def register_error_handlers(app: FastAPI) -> None:
             content=error_body(
                 request, "validation_error", "请求参数校验失败。", details
             ),
+            headers=_request_header(request),
+        )
+
+    @app.exception_handler(DBAPIError)
+    async def _dbapi_error(request: Request, exc: DBAPIError) -> JSONResponse:
+        mapped = _map_dbapi_error(exc)
+        if mapped is None:
+            logger.error(
+                "database error requestId=%s errno=%s",
+                request_id_of(request),
+                _dbapi_errno(exc),
+            )
+            return JSONResponse(
+                status_code=500,
+                content=error_body(request, "internal_error", "服务器内部错误。"),
+                headers=_request_header(request),
+            )
+        status_code, code, message = mapped
+        logger.warning(
+            "database constraint violation requestId=%s code=%s",
+            request_id_of(request),
+            code,
+        )
+        return JSONResponse(
+            status_code=status_code,
+            content=error_body(request, code, message),
             headers=_request_header(request),
         )
 
