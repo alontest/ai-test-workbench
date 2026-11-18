@@ -197,6 +197,34 @@ async def test_tc043_precondition_rejections_no_record(settings, database) -> No
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("blank_prompt", ["", "   ", "\n\t "])
+async def test_tc043_blank_prompt_rejected_before_gateway(
+    settings, database, blank_prompt
+) -> None:
+    """空/纯空白提示在接口层返回 400 validation_error，且不落到网关。"""
+    fake = FakeAI()
+    client = await _make(settings, database, fake)
+    try:
+        _project_id, _model_id, session_id = await _session(database)
+        response = await client.post(
+            f"/api/v1/sessions/{session_id}/ai/complete",
+            json={"prompt": blank_prompt},
+            headers=ORIGIN,
+        )
+        assert response.status_code == 400
+        body = response.json()
+        assert body["code"] == "validation_error"
+        assert any(item.get("field") == "prompt" for item in body["details"])
+        async with database.sessionmaker() as db:
+            assert (
+                await db.scalar(select(func.count()).select_from(AiCallRecord)) == 0
+            )
+        assert fake.calls == []
+    finally:
+        await client.__aexit__(None, None, None)
+
+
+@pytest.mark.asyncio
 async def test_tc044_call_event_payload(settings, database) -> None:
     fake = FakeAI(text="ok")
     client = await _make(settings, database, fake)

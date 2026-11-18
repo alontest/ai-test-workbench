@@ -71,7 +71,13 @@ async def logout(request: Request) -> Response:
 
         raise ApiError(401, "unauthorized", "未登录或会话已过期。")
     response = Response(status_code=204)
-    response.delete_cookie(SESSION_COOKIE, path="/")
+    response.delete_cookie(
+        SESSION_COOKIE,
+        httponly=True,
+        samesite="lax",
+        path="/",
+        secure=_cookie_secure(request),
+    )
     return response
 
 

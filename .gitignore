@@ -40,7 +40,7 @@ obj/Release/
 *.sqlite3
 data/
 backups/
-sessions/
+/sessions/
 logs/
 *.log
 .coverage.*

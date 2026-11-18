@@ -124,6 +124,39 @@ async def test_tc008_cookie_attributes(settings, database) -> None:
 
 
 @pytest.mark.asyncio
+async def test_tc008_logout_cookie_attributes(settings, database) -> None:
+    """登出删除 Cookie 时属性与登录下发一致（HttpOnly / SameSite / Path / Secure）。"""
+    await seed_admin(database.sessionmaker, ADMIN)
+
+    insecure = Settings(cookie_secure="false")
+    async with build_client(make_app(insecure, database)) as client:
+        await client.post(
+            "/api/v1/auth/login", json={"password": ADMIN}, headers=ORIGIN
+        )
+        response = await client.post("/api/v1/auth/logout", headers=ORIGIN)
+        assert response.status_code == 204
+        cookie = response.headers["set-cookie"]
+        assert "HttpOnly" in cookie
+        assert "SameSite=lax" in cookie or "SameSite=Lax" in cookie
+        assert "Path=/" in cookie
+        assert "Secure" not in cookie
+
+    secure = Settings(cookie_secure="true")
+    async with build_client(
+        make_app(secure, database), base_url="https://testserver"
+    ) as client:
+        await client.post(
+            "/api/v1/auth/login", json={"password": ADMIN}, headers=ORIGIN
+        )
+        response = await client.post("/api/v1/auth/logout", headers=ORIGIN)
+        assert response.status_code == 204
+        cookie = response.headers["set-cookie"]
+        assert "HttpOnly" in cookie
+        assert "Path=/" in cookie
+        assert "Secure" in cookie
+
+
+@pytest.mark.asyncio
 async def test_tc010_login_next_is_internal_only(app) -> None:
     async with build_client(app) as client:
         response = await client.get(
