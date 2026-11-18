@@ -63,6 +63,25 @@ jobs:
           path: reports/**
           if-no-files-found: ignore
 
-  # frontend-tests（Node 22 + Vitest）按 TASK-TD-018 的依赖说明，在
-  # TASK-TD-021 落地 web/ 后再补入。批次 A 无前端代码，此处不设占位 job：
-  # 占位 job 会在没有 package.json 时空跑并显示 success，形成假门禁。
+  frontend-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - name: Run Vitest
+        run: npm run test -- --run
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-reports
+          path: web/coverage
+          if-no-files-found: ignore

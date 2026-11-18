@@ -16,6 +16,7 @@ from workbench.adapters.ai.openai_compatible import OpenAICompatibleAdapter
 from workbench.config import get_settings
 from workbench.core.constants import AI_ATTEMPT_TIMEOUT_SECONDS
 from workbench.core.crypto import CredentialUnavailable, decrypt
+from workbench.core.ports import InjectionItem, InjectionSnapshot
 from workbench.core.redaction import redact
 from workbench.db.base import utcnow
 from workbench.db.engine import get_sessionmaker
@@ -23,25 +24,15 @@ from workbench.db.models import AiCallRecord, AnalysisSession, ModelBinding, Pro
 from workbench.services.errors import DomainError
 from workbench.services.sessions import append_event_in_db
 
+__all__ = [
+    "AIError",
+    "AIResult",
+    "AiGateway",
+    "InjectionItem",
+    "InjectionSnapshot",
+]
+
 _RETRYABLE_CODES = {"server_error", "unreachable"}
-
-
-@dataclass(frozen=True)
-class InjectionItem:
-    kb_id: int
-    kb_name: str
-    kb_version: int
-    entry_codes: tuple[str, ...]
-    injected_chars: int
-
-
-@dataclass(frozen=True)
-class InjectionSnapshot:
-    items: tuple[InjectionItem, ...]
-    prompt_chars: int
-    injected_chars: int
-    total_chars: int
-    excluded_codes: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -270,7 +261,7 @@ class AiGateway:
         async with sessionmaker() as db:
             session = await db.get(AnalysisSession, context["session"].session_id)
             assert session is not None
-            injection_payload = _injection_payload(injection)
+            items_payload = _injection_items_payload(injection)
             row = AiCallRecord(
                 session_id=session.session_id,
                 model_id=context["model"].model_id,
@@ -283,7 +274,7 @@ class AiGateway:
                 prompt_digest=hashlib.sha256(prepared.encode("utf-8")).hexdigest(),
                 prompt_preview=redact(prepared, max_length=200),
                 prompt_char_count=len(prepared),
-                knowledge_injection=injection_payload,
+                knowledge_injection=items_payload,
                 injected_chars=injection.injected_chars if injection else 0,
                 prompt_chars=injection.prompt_chars if injection else len(prepared),
                 total_chars=injection.total_chars if injection else len(prepared),
@@ -291,9 +282,9 @@ class AiGateway:
             )
             db.add(row)
             await db.flush()
-            if injection_payload is not None:
+            if injection is not None:
                 await append_event_in_db(
-                    db, session, "knowledge_injection", injection_payload
+                    db, session, "knowledge_injection", _injection_event_payload(injection)
                 )
             await db.commit()
             return row.call_id
@@ -344,20 +335,24 @@ class AiGateway:
             await db.commit()
 
 
-def _injection_payload(injection: InjectionSnapshot | None) -> dict | None:
+def _injection_items_payload(injection: InjectionSnapshot | None) -> list[dict] | None:
     if injection is None:
         return None
+    return [
+        {
+            "kbId": item.kb_id,
+            "kbName": item.kb_name,
+            "kbVersion": item.kb_version,
+            "entryCodes": list(item.entry_codes),
+            "injectedChars": item.injected_chars,
+        }
+        for item in injection.items
+    ]
+
+
+def _injection_event_payload(injection: InjectionSnapshot) -> dict:
     return {
-        "items": [
-            {
-                "kbId": item.kb_id,
-                "kbName": item.kb_name,
-                "kbVersion": item.kb_version,
-                "entryCodes": list(item.entry_codes),
-                "injectedChars": item.injected_chars,
-            }
-            for item in injection.items
-        ],
+        "items": _injection_items_payload(injection),
         "promptChars": injection.prompt_chars,
         "injectedChars": injection.injected_chars,
         "totalChars": injection.total_chars,

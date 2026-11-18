@@ -15,6 +15,7 @@ from workbench.db.repositories import events as events_repo
 from workbench.db.repositories import sessions as sessions_repo
 from workbench.db.models import AnalysisSession, ModelBinding, ProjectContext, ProviderConfig, SessionEvent
 from workbench.services.errors import DomainError
+from workbench.services.injection_snapshot import existing_kb_id_set, with_kb_deleted
 
 EntranceKey = Literal[
     "case-library",
@@ -434,12 +435,21 @@ async def list_events_page(
             statement = statement.where(SessionEvent.event_id > after_id)
         statement = statement.order_by(SessionEvent.event_id.asc()).limit(limit + 1)
         rows = list(await db.scalars(statement))
+        present = await existing_kb_id_set(db)
     has_more = len(rows) > limit
     page = rows[:limit]
     next_cursor = None
     if has_more and page:
         next_cursor = encode_cursor({"event_id": page[-1].event_id})
-    return [event_to_view(row) for row in page], next_cursor
+    views: list[EventView] = []
+    for row in page:
+        view = event_to_view(row)
+        if view["type"] == "knowledge_injection":
+            payload = dict(view["payload"] or {})
+            payload["items"] = with_kb_deleted(payload.get("items") or [], present) or []
+            view["payload"] = payload
+        views.append(view)
+    return views, next_cursor
 
 
 def event_to_api(view: EventView) -> dict[str, Any]:

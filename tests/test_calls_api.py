@@ -309,6 +309,126 @@ async def test_tc050_api_credential_unavailable(settings, database) -> None:
         await client.__aexit__(None, None, None)
 
 
+@pytest.mark.asyncio
+async def test_tc067_knowledge_injection_serialization(settings, database) -> None:
+    import hashlib
+
+    from sqlalchemy import text
+
+    from workbench.core.redaction import redact
+    from workbench.db.base import utcnow
+    from workbench.db.models import ModelBinding
+
+    fake = FakeAI()
+    client = await _make(settings, database, fake)
+    try:
+        project_id, model_id, session_id = await _session(database)
+        items = [
+            {
+                "kbId": 5,
+                "kbName": "支付中心知识库",
+                "kbVersion": 2,
+                "entryCodes": ["ENT-012", "BR-003"],
+                "injectedChars": 3,
+            }
+        ]
+        async with database.sessionmaker() as db:
+            model = await db.get(ModelBinding, model_id)
+            assert model is not None
+            now = utcnow()
+            plain = AiCallRecord(
+                session_id=session_id,
+                model_id=model_id,
+                provider_id=model.provider_id,
+                model_name_snapshot=model.model_name,
+                display_name_snapshot=model.display_name,
+                provider_name_snapshot="OpenAI",
+                protocol_snapshot="openai_compatible",
+                status="success",
+                prompt_digest=hashlib.sha256(b"plain").hexdigest(),
+                prompt_preview=redact("plain", max_length=200),
+                prompt_char_count=5,
+                result_text="不应出现在列表",
+                created_at=now,
+                finished_at=now,
+                latency_ms=10,
+            )
+            injected = AiCallRecord(
+                session_id=session_id,
+                model_id=model_id,
+                provider_id=model.provider_id,
+                model_name_snapshot=model.model_name,
+                display_name_snapshot=model.display_name,
+                provider_name_snapshot="OpenAI",
+                protocol_snapshot="openai_compatible",
+                status="success",
+                prompt_digest=hashlib.sha256(b"injected").hexdigest(),
+                prompt_preview=redact("injected", max_length=200),
+                prompt_char_count=8,
+                knowledge_injection=items,
+                injected_chars=3,
+                prompt_chars=5,
+                total_chars=8,
+                result_text="注入成功结果",
+                created_at=now,
+                finished_at=now,
+                latency_ms=12,
+            )
+            db.add_all([plain, injected])
+            await db.commit()
+            plain_id, injected_id = plain.call_id, injected.call_id
+
+        listed = await client.get("/api/v1/calls")
+        assert listed.status_code == 200
+        by_id = {item["callId"]: item for item in listed.json()["items"]}
+        assert by_id[plain_id]["knowledgeInjection"] is None
+        assert "resultText" not in by_id[plain_id]
+        snapshot = by_id[injected_id]["knowledgeInjection"]
+        assert snapshot[0]["kbId"] == 5
+        assert snapshot[0]["kbName"] == "支付中心知识库"
+        assert snapshot[0]["kbVersion"] == 2
+        assert snapshot[0]["entryCodes"] == ["ENT-012", "BR-003"]
+        assert snapshot[0]["injectedChars"] == 3
+        assert snapshot[0]["kbDeleted"] is True
+        assert "resultText" not in by_id[injected_id]
+
+        detail = await client.get(f"/api/v1/calls/{injected_id}")
+        assert detail.status_code == 200
+        assert detail.json()["resultText"] == "注入成功结果"
+        assert detail.json()["knowledgeInjection"][0]["kbDeleted"] is True
+        assert detail.json()["knowledgeInjection"][0]["kbName"] == "支付中心知识库"
+
+        async with database.sessionmaker() as db:
+            await db.execute(
+                text("CREATE TABLE knowledge_base (kb_id INTEGER PRIMARY KEY)")
+            )
+            await db.execute(text("INSERT INTO knowledge_base (kb_id) VALUES (5)"))
+            await db.commit()
+
+        present = await client.get(f"/api/v1/calls/{injected_id}")
+        assert present.json()["knowledgeInjection"][0]["kbDeleted"] is False
+        assert present.json()["knowledgeInjection"][0]["kbName"] == "支付中心知识库"
+
+        async with database.sessionmaker() as db:
+            await db.execute(text("DELETE FROM knowledge_base WHERE kb_id = 5"))
+            await db.commit()
+        deleted = await client.get(f"/api/v1/calls/{injected_id}")
+        assert deleted.json()["knowledgeInjection"][0]["kbDeleted"] is True
+        assert deleted.json()["knowledgeInjection"][0]["kbName"] == "支付中心知识库"
+
+        async with database.sessionmaker() as db:
+            await db.execute(text("DROP TABLE knowledge_base"))
+            await db.commit()
+        dropped = await client.get("/api/v1/calls")
+        dropped_item = next(
+            item for item in dropped.json()["items"] if item["callId"] == injected_id
+        )
+        assert dropped_item["knowledgeInjection"][0]["kbDeleted"] is True
+        assert dropped_item["knowledgeInjection"][0]["kbName"] == "支付中心知识库"
+    finally:
+        await client.__aexit__(None, None, None)
+
+
 _counter = iter(range(1000))
 
 

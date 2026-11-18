@@ -9,11 +9,12 @@ from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse
 
-from workbench.api.errors import register_error_handlers
+from workbench.api.errors import ApiError, register_error_handlers
 from workbench.api.v1.router import api_router
 from workbench.config import Settings, get_settings
+from workbench.core.entrances import get_entrance
 from workbench.db.engine import Database, configure_database, create_engine_from_url
 from workbench.services import auth
 
@@ -92,6 +93,20 @@ def create_app(
     register_error_handlers(app)
     app.include_router(api_router)
 
+    @app.get("/entrances/{key}", include_in_schema=False)
+    async def _entrance_html(key: str):  # noqa: ANN202
+        if get_entrance(key) is None:
+            raise ApiError(
+                400,
+                "entrance_unknown",
+                "未知入口。",
+                [{"field": "key", "message": key}],
+            )
+        index = WEB_DIST / "index.html"
+        if index.is_file():
+            return FileResponse(index)
+        raise ApiError(404, "not_found", "页面不存在。")
+
     if WEB_DIST.is_dir():
         _mount_spa(app)
 
@@ -110,5 +125,7 @@ def _mount_spa(app: FastAPI) -> None:
             and candidate.is_file()
         ):
             return FileResponse(candidate)
+        if full_path.startswith("assets/") or full_path == "favicon.ico":
+            return PlainTextResponse("Not Found", status_code=404)
         return FileResponse(index)
 

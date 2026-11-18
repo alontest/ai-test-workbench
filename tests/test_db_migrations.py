@@ -259,3 +259,101 @@ def test_tc064_migration_order_and_no_knowledge_table(tmp_path) -> None:
     }
     assert "knowledge_base" not in tables
     con.close()
+
+
+def test_tc064_migration_0006_injection_columns(tmp_path) -> None:
+    """知识库导入/检索/失效判定/正文组装属 knowledge-base spec，本 spec 不重复。"""
+    from pathlib import Path
+
+    versions = Path("migrations/versions")
+    names = {path.name for path in versions.glob("*.py") if path.name != "__init__.py"}
+    assert any(name.startswith("0006") for name in names)
+    assert not any(name.startswith("0007") for name in names)
+
+    url = _url(tmp_path)
+    _upgrade(url)
+    asyncio.run(_assert_injection_check(url))
+
+
+async def _assert_injection_check(url: str) -> None:
+    from workbench.core.crypto import encrypt
+    from workbench.db.base import utcnow as now_fn
+
+    database = Database(create_engine_from_url(url))
+    try:
+        sm = database.sessionmaker
+        async with sm() as db:
+            project = ProjectContext(name="支付中心", name_key="支付中心")
+            db.add(project)
+            await db.flush()
+            provider = ProviderConfig(
+                name="OpenAI",
+                protocol="openai_compatible",
+                base_url="https://api.example.com/v1",
+                api_key_ciphertext=encrypt("sk-test", key=bytes(range(32))),
+            )
+            db.add(provider)
+            await db.flush()
+            model = ModelBinding(
+                provider_id=provider.provider_id,
+                model_name="gpt-4.1",
+                model_name_key="gpt-4.1",
+                display_name="GPT-4.1",
+            )
+            db.add(model)
+            await db.flush()
+            now = now_fn()
+            session = AnalysisSession(
+                project_id=project.project_id,
+                entrance_key="case-library",
+                title="会话",
+                status="in_progress",
+                model_id=model.model_id,
+                created_at=now,
+                updated_at=now,
+            )
+            db.add(session)
+            await db.commit()
+            session_id = session.session_id
+            model_id = model.model_id
+            provider_id = provider.provider_id
+            db.add(
+                AiCallRecord(
+                    session_id=session_id,
+                    model_id=model_id,
+                    provider_id=provider_id,
+                    model_name_snapshot="gpt-4.1",
+                    display_name_snapshot="GPT-4.1",
+                    provider_name_snapshot="OpenAI",
+                    protocol_snapshot="openai_compatible",
+                    status="success",
+                    prompt_digest="0" * 64,
+                    prompt_preview="hi",
+                    prompt_char_count=2,
+                    injected_chars=1,
+                    prompt_chars=2,
+                    total_chars=9,
+                    created_at=now,
+                )
+            )
+            with pytest.raises(DBAPIError) as err:
+                await db.commit()
+            _assert_constraint_violation(err)
+            await db.rollback()
+
+            db.add(
+                SessionEvent(
+                    session_id=session_id,
+                    type="knowledge_injection",
+                    payload={"items": [], "promptChars": 0, "injectedChars": 0, "totalChars": 0},
+                    created_at=now,
+                )
+            )
+            await db.commit()
+        async with database.engine.connect() as connection:
+            tables = set(
+                await connection.run_sync(lambda sync: inspect(sync).get_table_names())
+            )
+        assert "knowledge_base" not in tables
+    finally:
+        await database.dispose()

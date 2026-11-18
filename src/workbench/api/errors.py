@@ -74,10 +74,14 @@ def request_id_of(request: Request) -> str:
 
 
 def error_body(request: Request, code: str, message: str, details=()) -> dict[str, Any]:  # noqa: ANN001
+    if isinstance(details, Mapping) and not isinstance(details, Sequence):
+        serialized: list[Any] | dict[str, Any] = dict(details)
+    else:
+        serialized = list(details)
     return {
         "code": code,
         "message": message,
-        "details": list(details),
+        "details": serialized,
         "requestId": request_id_of(request),
     }
 

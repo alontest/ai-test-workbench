@@ -4,7 +4,7 @@
 > 上游：`requirements-analysis/docs/context.md`（US 11 / AC 42 / EARS 17）、`technical-design/tasks.md`（55 个任务、70 个 TC）、`technical-design/docs/context.md`；另含实现期补充并已由 `aw verify` 通过的 TC-071（DB 错误映射方言可移植性）。
 > 依据：`approvals.md` 的 `tech-design · 2026-11-18 11:35:21 · 重新确认` 与 `tech-tasks · 2026-11-18 11:35:21 · 重新确认`（跨 spec 知识库注入扩展 ADR-042；55 任务 / 70 TC）。
 > 本体：`ontology-slices/test-verification.md` 不存在（项目无 `ontology-work/views/index.json`），本阶段不做本体对照，TC 的「涉及本体」一律记为「无」。
-> 开发尚未开始（仓库只有骨架 `src/workbench/__init__.py`、`tests/conftest.py`），本阶段只产出用例、映射与执行计划；所有 TC 的初始结果为 `待执行`。
+> MODE=verify 回填：`aw verify`（2026-11-18 15:32:49）pytest 126 passed / 0 failed / 0 skipped，TC-001～TC-071 全部 `passed`。人工项 M-01～M-07 未执行。
 
 ## 1. 交付范围
 

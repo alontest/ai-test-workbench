@@ -2,7 +2,8 @@
   "specs_dir": "specs",
   "code_paths": [
     "src/",
-    "tests/"
+    "tests/",
+    "web/"
   ],
   "exempt_paths": [
     "specs/",

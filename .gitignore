@@ -39,6 +39,7 @@ obj/Release/
 *.sqlite
 *.sqlite3
 data/
+backups/
 sessions/
 logs/
 *.log

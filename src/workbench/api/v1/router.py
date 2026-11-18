@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from workbench.api.v1 import artifacts, auth, calls, models, projects, providers, sessions
+from workbench.api.v1 import artifacts, auth, calls, entrances, models, projects, providers, sessions
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth.router)
+api_router.include_router(entrances.router)
 api_router.include_router(projects.router)
 api_router.include_router(providers.router)
 api_router.include_router(models.router)

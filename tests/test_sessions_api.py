@@ -305,3 +305,138 @@ async def test_tc031_recent_sessions_limit10(client, database) -> None:
         await client.delete(f"/api/v1/sessions/{session_id}", headers=ORIGIN)
     empty = await client.get("/api/v1/sessions?limit=10")
     assert empty.json() == {"items": [], "nextCursor": None}
+
+
+@pytest.mark.asyncio
+async def test_tc070_knowledge_injection_timeline_payload(client, database) -> None:
+    import hashlib
+
+    from sqlalchemy import text
+
+    from workbench.core.redaction import redact
+    from workbench.db.base import utcnow
+    from workbench.db.models import AiCallRecord, ModelBinding, SessionEvent
+    from workbench.services import sessions as sessions_service
+
+    sm = database.sessionmaker
+    project_id = await seed_project(sm)
+    provider_id = await seed_provider(sm)
+    model_id = await seed_model(sm, provider_id)
+    session_id = await seed_session(sm, project_id=project_id, model_id=model_id)
+    items = [
+        {
+            "kbId": 5,
+            "kbName": "支付中心知识库",
+            "kbVersion": 2,
+            "entryCodes": ["ENT-012", "BR-003"],
+            "injectedChars": 3,
+        }
+    ]
+    snapshot = {
+        "items": items,
+        "promptChars": 5,
+        "injectedChars": 3,
+        "totalChars": 8,
+        "excludedCodes": ["ENT-009"],
+    }
+    async with sm() as db:
+        model = await db.get(ModelBinding, model_id)
+        assert model is not None
+        now = utcnow()
+        record = AiCallRecord(
+            session_id=session_id,
+            model_id=model_id,
+            provider_id=model.provider_id,
+            model_name_snapshot=model.model_name,
+            display_name_snapshot=model.display_name,
+            provider_name_snapshot="OpenAI",
+            protocol_snapshot="openai_compatible",
+            status="success",
+            prompt_digest=hashlib.sha256(b"prompt").hexdigest(),
+            prompt_preview=redact("prompt", max_length=200),
+            prompt_char_count=8,
+            knowledge_injection=items,
+            injected_chars=3,
+            prompt_chars=5,
+            total_chars=8,
+            result_text="ok",
+            created_at=now,
+            finished_at=now,
+            latency_ms=12,
+        )
+        db.add(record)
+        await db.flush()
+        db.add(
+            SessionEvent(
+                session_id=session_id,
+                type="knowledge_injection",
+                payload=snapshot,
+                created_at=now,
+            )
+        )
+        await db.commit()
+        call_id = record.call_id
+
+    events = await client.get(f"/api/v1/sessions/{session_id}/events")
+    assert events.status_code == 200
+    injection_event = next(
+        item for item in events.json()["items"] if item["type"] == "knowledge_injection"
+    )
+    payload = injection_event["payload"]
+    assert payload["promptChars"] == 5
+    assert payload["injectedChars"] == 3
+    assert payload["totalChars"] == 8
+    assert payload["excludedCodes"] == ["ENT-009"]
+    assert payload["items"][0]["kbId"] == 5
+    assert payload["items"][0]["kbDeleted"] is True
+    assert "body" not in payload
+    assert "text" not in payload
+    assert "body" not in payload["items"][0]
+
+    detail = await client.get(f"/api/v1/calls/{call_id}")
+    assert detail.json()["knowledgeInjection"][0]["kbDeleted"] is True
+    assert detail.json()["knowledgeInjection"][0]["kbName"] == "支付中心知识库"
+
+    async with sm() as db:
+        await db.execute(text("CREATE TABLE knowledge_base (kb_id INTEGER PRIMARY KEY)"))
+        await db.execute(text("INSERT INTO knowledge_base (kb_id) VALUES (5)"))
+        await db.commit()
+
+    present_events = await client.get(f"/api/v1/sessions/{session_id}/events")
+    present_payload = next(
+        item
+        for item in present_events.json()["items"]
+        if item["type"] == "knowledge_injection"
+    )["payload"]
+    assert present_payload["items"][0]["kbDeleted"] is False
+    present_detail = await client.get(f"/api/v1/calls/{call_id}")
+    assert present_detail.json()["knowledgeInjection"][0]["kbDeleted"] is False
+
+    async with sm() as db:
+        await db.execute(text("DELETE FROM knowledge_base WHERE kb_id = 5"))
+        await db.commit()
+    deleted_events = await client.get(f"/api/v1/sessions/{session_id}/events")
+    deleted_payload = next(
+        item
+        for item in deleted_events.json()["items"]
+        if item["type"] == "knowledge_injection"
+    )["payload"]
+    assert deleted_payload["items"][0]["kbDeleted"] is True
+    assert deleted_payload["items"][0]["kbName"] == "支付中心知识库"
+
+    async with sm() as db:
+        await db.execute(text("DROP TABLE knowledge_base"))
+        await db.commit()
+    dropped = await client.get(f"/api/v1/sessions/{session_id}/events")
+    dropped_payload = next(
+        item for item in dropped.json()["items"] if item["type"] == "knowledge_injection"
+    )["payload"]
+    assert dropped_payload["items"][0]["kbDeleted"] is True
+
+    # 无注入事件不得被误标
+    await sessions_service.append_event(
+        session_id, "input_text", {"title": "t", "text": "boom", "charCount": 4}
+    )
+    mixed = await client.get(f"/api/v1/sessions/{session_id}/events")
+    input_event = next(item for item in mixed.json()["items"] if item["type"] == "input_text")
+    assert "kbDeleted" not in input_event["payload"]

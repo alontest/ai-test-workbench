@@ -2,7 +2,7 @@
 
 > 来源 spec：`specs/ai-test-workbench_20261117184149`（模块 `ai-test-workbench`，域 `workbench-core`）。
 > 用途：修复回归与后续 spec 复用。每条 TC 按小节合并；pytest 落点与 `design.md` 一致。
-> 当前状态：全部待执行（开发未开始）。
+> 当前状态：pytest 71/71 通过（`aw verify` 2026-11-18 15:32:49，head `6de8b57`，pytest 126/0/0）。人工 M-01～M-07 未执行。Vitest 本地 15 files / 58 passed（2026-11-18 15:34:45），不进 `.aw` 证据。
 
 ## TC-001
 

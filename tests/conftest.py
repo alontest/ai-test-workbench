@@ -42,3 +42,17 @@ async def database(settings):
     yield db
     configure_database(None)
     await db.dispose()
+
+
+@pytest.fixture
+def injection_preparer():
+    """注册/注销假 InjectionPreparer。知识库实现属 knowledge-base spec。"""
+    from fake_preparer import ScriptedInjectionPreparer
+    from workbench.core.ports import register_injection_preparer
+
+    impl = ScriptedInjectionPreparer()
+    register_injection_preparer(impl)
+    try:
+        yield impl
+    finally:
+        register_injection_preparer(None)
