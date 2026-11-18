@@ -20,7 +20,11 @@ TABLE_ARGS = {
 def upgrade() -> None:
     op.create_table(
         "admin_credential",
-        sa.Column("credential_id", sa.SmallInteger(), primary_key=True),
+        # 固定单行（credential_id = 1），显式关闭自增：
+        # MySQL 8 不允许 CHECK 引用 AUTO_INCREMENT 列（错误 3818）。
+        sa.Column(
+            "credential_id", sa.SmallInteger(), primary_key=True, autoincrement=False
+        ),
         sa.Column("algorithm", sa.String(length=32), nullable=False),
         sa.Column("password_hash", sa.String(length=255), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),

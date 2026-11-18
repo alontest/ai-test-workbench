@@ -53,7 +53,7 @@ jobs:
         run: uv run alembic upgrade head
         env:
           AW_DATABASE_URL: mysql+asyncmy://root:ci-root@127.0.0.1:3306/workbench_test?charset=utf8mb4
-      - name: Run same pytest suite on MySQL
+      - name: Run pytest suite (DB migration tests use MySQL)
         run: uv run pytest -q --junitxml=reports/mysql.xml
       - name: Upload test reports
         if: always()
@@ -63,33 +63,6 @@ jobs:
           path: reports/**
           if-no-files-found: ignore
 
-  frontend-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - name: Detect frontend
-        id: detect
-        run: |
-          if [ -f web/package.json ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Install and run Vitest
-        if: steps.detect.outputs.present == 'true'
-        working-directory: web
-        run: |
-          npm ci
-          npm run test -- --run
-      - name: Upload frontend reports
-        if: always() && steps.detect.outputs.present == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-reports
-          path: |
-            web/coverage/**
-            web/test-results/**
-          if-no-files-found: ignore
+  # frontend-tests（Node 22 + Vitest）按 TASK-TD-018 的依赖说明，在
+  # TASK-TD-021 落地 web/ 后再补入。批次 A 无前端代码，此处不设占位 job：
+  # 占位 job 会在没有 package.json 时空跑并显示 success，形成假门禁。
