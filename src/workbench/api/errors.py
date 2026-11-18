@@ -87,6 +87,21 @@ def _request_header(request: Request) -> dict[str, str]:
     return {"X-Request-Id": request_id} if request_id else {}
 
 
+async def _mark_session_failed(request: Request) -> None:
+    """未捕获异常时 best-effort 标记会话失败（DB 不可用则跳过）。"""
+    session_id = getattr(request.state, "session_id", None)
+    if session_id is None:
+        return
+    try:
+        from workbench.services.sessions import fail_session
+
+        await fail_session(session_id)
+    except Exception:  # noqa: BLE001 - 兜底路径不得再抛
+        logger.warning(
+            "failed to mark session failed requestId=%s", request_id_of(request)
+        )
+
+
 def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ApiError)
     async def _api_error(request: Request, exc: ApiError) -> JSONResponse:
@@ -98,10 +113,12 @@ def register_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(DomainError)
     async def _domain_error(request: Request, exc: DomainError) -> JSONResponse:
+        headers = _request_header(request)
+        headers.update(getattr(exc, "headers", {}) or {})
         return JSONResponse(
             status_code=exc.status_code,
             content=error_body(request, exc.code, exc.message, exc.details),
-            headers=_request_header(request),
+            headers=headers,
         )
 
     @app.exception_handler(RequestValidationError)
@@ -153,6 +170,7 @@ def register_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def _unhandled(request: Request, exc: Exception) -> JSONResponse:
+        await _mark_session_failed(request)
         logger.exception("unhandled error requestId=%s", request_id_of(request))
         return JSONResponse(
             status_code=500,

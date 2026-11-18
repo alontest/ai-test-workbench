@@ -251,3 +251,297 @@ async def _get_session(db: AsyncSession, session_id: int) -> AnalysisSession:
 
 async def list_events(db: AsyncSession, session_id: int) -> list[SessionEvent]:
     return await events_repo.list_for_session(db, session_id)
+
+
+# ---------------------------------------------------------------------------
+# 批次 B：会话状态流转、列表、时间线分页与删除
+# ---------------------------------------------------------------------------
+
+import logging
+from datetime import datetime
+
+from sqlalchemy import delete, select
+
+from workbench.adapters.fs import storage
+from workbench.api.pagination import encode_cursor
+from workbench.core.constants import PROMPT_MAX_CHARS
+from workbench.core.validation import require_text
+from workbench.db.models import AiCallRecord, Artifact
+
+logger = logging.getLogger(__name__)
+
+
+def _iso(value: datetime) -> str:
+    return value.isoformat() + "Z"
+
+
+def _closed_error(session_id: int, status: str) -> DomainError:
+    return DomainError(
+        "session_closed",
+        "会话已结束，不能继续写入。",
+        status_code=409,
+        details=[{"field": "sessionId", "message": f"session {session_id} is {status}"}],
+    )
+
+
+async def complete_session(session_id: int) -> SessionView:
+    sessionmaker = get_sessionmaker()
+    async with sessionmaker() as db:
+        session = await _get_session(db, session_id)
+        if session.status != "in_progress":
+            raise _closed_error(session_id, session.status)
+        now = utcnow()
+        previous = session.status
+        session.status = "completed"
+        session.closed_at = now
+        await append_event_in_db(
+            db,
+            session,
+            "status_change",
+            {
+                "from": previous,
+                "to": "completed",
+                "actor": "local-user",
+                "at": _iso(now),
+            },
+        )
+        await db.commit()
+        await db.refresh(session)
+        return session_to_view(session)
+
+
+async def fail_session(session_id: int, *, reason: str = "unhandled error") -> bool:
+    """未捕获异常时把进行中的会话标记失败；幂等，非进行中返回 False。"""
+    sessionmaker = get_sessionmaker()
+    async with sessionmaker() as db:
+        session = await db.get(AnalysisSession, session_id)
+        if session is None or session.status != "in_progress":
+            return False
+        now = utcnow()
+        previous = session.status
+        session.status = "failed"
+        session.closed_at = now
+        await append_event_in_db(
+            db,
+            session,
+            "status_change",
+            {
+                "from": previous,
+                "to": "failed",
+                "actor": "system",
+                "at": _iso(now),
+                "reason": reason,
+            },
+            actor="system",
+        )
+        await db.commit()
+        return True
+
+
+async def _detail(db: AsyncSession, session: AnalysisSession) -> dict[str, Any]:
+    project = await db.get(ProjectContext, session.project_id)
+    model = await db.get(ModelBinding, session.model_id)
+    provider = await db.get(ProviderConfig, model.provider_id) if model else None
+    return {
+        "sessionId": session.session_id,
+        "project": {
+            "projectId": session.project_id,
+            "name": project.name if project else "",
+        },
+        "entranceKey": session.entrance_key,
+        "title": session.title,
+        "status": session.status,
+        "model": {
+            "modelId": session.model_id,
+            "modelName": model.model_name if model else "",
+            "displayName": model.display_name if model else "",
+            "providerId": model.provider_id if model else 0,
+            "providerName": provider.name if provider else "",
+        },
+        "createdAt": session.created_at,
+        "updatedAt": session.updated_at,
+        "closedAt": session.closed_at,
+    }
+
+
+async def get_session(session_id: int) -> dict[str, Any]:
+    sessionmaker = get_sessionmaker()
+    async with sessionmaker() as db:
+        session = await _get_session(db, session_id)
+        return await _detail(db, session)
+
+
+async def list_sessions(
+    *,
+    project_id: int | None = None,
+    status: str | None = None,
+    limit: int = 20,
+    cursor: dict[str, Any] | None = None,
+) -> tuple[list[dict[str, Any]], str | None]:
+    if status is not None and status not in ("in_progress", "completed", "failed"):
+        raise DomainError(
+            "validation_error",
+            "请求参数校验失败。",
+            details=[{"field": "status", "message": "非法会话状态"}],
+        )
+    after = _parse_session_cursor(cursor)
+    sessionmaker = get_sessionmaker()
+    async with sessionmaker() as db:
+        statement = select(AnalysisSession)
+        if project_id is not None:
+            statement = statement.where(AnalysisSession.project_id == project_id)
+        if status is not None:
+            statement = statement.where(AnalysisSession.status == status)
+        if after is not None:
+            moment, session_id = after
+            statement = statement.where(
+                (AnalysisSession.updated_at < moment)
+                | (
+                    (AnalysisSession.updated_at == moment)
+                    & (AnalysisSession.session_id < session_id)
+                )
+            )
+        statement = statement.order_by(
+            AnalysisSession.updated_at.desc(), AnalysisSession.session_id.desc()
+        ).limit(limit + 1)
+        rows = list(await db.scalars(statement))
+        has_more = len(rows) > limit
+        page = rows[:limit]
+        items = [await _detail(db, row) for row in page]
+    next_cursor = None
+    if has_more and page:
+        last = page[-1]
+        next_cursor = encode_cursor(
+            {"updated_at": last.updated_at.isoformat(), "session_id": last.session_id}
+        )
+    return items, next_cursor
+
+
+async def list_events_page(
+    session_id: int, *, limit: int = 50, cursor: dict[str, Any] | None = None
+) -> tuple[list[EventView], str | None]:
+    after_id = None
+    if cursor is not None:
+        raw = cursor.get("event_id")
+        if not isinstance(raw, int):
+            raise DomainError("validation_error", "游标非法。")
+        after_id = raw
+    sessionmaker = get_sessionmaker()
+    async with sessionmaker() as db:
+        await _get_session(db, session_id)
+        statement = select(SessionEvent).where(SessionEvent.session_id == session_id)
+        if after_id is not None:
+            statement = statement.where(SessionEvent.event_id > after_id)
+        statement = statement.order_by(SessionEvent.event_id.asc()).limit(limit + 1)
+        rows = list(await db.scalars(statement))
+    has_more = len(rows) > limit
+    page = rows[:limit]
+    next_cursor = None
+    if has_more and page:
+        next_cursor = encode_cursor({"event_id": page[-1].event_id})
+    return [event_to_view(row) for row in page], next_cursor
+
+
+def event_to_api(view: EventView) -> dict[str, Any]:
+    return {
+        "eventId": view["event_id"],
+        "sessionId": view["session_id"],
+        "type": view["type"],
+        "payload": view["payload"],
+        "createdAt": _iso(view["created_at"]),
+    }
+
+
+async def append_text_input(session_id: int, *, title: str, text: str) -> EventView:
+    cleaned_title = require_text(title, field="title", max_length=200)
+    if not text or not text.strip():
+        raise DomainError(
+            "text_empty",
+            "文本内容不能为空。",
+            details=[{"field": "text", "message": "正文不能为空白"}],
+        )
+    if len(text) > PROMPT_MAX_CHARS:
+        raise DomainError(
+            "text_too_long",
+            "文本超过字符上限。",
+            details=[
+                {
+                    "field": "text",
+                    "charCount": len(text),
+                    "maxChars": PROMPT_MAX_CHARS,
+                }
+            ],
+        )
+    return await append_event(
+        session_id,
+        "input_text",
+        {"title": cleaned_title, "text": text, "charCount": len(text)},
+    )
+
+
+async def delete_session(session_id: int) -> None:
+    sessionmaker = get_sessionmaker()
+    async with sessionmaker() as db:
+        session = await _get_session(db, session_id)
+        del session
+
+    try:
+        trash = storage.move_to_trash(session_id)
+    except OSError as exc:
+        raise DomainError(
+            "session_delete_failed",
+            "会话删除失败。",
+            status_code=500,
+            details=[{"field": "sessionId", "message": "trash rename failed"}],
+        ) from exc
+
+    async with sessionmaker() as db:
+        row = await db.get(AnalysisSession, session_id)
+        if row is None:
+            raise DomainError("session_not_found", "会话不存在。", status_code=404)
+        try:
+            await db.execute(
+                delete(SessionEvent).where(SessionEvent.session_id == session_id)
+            )
+            await db.execute(
+                delete(Artifact).where(Artifact.session_id == session_id)
+            )
+            await db.execute(
+                delete(AiCallRecord).where(AiCallRecord.session_id == session_id)
+            )
+            await db.delete(row)
+            await db.commit()
+        except Exception:
+            await db.rollback()
+            _restore_trash(trash)
+            raise
+
+    if trash is not None:
+        import shutil
+
+        shutil.rmtree(trash, ignore_errors=True)
+
+
+def _restore_trash(trash) -> None:  # noqa: ANN001
+    if trash is None:
+        return
+    try:
+        import os
+
+        target = storage.artifact_dir(int(str(trash.name).split("-", 1)[0]))
+        os.replace(trash, target)
+    except (OSError, ValueError):  # pragma: no cover - 兜底清理
+        logger.warning("failed to restore session trash after rollback")
+
+
+def _parse_session_cursor(cursor: dict[str, Any] | None):  # noqa: ANN001
+    if cursor is None:
+        return None
+    raw_time = cursor.get("updated_at")
+    raw_id = cursor.get("session_id")
+    if not isinstance(raw_time, str) or not isinstance(raw_id, int):
+        raise DomainError("validation_error", "游标非法。")
+    return (
+        datetime.fromisoformat(raw_time.replace("Z", "+00:00")).replace(tzinfo=None),
+        raw_id,
+    )

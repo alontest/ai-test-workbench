@@ -13,12 +13,14 @@ class DomainError(Exception):
         *,
         status_code: int = 400,
         details: Sequence[Mapping[str, object]] | None = None,
+        headers: Mapping[str, str] | None = None,
     ) -> None:
         super().__init__(message)
         self.code = code
         self.message = message
         self.status_code = status_code
         self.details = list(details or ())
+        self.headers = dict(headers or {})
 
     def __repr__(self) -> str:  # pragma: no cover - 调试用
         return f"DomainError(code={self.code!r})"

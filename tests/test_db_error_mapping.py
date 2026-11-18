@@ -86,34 +86,44 @@ def _build_app(settings, database):  # noqa: ANN001
     return app
 
 
-async def _get(app, path: str) -> httpx.Response:  # noqa: ANN001
+async def _get(app, path: str, password: str) -> httpx.Response:  # noqa: ANN001
     transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
     async with httpx.AsyncClient(transport=transport, base_url=ORIGIN) as client:
+        login = await client.post(
+            "/api/v1/auth/login",
+            json={"password": password},
+            headers={"origin": ORIGIN},
+        )
+        assert login.status_code == 200
         return await client.get(path)
 
 
 async def test_tc071_db_error_mapping_is_dialect_portable(settings, database) -> None:  # noqa: ANN001
+    from helpers import seed_admin
+
+    password = "test-admin-mapping"
+    await seed_admin(database.sessionmaker, password)
     app = _build_app(settings, database)
 
-    check = await _get(app, "/api/v1/_db_check")
+    check = await _get(app, "/api/v1/_db_check", password)
     assert check.status_code == 400
     body = check.json()
     assert body["code"] == "validation_error"
     assert body["requestId"] == check.headers["X-Request-Id"]
     assert "ck_provider_config_protocol" not in body["message"]
 
-    duplicate = await _get(app, "/api/v1/_db_duplicate")
+    duplicate = await _get(app, "/api/v1/_db_duplicate", password)
     assert duplicate.status_code == 409
     assert duplicate.json()["code"] == "conflict"
 
-    foreign_key = await _get(app, "/api/v1/_db_foreign_key")
+    foreign_key = await _get(app, "/api/v1/_db_foreign_key", password)
     assert foreign_key.status_code == 409
     assert foreign_key.json()["code"] == "conflict"
 
-    sqlite_check = await _get(app, "/api/v1/_db_sqlite_check")
+    sqlite_check = await _get(app, "/api/v1/_db_sqlite_check", password)
     assert sqlite_check.status_code == 400
     assert sqlite_check.json()["code"] == "validation_error"
 
-    down = await _get(app, "/api/v1/_db_down")
+    down = await _get(app, "/api/v1/_db_down", password)
     assert down.status_code == 500
     assert down.json()["code"] == "internal_error"

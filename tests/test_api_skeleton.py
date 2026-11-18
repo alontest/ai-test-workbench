@@ -41,9 +41,17 @@ def _build_app(settings, database):
 
 @pytest.mark.asyncio
 async def test_tc060_error_envelope_and_cursor(settings, database) -> None:
+    from helpers import seed_admin
+
+    await seed_admin(database.sessionmaker, "test-admin-mapping")
     app = _build_app(settings, database)
     transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        await client.post(
+            "/api/v1/auth/login",
+            json={"password": "test-admin-mapping"},
+            headers={"origin": "http://testserver"},
+        )
         response = await client.get("/api/v1/_missing")
         assert response.status_code == 404
         body = response.json()
@@ -78,9 +86,17 @@ async def test_tc060_error_envelope_and_cursor(settings, database) -> None:
 
 @pytest.mark.asyncio
 async def test_tc061_origin_check_rejects_cross_site(settings, database) -> None:
+    from helpers import seed_admin
+
+    await seed_admin(database.sessionmaker, "test-admin-mapping")
     app = _build_app(settings, database)
     transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        await client.post(
+            "/api/v1/auth/login",
+            json={"password": "test-admin-mapping"},
+            headers={"origin": "http://testserver"},
+        )
         response = await client.post(
             "/api/v1/_origin", headers={"Origin": "https://evil.example"}
         )

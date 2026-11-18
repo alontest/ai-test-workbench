@@ -261,7 +261,7 @@
   - **状态**：pending
   - 免测理由：CI 配置本身不产生 pytest 用例；其有效性由流水线实际运行结果验收，本地 `aw verify` 不覆盖。
 
-- [ ] TASK-TD-019：实现认证服务（登录、令牌、锁定、登出）
+- [x] TASK-TD-019：实现认证服务（登录、令牌、锁定、登出）
   - **描述**：实现 `login` / `authenticate` / `logout` / `current_source_ip` 与 `login_attempt` 行锁计数。
   - **涉及文件**：`src/workbench/services/auth.py`、`src/workbench/db/repositories/auth.py`、`tests/test_auth_service.py`
   - **具体操作**：`login(password, source_ip)`：锁定期直接 429；Argon2 校验；成功删 `login_attempt` 行、写 `login_session`（只存 SHA-256 哈希）、返回 token 与 idle 过期时间；失败同事务自增，窗口 5 分钟，达 5 次写 `locked_until=now+5min`；`authenticate(token)` 查哈希、`revoked_at IS NULL`、`now-last_seen_at <= 8h`，命中刷新 `last_seen_at`；`logout` 写 `revoked_at`。用例 `test_tc001_unauthorized_without_session`、`test_tc002_login_issues_token_hash_only`、`test_tc003_wrong_password_uniform_error`、`test_tc004_lock_after_five_failures`、`test_tc005_concurrent_failures_counted`、`test_tc006_idle_expiry_and_refresh`、`test_tc007_logout_revokes_token`。
@@ -273,7 +273,7 @@
   - **估算**：14h [逻辑]，不确定性中（并发计数）
   - **状态**：pending
 
-- [ ] TASK-TD-020：实现认证 API、路由级鉴权与 Cookie 属性
+- [x] TASK-TD-020：实现认证 API、路由级鉴权与 Cookie 属性
   - **描述**：3 个认证端点、`require_session` 依赖、HTML 导航 302、Cookie 设置、Origin 校验接入。
   - **涉及文件**：`src/workbench/api/v1/auth.py`、`src/workbench/api/deps.py`、`src/workbench/api/schemas/auth.py`、`tests/test_auth_api.py`
   - **具体操作**：`POST /auth/login` 白名单；`POST /auth/logout` 204 并清 Cookie；`GET /auth/session` 返回 `authenticated/lastSeenAt/idleExpiresAt`；Cookie `aw_session` HttpOnly、SameSite=Lax、Path=/、`AW_COOKIE_SECURE` 决定 Secure；未认证 API 401 统一体、HTML 导航 302 `/login?next=`（只接受站内路径）；401 不返回业务字段。用例 `test_tc001_api_401_and_html_redirect`、`test_tc008_cookie_attributes`、`test_tc010_login_next_is_internal_only`、`test_tc011_expired_session_redirects`、`test_tc012_next_rejects_external_url`。
@@ -297,7 +297,7 @@
   - **估算**：16h [样板]，不确定性中（TS 7 / Vite 8 生态，RISK-007）
   - **状态**：pending
 
-- [ ] TASK-TD-022：实现项目服务与仓储
+- [x] TASK-TD-022：实现项目服务与仓储
   - **描述**：项目创建、编辑、详情、列表；名称唯一（casefold）与 `updated_at` 维护。
   - **涉及文件**：`src/workbench/services/projects.py`、`src/workbench/db/repositories/projects.py`、`tests/test_projects_service.py`
   - **具体操作**：`create` 去首尾空白、`name_key=casefold()`、冲突抛 `project_name_duplicate`；`update` 支持部分字段与显式 null 清空，刷新 `updated_at`；列表按 `updated_at DESC, project_id DESC` 游标分页。用例 `test_tc013_create_project_and_duplicate`、`test_tc014_update_reflects_and_touches`、`test_tc016_name_validation`。
@@ -309,7 +309,7 @@
   - **估算**：6h [逻辑]，不确定性低
   - **状态**：pending
 
-- [ ] TASK-TD-023：实现项目 API（4 个端点）
+- [x] TASK-TD-023：实现项目 API（4 个端点）
   - **描述**：`GET/POST /projects`、`GET/PATCH /projects/{id}`，逐字段校验与错误映射。
   - **涉及文件**：`src/workbench/api/v1/projects.py`、`src/workbench/api/schemas/project.py`、`tests/test_projects_api.py`
   - **具体操作**：`name` 1–100；`repoUrl` http(s) 绝对地址且无 userinfo；409 冲突带 `details[].field`；404 `project_not_found`；不提供 DELETE。用例覆盖 200/201/400/404/409。用例 `test_tc013_api_create_and_conflict`、`test_tc014_api_patch`、`test_tc015_session_requires_project`、`test_tc016_api_validation_fields`。
@@ -334,7 +334,7 @@
   - **估算**：10h [样板]，不确定性低
   - **状态**：pending
 
-- [ ] TASK-TD-025：实现提供商服务（加密、掩码、连接测试）
+- [x] TASK-TD-025：实现提供商服务（加密、掩码、连接测试）
   - **描述**：创建/编辑/启停、密钥加密与掩码、凭据解析、10s 连接测试。
   - **涉及文件**：`src/workbench/services/providers.py`、`src/workbench/db/repositories/providers.py`、`tests/test_providers_service.py`
   - **具体操作**：`apiKey` 加密为 `v1:...`；响应只给 `apiKeyMasked`；`update` 空密钥不改；`resolve_credentials` 解密失败抛 `provider_credential_unavailable`；连接测试用独立 10s 超时，不写会话/制品/记录，返回 `{ok,latencyMs,modelCount,errorCode}`；停用提供商不级改模型行。用例 `test_tc017_provider_key_encrypted_and_masked`、`test_tc018_provider_validation`、`test_tc019_connection_test_timeout`、`test_tc020_disabled_provider_blocks_models`、`test_tc021_connection_test_error_codes`、`test_tc022_update_key_blank_keeps`、`test_tc050_credential_decrypt_failure_no_record`。
@@ -346,7 +346,7 @@
   - **估算**：14h [逻辑]，不确定性中
   - **状态**：pending
 
-- [ ] TASK-TD-026：实现提供商 API（5 个端点）
+- [x] TASK-TD-026：实现提供商 API（5 个端点）
   - **描述**：列表、创建、编辑/启停、已保存与未保存两种连接测试。
   - **涉及文件**：`src/workbench/api/v1/providers.py`、`src/workbench/api/schemas/provider.py`、`tests/test_providers_api.py`
   - **具体操作**：任何响应不含 `apiKey`/密文；`PATCH` 缺省 apiKey 不改；连接测试上游失败仍 200；参数校验逐字段。用例 `test_tc017_api_never_returns_secret`、`test_tc018_api_validation`、`test_tc019_api_connection_test`、`test_tc021_api_connection_test_failure`、`test_tc022_api_patch_key`。
@@ -358,7 +358,7 @@
   - **估算**：8h [样板]，不确定性低
   - **状态**：pending
 
-- [ ] TASK-TD-027：实现模型服务与 API（4 个端点）
+- [x] TASK-TD-027：实现模型服务与 API（4 个端点）
   - **描述**：模型登记、编辑/启停、提供商内列表、跨提供商列表（含启用过滤）。
   - **涉及文件**：`src/workbench/services/models.py`、`src/workbench/db/repositories/models.py`、`src/workbench/api/v1/models.py`、`src/workbench/api/schemas/model.py`、`tests/test_models.py`
   - **具体操作**：`model_name_key=casefold()`，同提供商重名 409；temperature 0–2、max_tokens 1–1,000,000；`enabled=true` 查询同时要求提供商启用；`modelName` 不可改。用例 `test_tc023_create_model_and_ranges`、`test_tc024_duplicate_model_name`、`test_tc025_default_params_used_and_override_not_persisted`。
@@ -394,7 +394,7 @@
   - **估算**：10h [样板]，不确定性低
   - **状态**：pending
 
-- [ ] TASK-TD-030：实现会话服务（完成、失败、列表、详情、删除）
+- [x] TASK-TD-030：实现会话服务（完成、失败、列表、详情、删除）
   - **描述**：在冻结 `create/append_event` 之上补状态流转、查询与级联删除。
   - **涉及文件**：`src/workbench/services/sessions.py`、`src/workbench/db/repositories/sessions.py`、`tests/test_sessions_service.py`
   - **具体操作**：`complete` 写 `status_change(local-user)`、置 `closed_at`；`fail_session` 写 `system`；终态拒绝事件/调用；`list` 支持 projectId/status 与游标；`delete_session` 先 `move_to_trash`，再单事务删行，失败回滚文件；`model_id` 创建后不可改。用例 `test_tc026_create_session`、`test_tc027_list_filters`、`test_tc028_timeline_order`、`test_tc029_terminal_state_rejects`、`test_tc030_delete_cascades`。
@@ -406,7 +406,7 @@
   - **估算**：10h [逻辑]，不确定性中
   - **状态**：pending
 
-- [ ] TASK-TD-031：实现会话 API（6 个端点）
+- [x] TASK-TD-031：实现会话 API（6 个端点）
   - **描述**：列表、创建、详情、完成、删除、事件列表。
   - **涉及文件**：`src/workbench/api/v1/sessions.py`、`src/workbench/api/schemas/session.py`、`tests/test_sessions_api.py`
   - **具体操作**：`GET /sessions` 支持 projectId/status/limit/cursor，首页用 `limit=10`；创建失败映射 404/409/400；完成重复调用 409；删除 204；事件默认 50 最大 200 升序；会话对象含项目与模型摘要。用例 `test_tc026_api_create_session`、`test_tc027_api_filters`、`test_tc028_api_events_order`、`test_tc029_api_complete_idempotent`、`test_tc030_api_delete`、`test_tc031_recent_sessions_limit10`。
@@ -418,7 +418,7 @@
   - **估算**：10h [样板]，不确定性低
   - **状态**：pending
 
-- [ ] TASK-TD-032：接入 500 未捕获异常的会话失败标记
+- [x] TASK-TD-032：接入 500 未捕获异常的会话失败标记
   - **描述**：会话作用域端点出现未捕获异常时 best-effort 调用 `fail_session`。
   - **涉及文件**：`src/workbench/api/errors.py`、`tests/test_fail_session_hook.py`
   - **具体操作**：异常处理器识别会话作用域与 `session_id`；DB 不可用则跳过并记日志；业务错误 400/404/409/502/504 不改状态；写 `status_change(actor=system, reason="unhandled error")`。用例 `test_tc029_unhandled_error_marks_failed`。
@@ -454,7 +454,7 @@
   - **估算**：16h [样板]，不确定性低
   - **状态**：pending
 
-- [ ] TASK-TD-035：实现文本输入接口
+- [x] TASK-TD-035：实现文本输入接口
   - **描述**：`POST /sessions/{id}/inputs/text`，追加 `input_text` 事件。
   - **涉及文件**：`src/workbench/api/v1/sessions.py`、`src/workbench/api/schemas/input.py`、`tests/test_inputs_api.py`
   - **具体操作**：标题 1–200；正文去空白后非空（`text_empty`）；`len(text) <= 200000`（`text_too_long`，details 含 charCount/maxChars）；终态 409；201 返回事件并刷新会话。用例 `test_tc032_append_text_event`、`test_tc033_empty_text_rejected`、`test_tc034_text_over_limit_rejected`、`test_tc035_updated_at_bumped`。
@@ -466,7 +466,7 @@
   - **估算**：6h [样板]，不确定性低
   - **状态**：pending
 
-- [ ] TASK-TD-036：实现制品上传、元数据与内容接口
+- [x] TASK-TD-036：实现制品上传、元数据与内容接口
   - **描述**：`POST /sessions/{id}/artifacts`、`GET /artifacts/{id}`、`GET /artifacts/{id}/content`。
   - **涉及文件**：`src/workbench/api/v1/artifacts.py`、`src/workbench/api/schemas/artifact.py`、`tests/test_artifacts_api.py`
   - **具体操作**：multipart 重复 `files`，1–10 个；整批校验（类型/大小/数量）后逐个 `artifacts.save`；响应含 items 与 events；元数据不含路径；content 支持 inline/download、`max_bytes` 默认/上限 262144；Content-Type 服务端映射、`nosniff`、RFC 5987 文件名；行在文件缺 410。用例 `test_tc036_upload_success_and_preview`、`test_tc037_batch_validation_rejects_all`、`test_tc038_duplicate_names_renamed`、`test_tc039_traversal_rejected_via_api`、`test_tc040_disk_failure_returns_507`。
@@ -502,7 +502,7 @@
   - **估算**：12h [样板]，不确定性低
   - **状态**：pending
 
-- [ ] TASK-TD-039：实现发起调用接口
+- [x] TASK-TD-039：实现发起调用接口
   - **描述**：`POST /sessions/{id}/ai/complete`，调用 `AiGateway.complete` 并映射错误（知识库引用扩展见 TASK-TD-053）。
   - **涉及文件**：`src/workbench/api/v1/calls.py`、`src/workbench/api/schemas/call.py`、`tests/test_calls_api.py`
   - **具体操作**：prompt 1–200000（`prompt_too_long`）；temperature/maxTokens 可选；前置拒绝 404/409 且无记录；成功 200 返回 callId/resultText/latencyMs/retryCount/模型摘要；失败 502 `ai_*`、504 `ai_timeout`、502 `provider_credential_unavailable`，details 含 callId/retryCount。用例 `test_tc041_api_call_success`、`test_tc042_api_call_failure`、`test_tc043_precondition_rejections_no_record`、`test_tc044_call_event_payload`、`test_tc045_api_retry_and_timeout`、`test_tc050_api_credential_unavailable`。
@@ -526,7 +526,7 @@
   - **估算**：14h [样板]，不确定性中（长请求体验）
   - **状态**：pending
 
-- [ ] TASK-TD-041：编写批次 B 最小闭环冒烟测试
+- [x] TASK-TD-041：编写批次 B 最小闭环冒烟测试
   - **描述**：用 httpx ASGITransport 串起登录 → 建项目 → 提供商/模型 → 会话 → 贴文本 → 调用，断言各步返回与记录。
   - **涉及文件**：`tests/test_batch_b_smoke.py`
   - **具体操作**：假 AI 适配器返回固定文本；断言 Cookie 建立、201/200、时间线含 input_text 与 call、`ai_call_record` 一行成功、会话 `updated_at` 变化；不依赖浏览器与外部网络。用例 `test_tc062_batch_b_minimal_loop`。
