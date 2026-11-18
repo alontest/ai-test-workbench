@@ -1,5 +1,6 @@
 # Flowchart — workbench-core
 
+> **文档状态：draft — 2026-11-18 因跨 spec 知识库注入扩展（A101 / A102 / A103 B）变更，待用户重新确认。**
 > 阶段：tech-design。图与 `docs/database-schema.md` / `docs/api-spec.md` / `change-spec.md` 一致。
 
 ## 1. 分层架构
@@ -14,7 +15,7 @@ graph TB
 
   subgraph API["FastAPI /api/v1"]
     AUTHMW["require_session + Origin 校验"]
-    ROUTES["auth / entrances / projects / providers / models / sessions / artifacts / calls"]
+    ROUTES["auth / entrances / projects / providers / models / sessions / artifacts / ai/complete / calls"]
     ERR["统一错误体 {code,message,details,requestId}"]
     AUTHMW --> ROUTES
     ROUTES --> ERR
@@ -27,6 +28,11 @@ graph TB
     SAR["services.artifacts<br/>save"]
     AG["services.ai_gateway<br/>AiGateway.complete（唯一模型出口）"]
     SC["services.calls（查询）"]
+    PORT["core.ports.InjectionPreparer"]
+  end
+
+  subgraph KB["knowledge-base spec（可选，迁移 0007+）"]
+    KBS["KnowledgeInjectionService.prepare_for_call<br/>失效重校验 / 组装 / 字符预算"]
   end
 
   subgraph Adapters["适配层"]
@@ -56,6 +62,8 @@ graph TB
   ROUTES --> SAR
   ROUTES --> AG
   ROUTES --> SC
+  ROUTES -. knowledgeRefs .-> PORT
+  PORT -. 实现注册 .-> KBS
   SA --> PW
   SP --> CR
   SS --> DB
@@ -107,14 +115,28 @@ sequenceDiagram
 sequenceDiagram
   autonumber
   participant B as Browser
-  participant API as API /sessions/{id}/calls
+  participant API as API /sessions/{id}/ai/complete
+  participant KB as knowledge-base 注入服务
   participant G as AiGateway
   participant AG as Provider Adapter
   participant P as 上游提供商
   participant DB as DB
 
-  B->>API: POST calls {prompt, temperature?, maxTokens?}
-  API->>G: complete(session_id, model_id, prepared, ...)
+  B->>API: POST ai/complete {prompt, temperature?, maxTokens?, knowledgeRefs?, confirmInvalidCodes?}
+  API->>DB: 只读校验：会话进行中 / 模型与提供商启用
+  alt 前置失败
+    API-->>B: 404/409（无 AiCallRecord、无外部请求）
+  end
+  alt 携带 knowledgeRefs（A103 B）
+    API->>KB: prepare_for_call(session, project, prompt, refs, confirmInvalidCodes)
+    alt 失效未精确确认 / 有效集为空 / 超预算 / 未安装
+      KB-->>API: 领域错误
+      API-->>B: 409/400（无 AiCallRecord、无外部请求）
+    else 组装成功
+      KB-->>API: prepared + InjectionSnapshot
+    end
+  end
+  API->>G: complete(session_id, model_id, prepared, injection=snapshot)
   G->>DB: 只读校验：会话进行中 / 模型与提供商启用
   alt 前置失败
     G-->>API: 错误（无 AiCallRecord）
@@ -125,6 +147,10 @@ sequenceDiagram
   else 前置通过
     G->>G: acquire semaphore(4)
     G->>DB: INSERT ai_call_record(status=running)
+    opt injection 非空（A102）
+      G->>DB: 同事务写 knowledge_injection / injected_chars / prompt_chars / total_chars
+      G->>DB: 同事务 INSERT session_event(type=knowledge_injection)
+    end
     loop 最多 2 次尝试（仅网络错误 / 5xx 重试）
       G->>AG: request(prepared, params, timeout=120s)
       AG->>P: HTTPS
@@ -144,14 +170,14 @@ sequenceDiagram
     G->>DB: UPDATE call_record → success/ failed/ timeout（latency_ms, retry_count, error_code, result_text）
     G->>DB: INSERT session_event(type=call) + UPDATE session.updated_at（同一事务）
     alt 成功
-      G-->>API: AIResult(call_id, text)
-      API-->>B: 200
+      G-->>API: AIResult(call_id, text, knowledge_injection)
+      API-->>B: 200（knowledgeInjection + kbDeleted）
     else 失败/超时
       G-->>API: AIError(code, call_id, retry_count)
       API-->>B: 502/504（details 含 callId）
     end
   end
-  Note over G,DB: 请求取消或进程异常：finally 终结 failed(interrupted)；硬崩溃由启动归并兜底
+  Note over G,DB: 请求取消或进程异常：finally 终结 failed(interrupted)；硬崩溃由启动归并兜底；注入留痕不回滚
 ```
 
 ## 4. 启动自检与 running 回收
@@ -363,6 +389,10 @@ erDiagram
     char prompt_digest
     varchar prompt_preview
     int prompt_char_count
+    json knowledge_injection
+    int injected_chars
+    int prompt_chars
+    int total_chars
     text result_text
     int latency_ms
     int retry_count
@@ -383,3 +413,5 @@ erDiagram
 ```
 
 > `ADMIN_CREDENTIAL`、`LOGIN_SESSION`、`LOGIN_ATTEMPT` 不与业务表建外键；登录会话独立于分析会话。
+> `AI_CALL_RECORD.knowledge_injection` 只存标识快照，不建指向 `knowledge_base`（knowledge-base spec 的表）的外键；`kbDeleted` 在读取时左连接计算。
+> 迁移顺序：core `0006_knowledge_injection` 先于 knowledge-base 的 `0007`；core `0006` 不创建或引用 `knowledge_base`。

@@ -1,6 +1,8 @@
 # Architecture Decisions Record (ADR)
 
 > **文档状态：architecture-locked** — 2026-11-18 用户重新确认（`approvals.md` 2026-11-18 10:24:32，用户原话「全部确认」；spec 拆分后知识库 ADR 已迁出，新增 ADR-041）。
+> 2026-11-18 11:23:27 追加 ADR-042（跨 spec 知识库注入扩展，用户原话「A101 A、A102 A、A103 B」）；ADR-001 ~ ADR-041 决策不变，tech-design 相关文档因该扩展待用户重新确认，不视为已确认。
+> 2026-11-18 依赖版本核实：FastAPI 0.163.2、SQLAlchemy 2.1.9、pydantic-settings 2.16.3，均为实际安装版本，无降级（见 ADR-043）。
 >
 > 状态：**已确认（architecture-locked）**。依据 `technical-design/answers.md` 2026-11-17 19:49:04 用户原话「STK-001 A，STK-002 A，STK-003 A，STK-004 A」，以及 2026-11-18 10:24:32 拆分后重新确认。
 > ADR-001 ~ ADR-009 来自用户拍板；ADR-010 ~ ADR-014 为用户未反对、采用默认。仓库现有代码为占位，不构成「已有」来源。
@@ -337,6 +339,30 @@
 - **影响**：上述签名若需调整，必须走本 spec 变更；repo-integration 新增错误码/分页字段时须在自己的 ADR 声明，并保持外层结构兼容。
 - **取代**：无
 
+### ADR-042：跨 spec 知识库注入扩展（A101 + A102 + A103 B）
+
+- **决策**：
+  1. **A101（core 拥有迁移与留痕列）**：`ai_call_record` 追加 `knowledge_injection`（JSON，可空）、`injected_chars`、`prompt_chars`、`total_chars`；`session_event.type` 的 CHECK 增加 `knowledge_injection`。core 的调用记录与时间线序列化暴露 `knowledgeInjection`（含每个 `kbId` 的 `kbDeleted`）与 `kbDeleted` 判定：读取时按 `kbId` 左连接 `knowledge_base`（该表由 knowledge-base spec 创建，core 不建表、不建外键）；行不存在或表不存在时 `kbDeleted=true`，历史记录永不改写。
+  2. **A102（网关签名 additive 扩展）**：`AiGateway.complete(session_id, model_id, prepared, *, temperature=None, max_tokens=None, injection: InjectionSnapshot | None = None)`。缺省 `None` 时行为、记录与事件与现状完全一致；非空时在插入 `running` 记录的同事务写入四个列，并追加 `session_event(type="knowledge_injection")`。`InjectionSnapshot` 只含标识与字符数，不含正文。
+  3. **A103 B（唯一调用入口）**：不新增 `/knowledge-injection/calls` 端点。core 的调用端点为 `POST /api/v1/sessions/{sessionId}/ai/complete`（取代此前 tech-design 草案中的 `POST /sessions/{sessionId}/calls`，后者尚未实现），请求体在 `{prompt, temperature?, maxTokens?}` 基础上可选接受 `knowledgeRefs` 与 `confirmInvalidCodes`。core 在发起前调用 knowledge-base 的进程内服务（`KnowledgeInjectionService.prepare_for_call(...)`）做失效重校验、组装与字符预算；该服务由 knowledge-base spec 提供，core 通过 `core.ports.InjectionPreparer` 协议解耦并允许注册，未安装且请求携带引用时返回 409 `knowledge_unavailable`。
+  4. **错误语义**：`knowledge_invalid_entries`（409，失效集与确认集不精确相等）、`knowledge_injection_empty`（409，确认后有效集为空）、`prompt_budget_exceeded`（400，超过 `AW_PROMPT_MAX_CHARS`）均在发起外部请求前返回，不写 AiCallRecord；`injection_snapshot_mismatch`（400）表示 `prepared` 长度与快照字符数不一致，同样不写记录。
+  5. **迁移顺序**：core 新增 revision `0006_knowledge_injection`（现有 head 为 `0005`）；knowledge-base 的迁移从 `0007` 起，原计划的 `0006` 作废。二者在同一 Alembic 线性树上，`0006` 必须先于 `0007` 应用；core 的 `0006` 不引用 `knowledge_base` 表。
+- **来源**：新增（2026-11-18 11:23:27 用户原话「A101 A、A102 A、A103 B」；knowledge-base spec 的 OQ-ARCH-101/102/103 同源）
+- **状态**：✅ 已确认（2026-11-18 用户拍板；tech-design 文档因该扩展待用户重新确认，不随本条自动视为已确认）
+- **理由**：注入留痕必须与 `running` 记录同事务落库，否则进程崩溃会丢「这次调用用过哪些知识库」；迁移与列归 core 可避免两套迁移树争抢同一张表；唯一调用入口避免「勾选知识库时改走另一个端点」造成的鉴权、错误码与前端路径分裂。
+- **影响**：core 需新增 `core/ports.py` 与可选注册机制；core 的 pytest 需用假 `InjectionPreparer` 覆盖 409/400 分支；knowledge-base 的注入正文与失效判定逻辑由其自身 spec 覆盖，core 不重复实现；`kbDeleted` 依赖可选表，查询需兼容表不存在（测试环境未装 knowledge-base 时按 true 处理）。
+- **取代**：无（`POST /sessions/{sessionId}/calls` 是 tech-design 草案路径，尚未实现，按本 ADR 统一为 `/ai/complete`）
+
+### ADR-043：依赖版本核实记录（FastAPI 0.163.2 / SQLAlchemy 2.1.9）
+
+- **背景**：实现侧对依赖版本先后给出两次错误结论：先报 FastAPI 为 0.162.5，再报「SQLAlchemy 2.1 在目标环境不可用」。经编排者运行时核实，两次结论均不成立，已由实现侧更正。
+- **核实结果**：`uv lock` / `uv sync` 实装 **SQLAlchemy 2.1.9**（`pyproject.toml` 为 `sqlalchemy>=2.1.9,<2.2`）；`pytest` 36 passed；`alembic upgrade head` 在 SQLite 上 `0001` → `0006` 全部通过；`aw.py verify` 36 通过 / 0 失败；生产代码零改动。FastAPI 为 **0.163.2**（`fastapi.__version__` 与 `uv.lock` 一致，`pyproject` 约束 `>=0.162,<0.164`）；pydantic-settings 为 **2.16.3**。
+- **结论**：**本次没有任何依赖降级**。技术栈与 ADR-001 / ADR-003 / ADR-015 / ADR-016 的原始决策一致，无需修改任何决策或实现约束。
+- **来源**：编排者运行时核实（2026-11-18）
+- **状态**：记录性 ADR，无决策变更
+- **影响**：仅澄清版本事实；`technical-design/docs/context.md`、`tasks.md`、`requirements.md`、`docs/file-structure.md`、`design.md` 的版本号与仓库实际安装版本一致。
+- **取代**：无
+
 ## 约束条件
 
 - 交付形态为 Web 应用（浏览器访问，前后端同源部署）；本 spec 仅覆盖 `workbench-core` 域。
@@ -361,7 +387,10 @@
 - repo-integration 扩展本 spec 现有设计：复用凭证加密（AES-256-GCM + `AW_ENCRYPTION_KEY` + 掩码）、错误体 `{code, message, details[], requestId}`、`limit` + `cursor` 分页、`require_session` 认证前置与双方言纪律（ADR-041）。
 - `AW_PROMPT_MAX_CHARS=200000` 只在本 spec 定义一次；knowledge-base 的注入正文字符口径沿用同一常量（ADR-041）。
 - 未安装任何 AlonWorkflow pack（`.aw/install.json` 的 `packs` 为空），未套用 pack 专属约定。
+- 知识库注入留痕归 core：`ai_call_record` 的 `knowledge_injection` / `injected_chars` / `prompt_chars` / `total_chars` 与 `session_event.type=knowledge_injection` 由 core 迁移与写入；`knowledge_base` 表由 knowledge-base spec 创建，core 只按 `kbId` 左连接、不建外键（ADR-042）。
+- 迁移顺序：core `0006_knowledge_injection` 先于 knowledge-base 的 `0007`；原 knowledge-base `0006` 作废。
+- 调用入口唯一：`POST /api/v1/sessions/{sessionId}/ai/complete`；请求可选携带 `knowledgeRefs` / `confirmInvalidCodes`，不新增 `/knowledge-injection/calls` 端点。
 
 ## 状态
 
-architecture-locked（2026-11-18 10:24:32 用户重新确认并恢复锁定；2026-11-17 19:49 首次锁定、20:09:45 与 20:27:18 两轮确认记录保留于文首；ADR-003 / ADR-008 已被取代、原文保留；ADR-029 ~ ADR-040 已迁出至 knowledge-base spec、编号保留；ADR-041 记录拆分后的对外契约与仓库集成复用点）
+architecture-locked（2026-11-18 10:24:32 用户重新确认并恢复锁定；2026-11-17 19:49 首次锁定、20:09:45 与 20:27:18 两轮确认记录保留于文首；ADR-003 / ADR-008 已被取代、原文保留；ADR-029 ~ ADR-040 已迁出至 knowledge-base spec、编号保留；ADR-041 记录拆分后的对外契约与仓库集成复用点；2026-11-18 11:23:27 追加 ADR-042 跨 spec 知识库注入扩展，其对应的 tech-design 文档待用户重新确认；2026-11-18 追加 ADR-043 依赖版本核实记录（FastAPI 0.163.2 / SQLAlchemy 2.1.9 / pydantic-settings 2.16.3，无降级）

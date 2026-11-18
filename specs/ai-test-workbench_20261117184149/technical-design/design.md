@@ -2,6 +2,7 @@
 
 > 阶段：tech-arch（步骤 1–3.5）。
 > **文档状态：architecture-locked — 2026-11-18 10:24:32 用户重新确认（`approvals.md`，用户原话「全部确认」）。**
+> 2026-11-18 依赖版本核实：FastAPI 0.163.2、SQLAlchemy 2.1.9、pydantic-settings 2.16.3，均为实际安装版本，无降级（见 ADR-043）。
 > 依据：`technical-design/answers.md` 2026-11-17 19:49:04（STK-001~004 全 A）；2026-11-17 19:52:50 用户原话「打断一下，这不是本地部署的，所以需要mysql。不能只是sqllite。」与同节三项选择（MySQL 生产 + SQLite 开发/测试、加单用户登录、compose 默认并支持外接 MySQL）；2026-11-17 20:50:31 拆 3 个 spec（workbench-core / knowledge-base / repo-integration）。
 > 现行结论：本 spec 只覆盖 `workbench-core`。Python/FastAPI + React；**MySQL 8.4 LTS 生产 + SQLite 开发/测试**；**单用户登录**（Argon2id + HttpOnly Cookie 会话）；**docker-compose 默认交付且支持外接 MySQL**。知识库部分（ADR-029 ~ ADR-040、决策 11 ~ 13、`knowledge_bases` / `knowledge_entries` 表与相关端点）已整体迁出至 `specs/knowledge-base_20261117205011`，技术原文见该 spec 的 `_handoff/from-tech-arch.md`；仓库集成迁出至 `specs/repo-integration_20261117205011`，其架构**扩展本 spec 现有设计**（复用凭证加密、错误体与分页，见 ADR-041）。
 > 决策见 `docs/architecture-decisions.md`（ADR-003 / ADR-008 已被 ADR-015 / ADR-027 取代，原文保留；ADR-029 ~ ADR-040 编号保留并标注已迁出）。
@@ -19,7 +20,7 @@
 | 数据获取 | TanStack Query | 5.107.2 (MIT) | 新增 | 列表/时间线的 loading / empty / error 三态与失效重取 |
 | 样式 / 无障碍原语 | CSS 变量 + CSS Modules；Radix Primitives | radix-ui 1.8.1 (MIT) | 新增 | 直接落地 interaction-design 的 token；Dialog/Tabs/Toast 用无样式原语保证焦点管理 |
 | 后端运行时 | Python | 3.12+（本机 3.14.7） | 新增 | 官方 openai/anthropic SDK 与加密、测试生态成熟 |
-| 后端框架 | FastAPI + Uvicorn | fastapi 0.163.1 (MIT) / uvicorn 0.54.0 (BSD-3) | 新增 | 类型化 HTTP 契约、自动 OpenAPI、异步 IO |
+| 后端框架 | FastAPI + Uvicorn | fastapi 0.163.2 (MIT) / uvicorn 0.54.0 (BSD-3) | 新增 | 类型化 HTTP 契约、自动 OpenAPI、异步 IO |
 | 数据校验 | Pydantic | 2.14.3 (MIT) | 新增 | 请求/响应边界校验，错误逐字段（AC-003-2） |
 | ORM / 迁移 | SQLAlchemy + Alembic | 2.1.9 / 1.20.1（均 MIT） | 新增 | 异步 ORM，一套模型跑两套方言；迁移按方言生成 DDL |
 | 数据库（生产） | MySQL 8.4 LTS | 镜像 `mysql:8.4.13`；兼容 8.0+ | 新增 | 用户要求非本地部署；事务、并发与运维工具成熟 |
@@ -41,7 +42,7 @@
 
 本轮新增的技术点全部先核实版本与维护状态，不凭记忆写版本号：
 
-- **PyPI JSON**（`curl -s https://pypi.org/pypi/<包>/json`）：`asyncmy` 0.2.18（2026-11-07，Apache-2.0，含 cp313/cp314 的 macOS、manylinux、musllinux wheel）；`aiomysql` 0.3.2（2025-10-22，MIT，纯 Python）；`pymysql` 1.2.4（2026-11-09）；`aiosqlite` 0.22.1；`argon2-cffi` 25.1.0（MIT；绑定 `argon2-cffi-bindings` 26.2.0 有 cp314 wheel）；`bcrypt` 5.0.0；`sqlalchemy` 2.1.9（2026-11-16，requires-python ≥3.11）；`alembic` 1.20.1；`testcontainers` 4.15.0（2026-07-24）；`pydantic-settings` 2.16.3（2026-11-13）。
+- **PyPI JSON**（`curl -s https://pypi.org/pypi/<包>/json`）：`asyncmy` 0.2.18（2026-11-07，Apache-2.0，含 cp313/cp314 的 macOS、manylinux、musllinux wheel）；`aiomysql` 0.3.2（2025-10-22，MIT，纯 Python）；`pymysql` 1.2.4（2026-11-09）；`aiosqlite` 0.22.1；`argon2-cffi` 25.1.0（MIT；绑定 `argon2-cffi-bindings` 26.2.0 有 cp314 wheel）；`bcrypt` 5.0.0；`sqlalchemy` 2.1.9（2026-11-16，requires-python ≥3.11；2026-11-18 经 `uv lock`/`uv sync` 实装复核）；`alembic` 1.20.1；`testcontainers` 4.15.0（2026-07-24）；`pydantic-settings` 2.16.3（2026-11-13）。
 - **Docker Hub tags API**（`hub.docker.com/v2/repositories/library/mysql/tags`）：当前标签含 `8.4.13` / `9.7.4` / `26.10.0` 与 `lts`；选 8.4 LTS 作为生产基线。
 - **Context7**：`/sqlalchemy/sqlalchemy`（10,372 stars）确认异步 MySQL 方言用法为 `create_async_engine("mysql+asyncmy://…?charset=utf8mb4")`；`/hynek/argon2-cffi`（verified，630 stars，2026-11-02 更新）确认 `PasswordHasher` / `Parameters` 用法与 RFC 9106 低内存默认档；`argon2.profiles.get_default_parameters()` 按平台给出兼容参数。
 - **复用结论**：MySQL 驱动、连接池、迁移、口令哈希全部用成熟库，不自研；未用 `fastapi-users` / `Authlib`（单账号、无注册与 OAuth，带来的用户表与找回流程用不上）；未用 `slowapi`（失败计数要按 AC-011-4 跨重启保持并可清零，放数据库比进程内存更可验证）。
@@ -55,7 +56,7 @@
 
 | 候选 | 版本现状 | 优点 | 代价 |
 |------|---------|------|------|
-| A. Python 3.12+ / FastAPI | fastapi 0.163.1、sqlalchemy 2.1.9 | 官方 openai/anthropic SDK 同步最及时；pytest 与现有 `aw verify` 门禁天然一致；加密、上传、迁移库成熟 | 需同时装 Python 与 Node 两套工具链 |
+| A. Python 3.12+ / FastAPI | fastapi 0.163.2、sqlalchemy 2.1.9 | 官方 openai/anthropic SDK 同步最及时；pytest 与现有 `aw verify` 门禁天然一致；加密、上传、迁移库成熟 | 需同时装 Python 与 Node 两套工具链 |
 | B. Node.js 24 / NestJS | Node 24.21.0、@nestjs/core 12.5.1、fastify 5.12.8、drizzle-orm 0.45.4 | 前后端同语言；内置 `crypto` 与 node:sqlite；单工具链 | 推荐 Fastify/Express + Drizzle 也可行；NestJS 对单用户自托管偏重；需改 `.aw/config.json` 的 pytest test 命令 |
 | C. Go 1.2x / Chi | 单二进制、低内存、无运行时依赖 | 生态与 AI SDK 需自行封 HTTP，前端仍需 Node 构建；团队调试成本更高 | 需改 `.aw/config.json` test 命令 |
 

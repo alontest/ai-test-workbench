@@ -3,6 +3,9 @@
 > 阶段：tech-tasks。来源：`requirements.md`（AC-TECH）、`change-spec.md`、`docs/database-schema.md`、`docs/api-spec.md`、`docs/component-tree.md`、`docs/architecture-decisions.md`、`interaction-design/docs/context.md`。
 > 依据：`approvals.md` 末行 `tech-design · 2026-11-18 10:47:44 · 确认`；OQ-TD-01 ~ 05 全按 A（`answers.md` 2026-11-18 10:44:10「全按建议」）。
 > 本体：`specs/ai-test-workbench_20261117184149/ontology-slices/tech-tasks.md` 不存在（项目无 `ontology-work/views/index.json`），任务不附 `ENT-` / `BR-` 编号；实体名沿用 `_shared/domain-map.md`（Session / SessionEvent / Artifact / AiCallRecord / ProjectContext / ProviderConfig / ModelBinding）。
+> OQ-TT-01 ~ 04 已于 2026-11-18 确认（`answers.md`）：GitHub Actions + 公开仓库、30 个端点、Vitest 进必过门禁（Playwright 不进）、备份手工演练。
+> **文档状态：draft — 2026-11-18 因跨 spec 知识库注入扩展（A101 / A102 / A103 B）变更，待用户重新确认。** 变更前任务已于 2026-11-18 确认；新增 TASK-TD-051 ~ 055 与 TC-064 ~ TC-070。
+> 2026-11-18 依赖版本核实：FastAPI 0.163.2、SQLAlchemy 2.1.9、pydantic-settings 2.16.3，均为实际安装版本，无降级（见 ADR-043）。
 > 本文件是 aw-implementer 的唯一任务来源；复选框行不得改写。
 
 ## 任务分组
@@ -20,7 +23,7 @@
 目标：跑通「登录 → 建项目 → 配提供商/模型 → 建会话 → 贴文本 → 发起调用」，包含上传与时间线。批次结束即可独立验收（AC-TECH-4）。
 
 - 依赖：批次 A 全部完成；019/020 → 021；022/023 → 024；025/026 → 027 → 028/029；030/031 → 033/034；035/036 → 037/038；039/040；041 依赖 019 ~ 040 的接口与用例。
-- 出口条件：TC-001 ~ TC-050、TC-062 全绿（SQLite 默认；MySQL 由 CI job 2 复跑）；`python3 .aw/aw.py verify` 可识别全部 TC。
+- 出口条件：TC-001 ~ TC-045、TC-049、TC-050、TC-062 全绿（SQLite 默认；MySQL 由 CI job 2 复跑）；`python3 .aw/aw.py verify` 可识别全部 TC；前端 `npm run test -- --run` 通过（CI job 3）。
 
 ### 批次 C：调用查询、六入口与交付（TASK-TD-042 ~ TASK-TD-050）
 
@@ -30,12 +33,20 @@
 - 出口条件：TC-046 ~ TC-048、TC-031、TC-051 ~ TC-056 全绿；compose 启动与备份脚本按 `docs/dev-setup.md` 手工验收通过（[no-test] 项）。
 - 批次 C 不阻塞批次 B 的独立验收。
 
+### 批次 D：跨 spec 知识库注入扩展（TASK-TD-051 ~ TASK-TD-055）
+
+目标：按 A101 / A102 / A103 B 为 core 增加知识库注入留痕、唯一调用入口与 `kbDeleted` 序列化，作为确认后的 additive 变更；知识库自身的导入 / 检索 / 失效判定 / 组装逻辑由 knowledge-base spec 实现，本批次不重复造。
+
+- 依赖：批次 A 的 008/009（迁移与模型）、批次 B 的 034/039/040（调用链与时间线）完成；051 → 052 → 053/054；055 依赖 051 ~ 053。
+- 出口条件：TC-064 ~ TC-070 全绿（pytest；SQLite 默认，MySQL CI job 复跑迁移）；core 迁移 head 变为 `0006`，knowledge-base 的 `0007` 不在本 spec 实现。
+- 兼容要求：`injection=None` 时既有 TC-041 ~ TC-050、TC-057 必须原样通过。
+
 ## 任务清单
 
-- [ ] TASK-TD-001：配置后端依赖与工具链 [no-test]
+- [x] TASK-TD-001：配置后端依赖与工具链 [no-test]
   - **描述**：在 `pyproject.toml` 写入后端运行与测试依赖，删除占位 `dependencies = []`；锁定版本并生成 `uv.lock`。
-  - **涉及文件**：`pyproject.toml`、`uv.lock`、`.env.example`
-  - **具体操作**：requires-python `>=3.12`；依赖 fastapi 0.163.x、uvicorn 0.54.x、pydantic 2.14.x、pydantic-settings 2.16.x、SQLAlchemy 2.1.x、alembic 1.20.x、aiosqlite 0.22.x、asyncmy 0.2.18、argon2-cffi 25.1.x、cryptography 50.x、openai 3.52.x、anthropic 2.9.x、python-multipart 0.0.34；dev 依赖 pytest、pytest-asyncio、httpx、testcontainers（可选）；pytest `testpaths=["tests"]`、`pythonpath=["src"]`、`asyncio_mode="auto"`；`.env.example` 列出 `AW_ADMIN_PASSWORD`、`AW_ENCRYPTION_KEY`、`AW_DATABASE_URL`、`AW_DATA_DIR`、`AW_PUBLIC_ORIGIN`、`AW_COOKIE_SECURE`、`AW_TRUST_PROXY`、`AW_ALLOW_REMOTE`、`AW_AI_MAX_CONCURRENCY`、`AW_PROMPT_MAX_CHARS`（值写占位，不写真实密钥）。
+  - **涉及文件**：`pyproject.toml`、`uv.lock`、`.env.example`、`.gitignore`
+  - **具体操作**：requires-python `>=3.12`；依赖 fastapi 0.163.2、uvicorn 0.54.x、pydantic 2.14.x、pydantic-settings 2.16.3、SQLAlchemy 2.1.9、alembic 1.20.x、aiosqlite 0.22.x、asyncmy 0.2.18、argon2-cffi 25.1.x、cryptography 50.x、openai 3.52.x、anthropic 2.9.x、python-multipart 0.0.34；dev 依赖 pytest、pytest-asyncio、httpx、testcontainers（可选）；pytest `testpaths=["tests"]`、`pythonpath=["src"]`、`asyncio_mode="auto"`；`.env.example` 列出 `AW_ADMIN_PASSWORD`、`AW_ENCRYPTION_KEY`、`AW_DATABASE_URL`、`AW_DATA_DIR`、`AW_PUBLIC_ORIGIN`、`AW_COOKIE_SECURE`、`AW_TRUST_PROXY`、`AW_ALLOW_REMOTE`、`AW_AI_MAX_CONCURRENCY`、`AW_PROMPT_MAX_CHARS`（值写占位，不写真实密钥）；`.gitignore` 补齐 `.env`、`data/`、`web/node_modules/`、`web/dist/`、`*.db`、`__pycache__/`、`.pytest_cache/`、`coverage/`、`playwright-report/` 与编辑器临时文件（OQ-TT-01 已确认）。
   - **优先级**：P0
   - **复杂度**：S（<1d）
   - **依赖**：无
@@ -45,7 +56,7 @@
   - **状态**：pending
   - 免测理由：纯依赖清单与工具配置，无运行时行为；`.aw/config.json` 的 pytest 命令保持不变。
 
-- [ ] TASK-TD-002：实现配置模块与启动期环境校验
+- [x] TASK-TD-002：实现配置模块与启动期环境校验
   - **描述**：用 pydantic-settings 集中声明 `AW_*` 变量与默认值，提供 `Settings` 单例与校验错误信息。
   - **涉及文件**：`src/workbench/config.py`、`tests/test_config.py`
   - **具体操作**：`AW_ENCRYPTION_KEY` 必须为 32 字节 base64；`AW_ADMIN_PASSWORD` 非空；`AW_DATABASE_URL` 未设置时回退 `sqlite+aiosqlite:///<AW_DATA_DIR>/workbench.db`；`AW_DATA_DIR` 默认 `./data`；`AW_COOKIE_SECURE` ∈ auto/true/false；`AW_AI_MAX_CONCURRENCY` 默认 4；`AW_PROMPT_MAX_CHARS` 默认 200000。缺失/非法时抛可读错误（由启动自检转成非 0 退出）。用例 `test_tc009_missing_admin_password_refuses_start`、`test_tc057_frozen_settings_contract`。
@@ -57,7 +68,7 @@
   - **估算**：6h [逻辑]，不确定性低
   - **状态**：pending
 
-- [ ] TASK-TD-003：定义全局常量与 6 入口配置
+- [x] TASK-TD-003：定义全局常量与 6 入口配置
   - **描述**：集中阈值常量，并用代码常量定义 6 个入口（唯一来源，驱动 planned/live）。
   - **涉及文件**：`src/workbench/core/constants.py`、`src/workbench/core/entrances.py`、`tests/test_entrances.py`
   - **具体操作**：常量含 200000 字符、10MB、10 个、120s、10s、8h、5 次/5 分钟、预览 262144 字节、同名改名上限 100；入口 key 固定为 `case-library` / `bug-analysis` / `log-triage` / `sql-analysis` / `regression-list` / `test-report`，各含 name、description、domain、status；本期全部 `planned`。用例 `test_tc051_entrances_has_six_items`、`test_tc056_entrance_status_is_config_driven`。
@@ -69,7 +80,7 @@
   - **估算**：3h [样板]，不确定性低
   - **状态**：pending
 
-- [ ] TASK-TD-004：实现 AES-256-GCM 加解密与密钥掩码
+- [x] TASK-TD-004：实现 AES-256-GCM 加解密与密钥掩码
   - **描述**：密文格式 `v1:<nonce_b64>:<ciphertext_b64>`；提供 `encrypt` / `decrypt` / `mask_secret`，解密失败抛统一异常。
   - **涉及文件**：`src/workbench/core/crypto.py`、`tests/test_crypto.py`
   - **具体操作**：每次加密随机 12 字节 nonce；`decrypt` 校验版本前缀、base64 与 GCM tag，失败抛 `CredentialUnavailable`（不含密文）；`mask_secret("sk-abcdef1234")` → `sk-****1234`；用例覆盖往返、篡改、格式错误、错误密钥、掩码边界。用例 `test_tc017_crypto_roundtrip_and_tamper`。
@@ -81,7 +92,7 @@
   - **估算**：5h [逻辑]，不确定性低
   - **状态**：pending
 
-- [ ] TASK-TD-005：实现管理员口令哈希与校验
+- [x] TASK-TD-005：实现管理员口令哈希与校验
   - **描述**：用 argon2-cffi 默认 RFC 9106 低内存参数封装 `hash_password` / `verify_password`。
   - **涉及文件**：`src/workbench/core/password.py`、`tests/test_password.py`
   - **具体操作**：只通过 `PasswordHasher.verify` 比较，不手写字符串比较；hash 编码串整体存储；用例覆盖正确/错误口令、非法编码串返回 False。用例 `test_tc002_password_verify_contract`。
@@ -93,7 +104,7 @@
   - **估算**：3h [逻辑]，不确定性低
   - **状态**：pending
 
-- [ ] TASK-TD-006：实现日志脱敏过滤器
+- [x] TASK-TD-006：实现日志脱敏过滤器
   - **描述**：统一过滤 Authorization、`sk-` 密钥、Cookie、口令字段，提供 `redact(text)` 与 logging Filter。
   - **涉及文件**：`src/workbench/core/redaction.py`、`tests/test_redaction.py`
   - **具体操作**：对 `Authorization`、`Cookie`、`apiKey`、`password`、`token` 键值替换为 `[REDACTED]`；截断超长文本；用例断言 JSON 日志、异常消息、AiCallRecord 预览均无原文。用例 `test_tc063_logs_and_responses_never_contain_secrets`。
@@ -105,7 +116,7 @@
   - **估算**：4h [逻辑]，不确定性中（需覆盖 SDK 异常文本）
   - **状态**：pending
 
-- [ ] TASK-TD-007：搭建 SQLAlchemy Base 与双方言引擎
+- [x] TASK-TD-007：搭建 SQLAlchemy Base 与双方言引擎
   - **描述**：声明 Declarative Base、naming_convention、类型助手；按 URL 选择 SQLite/MySQL 引擎与连接池。
   - **涉及文件**：`src/workbench/db/base.py`、`src/workbench/db/engine.py`、`tests/test_engine.py`
   - **具体操作**：SQLite 用 `NullPool` + WAL + `busy_timeout=5000`，测试内存库可用 `StaticPool`；MySQL 用 `AsyncAdaptedQueuePool`（pool_size=5、max_overflow=5、pool_recycle=1800、pool_pre_ping=True、pool_timeout=10）与 `isolation_level="READ COMMITTED"`；类型助手含 `pk_type()`（BigInteger + sqlite Integer 变体）、`medium_text()`。用例 `test_tc058_engine_creation_both_dialects`。
@@ -117,7 +128,7 @@
   - **估算**：5h [逻辑]，不确定性低
   - **状态**：pending
 
-- [ ] TASK-TD-008：实现 10 张表的 ORM 模型
+- [x] TASK-TD-008：实现 10 张表的 ORM 模型
   - **描述**：按 `database-schema.md` 逐表建模块，含字段、CHECK、唯一、索引、外键与级联。
   - **涉及文件**：`src/workbench/db/models/{admin_credential,login_session,login_attempt,project_context,provider_config,model_binding,analysis_session,session_event,artifact,ai_call_record}.py`、`src/workbench/db/models/__init__.py`
   - **具体操作**：主键用 `pk_type()`；时间 `DateTime`；`payload` 用 `sa.JSON`；长短文本用 `medium_text()`；唯一键落 `*_key` 且列级 `utf8mb4_bin`；枚举列全部 `CheckConstraint`；`analysis_session` 删除级联 event/artifact/call，其余外键 `RESTRICT`；`__table_args__` 写 InnoDB/utf8mb4 参数。用例 `test_tc058_models_match_schema_metadata`。
@@ -129,7 +140,7 @@
   - **估算**：12h [逻辑]，不确定性低
   - **状态**：pending
 
-- [ ] TASK-TD-009：建立 Alembic 单一迁移树与 5 个初始 revision
+- [x] TASK-TD-009：建立 Alembic 单一迁移树与 5 个初始 revision
   - **描述**：`alembic.ini` + `migrations/env.py`（双方言、batch 模式、compare_type）+ `0001_auth` ~ `0005_ai_call_record`。
   - **涉及文件**：`alembic.ini`、`migrations/env.py`、`migrations/script.py.mako`、`migrations/versions/0001_auth.py`、`0002_project_provider_model.py`、`0003_session_event.py`、`0004_artifact.py`、`0005_ai_call_record.py`
   - **具体操作**：一个 revision 只做一类表；SQLite `render_as_batch=True`；每个 revision 提供 `downgrade()`；不在迁移中写业务数据；命名约定与 ORM 一致。
@@ -141,7 +152,7 @@
   - **估算**：10h [逻辑]，不确定性中（MySQL DDL 细节）
   - **状态**：pending
 
-- [ ] TASK-TD-010：编写迁移与双方言约束测试
+- [x] TASK-TD-010：编写迁移与双方言约束测试
   - **描述**：从空库升级到 head；`AW_TEST_DATABASE_URL` 存在时同一用例在 MySQL 复跑。
   - **涉及文件**：`tests/test_db_migrations.py`
   - **具体操作**：断言 `alembic_version == head`；断言 10 张表存在；验证唯一（项目名大小写、模型名、文件名）、CHECK（status/entrance/protocol）、级联删除、`RESTRICT`；MySQL 下补验 `utf8mb4_bin` 行为；用例 `test_tc058_migrate_empty_db_to_head`、`test_tc059_constraints_on_test_database`。
@@ -153,7 +164,7 @@
   - **估算**：6h [集成]，不确定性中（本地无 MySQL 时跳过并标注）
   - **状态**：pending
 
-- [ ] TASK-TD-011：搭建 FastAPI 应用骨架与统一错误/分页
+- [x] TASK-TD-011：搭建 FastAPI 应用骨架与统一错误/分页
   - **描述**：`create_app()`、路由注册、静态托管、异常处理器、`requestId`、游标编解码、Origin 校验依赖。
   - **涉及文件**：`src/workbench/main.py`、`src/workbench/api/errors.py`、`src/workbench/api/deps.py`、`src/workbench/api/v1/router.py`、`src/workbench/api/pagination.py`、`tests/test_api_skeleton.py`
   - **具体操作**：错误体 `{code,message,details[],requestId}`；`ApiError` 映射表；请求体校验失败 400 `validation_error` 逐字段；`limit` 1–100（事件 1–200）；base64url 游标编码/解码；非安全方法校验 Origin/Referer 命中 `AW_PUBLIC_ORIGIN`，否则 403 `forbidden_origin`；SPA fallback 到 `index.html`。用例 `test_tc060_error_envelope_and_cursor`、`test_tc061_origin_check_rejects_cross_site`。
@@ -165,7 +176,7 @@
   - **估算**：8h [逻辑]，不确定性低
   - **状态**：pending
 
-- [ ] TASK-TD-012：实现制品文件存储适配器
+- [x] TASK-TD-012：实现制品文件存储适配器
   - **描述**：临时文件写入、原子移动、包含校验、trash、孤儿扫描。
   - **涉及文件**：`src/workbench/adapters/fs/storage.py`、`tests/test_storage.py`
   - **具体操作**：`artifact_dir(session_id)`；`safe_artifact_path` resolve 后 `is_relative_to(session_dir)` 且链上无符号链接，否则抛 not found；`move_to_trash` 用 `os.replace`；`scan_orphans(max_age)` 清理 `.tmp` / `.trash`；存储名 `<uuid4hex>.<ext>`；用例覆盖 `../../x`、`..%2F`、符号链接、改名与清理。用例 `test_tc039_path_traversal_rejected`、`test_tc040_storage_cleanup_on_failure`。
@@ -177,7 +188,7 @@
   - **估算**：8h [逻辑]，不确定性中（跨平台路径行为）
   - **状态**：pending
 
-- [ ] TASK-TD-013：实现启动自检与后台清理
+- [x] TASK-TD-013：实现启动自检与后台清理
   - **描述**：按 ADR-020 顺序 fail-fast；提供 `merge_running_calls()` 与清理任务入口。
   - **涉及文件**：`src/workbench/startup.py`、`tests/test_startup.py`
   - **具体操作**：顺序：加密口令 → 管理员口令 → 连接串 → 数据库连通（30s 退避）→ `alembic_version == head` → 凭据转存/轮换 → 归并 `running` → 清理过期登录会话与失败计数；任一步失败非 0 退出；清理每小时一次且失败只记日志；归并逻辑在应用层算 `latency_ms`，同事务更新记录、追加 `call` 事件、刷新会话 `updated_at`。用例 `test_tc049_startup_merges_running_calls`。
@@ -189,7 +200,7 @@
   - **估算**：8h [逻辑]，不确定性中
   - **状态**：pending
 
-- [ ] TASK-TD-014：落地冻结签名 `sessions.create` / `sessions.append_event`
+- [x] TASK-TD-014：落地冻结签名 `sessions.create` / `sessions.append_event`
   - **描述**：按 `change-spec.md` §3.1 实现 TypedDict、`DomainError`、创建前置校验与事件写入。
   - **涉及文件**：`src/workbench/services/sessions.py`、`src/workbench/services/errors.py`、`src/workbench/db/repositories/sessions.py`、`src/workbench/db/repositories/events.py`、`tests/test_sessions_service.py`
   - **具体操作**：`create(*, project_id, entrance_key, title, model_id) -> SessionView`；校验项目存在、模型启用、提供商启用、入口合法、标题 1–200；失败抛 `project_not_found` / `model_not_found` / `model_disabled` / `provider_disabled` / `validation_error` 且不写行；`append_event(session_id, event_type, payload, *, actor="local-user")` 要求会话 `in_progress`，同事务写事件并刷新 `updated_at`；payload 按类型校验必需键。用例 `test_tc057_frozen_session_signatures`、`test_tc026_create_session_contract`。
@@ -201,7 +212,7 @@
   - **估算**：10h [逻辑]，不确定性低
   - **状态**：pending
 
-- [ ] TASK-TD-015：落地冻结签名 `artifacts.save`
+- [x] TASK-TD-015：落地冻结签名 `artifacts.save`
   - **描述**：按 `change-spec.md` §3.2 实现上传校验、落盘、同名改名、行与事件同事务。
   - **涉及文件**：`src/workbench/services/artifacts.py`、`src/workbench/db/repositories/artifacts.py`、`tests/test_artifacts_service.py`
   - **具体操作**：`save(session_id, *, file_name, source, claimed_content_type=None, kind="upload") -> ArtifactView`；白名单扩展名与 ≤10MB（generated 同限）；流式写 `.tmp/<uuid>`；同名 `stem-N.ext`；原子移动到 `sessions/<session_id>/<uuid4hex>.<ext>`；插入行 + `append_event`；任一步失败清理临时/已移动文件且不留 DB 行；mime 由扩展名映射。用例 `test_tc057_frozen_artifact_signature`、`test_tc036_save_upload_success`、`test_tc038_duplicate_name_renamed`。
@@ -213,7 +224,7 @@
   - **估算**：10h [逻辑]，不确定性中
   - **状态**：pending
 
-- [ ] TASK-TD-016：落地冻结签名 `AiGateway.complete` 与适配器协议
+- [x] TASK-TD-016：落地冻结签名 `AiGateway.complete` 与适配器协议
   - **描述**：实现 `AIResult`、`ProtocolAdapter` 协议、假适配器、并发信号量、记录生命周期与超时/重试。
   - **涉及文件**：`src/workbench/services/ai_gateway.py`、`src/workbench/adapters/ai/base.py`、`src/workbench/adapters/ai/fake.py`（测试用）、`tests/test_ai_gateway.py`
   - **具体操作**：`complete(session_id, model_id, prepared, *, temperature=None, max_tokens=None)`；prepared 1–200000；前置校验在写记录前；获取信号量后插入 `running`；每次尝试 `asyncio.timeout(120)`；仅网络错误与 5xx 重试 1 次（退避 2s）；终结 `success/failed/timeout` 并写 `latency_ms/retry_count/error_code/result_text`；同事务追加 `call` 事件；失败抛 `AIError(code,message,call_id,retry_count)`；取消时 `finally` 终结为 `failed(interrupted)`。用例 `test_tc057_frozen_gateway_signature`、`test_tc041_success_records_call`、`test_tc042_upstream_failure_recorded`、`test_tc045_retry_then_timeout`。
@@ -225,7 +236,7 @@
   - **估算**：14h [逻辑]，不确定性中（超时/取消时序）
   - **状态**：pending
 
-- [ ] TASK-TD-017：实现 OpenAI 兼容与 Anthropic 协议适配器
+- [x] TASK-TD-017：实现 OpenAI 兼容与 Anthropic 协议适配器
   - **描述**：用官方 SDK 发起非流式请求，把 SDK 异常映射为统一错误码。
   - **涉及文件**：`src/workbench/adapters/ai/openai_compatible.py`、`src/workbench/adapters/ai/anthropic.py`、`tests/test_ai_adapters.py`
   - **具体操作**：OpenAI 兼容用 `base_url` + `api_key`；Anthropic 用官方 messages API；统一返回文本与错误分类 `auth|rate_limit|server_error|timeout|unreachable|invalid_request`；不记录请求头与密钥；SDK `max_retries=0`（重试由网关控制）。用例用 httpx mock/假客户端覆盖 401/429/500/网络错误/超时。用例 `test_tc019_connection_test_timeout`、`test_tc021_connection_test_error_classification`、`test_tc042_adapter_error_mapping`。
@@ -237,16 +248,16 @@
   - **估算**：12h [集成]，不确定性中（厂商差异，RISK-002）
   - **状态**：pending
 
-- [ ] TASK-TD-018：新增 CI 的 pytest 与 MySQL 两个 job [no-test]
-  - **描述**：新增 CI 流水线，job 1 在 SQLite 上跑 `pytest`，job 2 起 MySQL 8.4 service 并以 `AW_TEST_DATABASE_URL` 跑同一套用例。
-  - **涉及文件**：`.github/workflows/ci.yml`（平台待 OQ-TT-01 确认，默认 GitHub Actions）
-  - **具体操作**：job 1：安装 uv、Python 3.12、`uv sync --frozen`、`python3 .aw/aw.py verify`（或等价 pytest）；job 2：`services.mysql` 镜像 `mysql:8.4`、健康检查、`AW_TEST_DATABASE_URL=mysql+asyncmy://.../workbench_test?charset=utf8mb4`、先 `alembic upgrade head` 再 pytest；两个 job 都上传测试报告；不缓存测试结果。
+- [x] TASK-TD-018：新增 GitHub Actions CI 的三个 job（SQLite / MySQL / 前端 Vitest） [no-test]
+  - **描述**：在 GitHub 公开仓库（OQ-TT-01 已确认）新增 CI：job 1 在 SQLite 上跑 `pytest`，job 2 起 MySQL 8.4 service 并以 `AW_TEST_DATABASE_URL` 跑同一套用例，job 3 跑前端 Vitest 组件单测（OQ-TT-03 已确认为必过门禁）。
+  - **涉及文件**：`.github/workflows/ci.yml`
+  - **具体操作**：job 1 `backend-tests`：checkout、安装 uv、Python 3.12、`uv sync --frozen`、`python3 .aw/aw.py verify`（或等价 pytest）；job 2 `mysql-tests`：`services.mysql` 镜像 `mysql:8.4`、健康检查、`AW_TEST_DATABASE_URL=mysql+asyncmy://.../workbench_test?charset=utf8mb4`、先 `alembic upgrade head` 再 pytest；job 3 `frontend-tests`：Node 22、`cd web && npm ci && npm run test -- --run`。三个 job 都上传测试报告；三个 job 均为必过（分支保护要求全绿）。Playwright E2E 不进必过门禁。
   - **优先级**：P0
   - **复杂度**：S（<1d）
-  - **依赖**：TASK-TD-001、TASK-TD-010
-  - **对应 AC**：AC-TECH-2
-  - **TC**：TC-058、TC-059（由 CI 运行时执行同一批用例）
-  - **估算**：4h [样板]，不确定性中（平台未定）
+  - **依赖**：TASK-TD-001、TASK-TD-010（job 3 在 TASK-TD-021 落地后补入同一 workflow 文件）
+  - **对应 AC**：AC-TECH-2、AC-TECH-3
+  - **TC**：TC-058、TC-059（job 1/2 执行同一批用例）；Vitest 用例标题带 TC 编号但不作为 `aw verify` 的唯一来源
+  - **估算**：6h [样板]，不确定性低
   - **状态**：pending
   - 免测理由：CI 配置本身不产生 pytest 用例；其有效性由流水线实际运行结果验收，本地 `aw verify` 不覆盖。
 
@@ -276,14 +287,14 @@
 
 - [ ] TASK-TD-021：搭建前端 SPA 脚手架、Design Tokens 与通用原子组件
   - **描述**：Vite + React + TS + Router + TanStack Query；tokens.css 映射 design-system；AuthGate、LoginPage、AppShell 与基础 UI 组件。
-  - **涉及文件**：`web/package.json`、`web/vite.config.ts`、`web/tsconfig.json`、`web/index.html`、`web/src/main.tsx`、`web/src/router.tsx`、`web/src/app/{AppShell,AuthGate,Providers}.tsx`、`web/src/styles/tokens.css`、`web/src/components/ui/{Button,Input,Select,Switch,Badge,Loading,Tooltip,FormField,ConfirmDialog,Feedback}.tsx`、`web/src/features/auth/{LoginPage,PasswordField,AuthBanner,useLogin,useLogout}.tsx`、`web/src/lib/api/{client,errors,keys}.ts`
-  - **具体操作**：tokens.css 只声明变量，不新增/改名；API 客户端 `credentials:'same-origin'`，401 统一跳登录；AuthGate 启动调 `/auth/session`，未认证带 `next`；LoginPage 状态 default/submitting/error/locked/expired/logged-out，锁定 `mm:ss` 倒计时；AppShell 侧边栏 248px、顶栏 64px、≤768px 抽屉。前端行为由批次 B 冒烟与人工/Playwright 验证；TC 复用服务端用例，不单独产生 pytest 用例。
+  - **涉及文件**：`web/package.json`、`web/vite.config.ts`、`web/tsconfig.json`、`web/index.html`、`web/src/main.tsx`、`web/src/router.tsx`、`web/src/app/{AppShell,AuthGate,Providers}.tsx`、`web/src/styles/tokens.css`、`web/src/components/ui/{Button,Input,Select,Switch,Badge,Loading,Tooltip,FormField,ConfirmDialog,Feedback}.tsx`、`web/src/features/auth/{LoginPage,PasswordField,AuthBanner,useLogin,useLogout}.tsx`、`web/src/lib/api/{client,errors,keys}.ts`、`web/vitest.config.ts`、`web/src/test/setup.ts`
+  - **具体操作**：配置 Vitest + Testing Library + jsdom（OQ-TT-03 必过门禁），`npm run test` 指向 `vitest run`；tokens.css 只声明变量，不新增/改名；API 客户端 `credentials:'same-origin'`，401 统一跳登录；AuthGate 启动调 `/auth/session`，未认证带 `next`；LoginPage 状态 default/submitting/error/locked/expired/logged-out，锁定 `mm:ss` 倒计时；AppShell 侧边栏 248px、顶栏 64px、≤768px 抽屉。Vitest 用例覆盖认证骨架三态与 AuthGate 跳转，标题带 TC 编号；TC 的 `aw verify` 结果仍由服务端 pytest 用例提供。
   - **优先级**：P0
   - **复杂度**：M（2–3d）
   - **依赖**：TASK-TD-020
   - **对应 AC**：AC-011-1 ~ AC-011-7、AC-001-1
-  - **TC**：TC-001、TC-008、TC-010（服务端断言；UI 状态人工验收）
-  - **估算**：14h [样板]，不确定性中（TS 7 / Vite 8 生态，RISK-007）
+  - **TC**：TC-001、TC-008、TC-010（pytest 断言；Vitest 补 UI 状态证据）
+  - **估算**：16h [样板]，不确定性中（TS 7 / Vite 8 生态，RISK-007）
   - **状态**：pending
 
 - [ ] TASK-TD-022：实现项目服务与仓储
@@ -312,14 +323,15 @@
 
 - [ ] TASK-TD-024：实现项目页面与表单
   - **描述**：项目列表、新建/编辑对话框、重名与校验错误定位。
-  - **涉及文件**：`web/src/features/projects/{ProjectsPage,ProjectList,ProjectForm,ProjectDialog}.tsx`
-  - **具体操作**：三态 loading/empty/error；`FormField` 按 `details[].field` 标错；保存后失效 `['projects']`；不出现删除按钮（OQ-TD-02 A）。
+  - **涉及文件**：`web/src/features/projects/{ProjectsPage,ProjectList,ProjectForm,ProjectDialog,ProjectKnowledgeSummary}.tsx`、`web/src/features/projects/ProjectsPage.test.tsx`
+  - **具体操作**：三态 loading/empty/error；`FormField` 按 `details[].field` 标错；保存后失效 `['projects']`；不出现删除按钮（OQ-TD-02 A）；Vitest 覆盖重名错误定位与空态，用例标题带 `TC-013` / `TC-016`。
+  - **跨 spec 挂载位**：`ProjectKnowledgeSummary` 只预留空占位（渲染 `null` 或空容器，标注 `data-mount="knowledge-summary"`），本期不实现内容、不新增端点、不改数据模型；数据由 `specs/knowledge-base_20261117205011` 的只读接口提供，依赖方为 knowledge-base spec（UXAMB-004，2026-11-18 11:02 用户拍板）。该挂载位不参与 AC-008 系列验收，缺失或为空不影响项目页用例。
   - **优先级**：P0
   - **复杂度**：M（2–3d）
   - **依赖**：TASK-TD-021、TASK-TD-023
   - **对应 AC**：AC-008-1、AC-008-2
-  - **TC**：TC-013、TC-014、TC-016（服务端断言；UI 人工验收）
-  - **估算**：8h [样板]，不确定性低
+  - **TC**：TC-013、TC-014、TC-016（pytest 断言；Vitest 补 UI 状态证据）
+  - **估算**：10h [样板]，不确定性低
   - **状态**：pending
 
 - [ ] TASK-TD-025：实现提供商服务（加密、掩码、连接测试）
@@ -360,26 +372,26 @@
 
 - [ ] TASK-TD-028：实现提供商页面与表单
   - **描述**：列表、新建/编辑对话框、SecretField、ConnectionTestBadge 七态。
-  - **涉及文件**：`web/src/features/providers/{ProvidersPage,ProviderTable,ProviderDialog,ProviderForm,SecretField,ConnectionTestBadge}.tsx`
-  - **具体操作**：掩码展示；编辑留空不改；表单变更后测试结果回到 idle；停用开关乐观更新；错误按字段定位；协议只给两个选项。
+  - **涉及文件**：`web/src/features/providers/{ProvidersPage,ProviderTable,ProviderDialog,ProviderForm,SecretField,ConnectionTestBadge}.tsx`、`web/src/features/providers/ProviderForm.test.tsx`
+  - **具体操作**：掩码展示；编辑留空不改；表单变更后测试结果回到 idle；停用开关乐观更新；错误按字段定位；协议只给两个选项；Vitest 覆盖掩码、留空不改与 ConnectionTestBadge 状态切换，标题带 `TC-017` / `TC-021`。
   - **优先级**：P0
   - **复杂度**：M（2–3d）
   - **依赖**：TASK-TD-021、TASK-TD-026
   - **对应 AC**：AC-003-1 ~ AC-003-4
-  - **TC**：TC-017、TC-018、TC-021（服务端断言；UI 人工验收）
-  - **估算**：12h [样板]，不确定性低
+  - **TC**：TC-017、TC-018、TC-021（pytest 断言；Vitest 补 UI 状态证据）
+  - **估算**：14h [样板]，不确定性低
   - **状态**：pending
 
 - [ ] TASK-TD-029：实现模型页面与表单
   - **描述**：提供商下模型列表、新增/编辑、启停与参数校验。
-  - **涉及文件**：`web/src/features/models/{ModelsPage,ModelTable,ModelDialog,ModelForm}.tsx`
-  - **具体操作**：显示名与模型名分离；temperature 步进与范围提示；重名提示 `model_name_duplicate`；停用后从可选列表消失。
+  - **涉及文件**：`web/src/features/models/{ModelsPage,ModelTable,ModelDialog,ModelForm}.tsx`、`web/src/features/models/ModelForm.test.tsx`
+  - **具体操作**：显示名与模型名分离；temperature 步进与范围提示；重名提示 `model_name_duplicate`；停用后从可选列表消失；Vitest 覆盖参数越界与重名提示，标题带 `TC-023` / `TC-024`。
   - **优先级**：P0
   - **复杂度**：M（2–3d）
   - **依赖**：TASK-TD-021、TASK-TD-027
   - **对应 AC**：AC-004-1 ~ AC-004-3
-  - **TC**：TC-023、TC-024（服务端断言；UI 人工验收）
-  - **估算**：8h [样板]，不确定性低
+  - **TC**：TC-023、TC-024（pytest 断言；Vitest 补 UI 状态证据）
+  - **估算**：10h [样板]，不确定性低
   - **状态**：pending
 
 - [ ] TASK-TD-030：实现会话服务（完成、失败、列表、详情、删除）
@@ -420,8 +432,8 @@
 
 - [ ] TASK-TD-033：实现会话列表、筛选与新建对话框
   - **描述**：`/sessions` 页面、项目/状态筛选、创建会话（项目与启用模型为硬前置）。
-  - **涉及文件**：`web/src/features/sessions/{SessionsPage,SessionFilters,SessionTable,CreateSessionDialog,SessionHeader,StatusPill}.tsx`
-  - **具体操作**：缺项目/缺模型禁用创建并给配置引导；创建后失效 `['sessions']` 与 `['sessions', id]`；状态徽标带文字；列表区分 empty 与 filtered-empty。
+  - **涉及文件**：`web/src/features/sessions/{SessionsPage,SessionFilters,SessionTable,CreateSessionDialog,SessionHeader,StatusPill}.tsx`、`web/src/features/sessions/CreateSessionDialog.test.tsx`
+  - **具体操作**：缺项目/缺模型禁用创建并给配置引导；创建后失效 `['sessions']` 与 `['sessions', id]`；状态徽标带文字；列表区分 empty 与 filtered-empty；Vitest 覆盖缺前置禁用、筛选空态与状态徽标文字，标题带 `TC-026` / `TC-027`。
   - **优先级**：P0
   - **复杂度**：M（2–3d）
   - **依赖**：TASK-TD-021、TASK-TD-031、TASK-TD-024
@@ -432,14 +444,14 @@
 
 - [ ] TASK-TD-034：实现会话详情与时间线
   - **描述**：`/sessions/:id` 头部、四类事件卡、只读态、滚动/分页加载。
-  - **涉及文件**：`web/src/features/sessions/{SessionDetailPage,SessionTimeline,TimelineEvent,InputEventCard,CallEventCard,ArtifactEventCard,StatusChangeEvent}.tsx`
-  - **具体操作**：事件升序；输入卡折叠/展开全文；调用卡显示模型/耗时/状态/摘要与失败重试次数；制品卡显示文件名/大小/预览；终态只读；`useInfiniteQuery` 用 `nextCursor`。
+  - **涉及文件**：`web/src/features/sessions/{SessionDetailPage,SessionTimeline,TimelineEvent,InputEventCard,CallEventCard,ArtifactEventCard,StatusChangeEvent}.tsx`、`web/src/features/sessions/SessionTimeline.test.tsx`
+  - **具体操作**：事件升序；输入卡折叠/展开全文；调用卡显示模型/耗时/状态/摘要与失败重试次数；制品卡显示文件名/大小/预览；终态只读；`useInfiniteQuery` 用 `nextCursor`；Vitest 覆盖四类事件渲染与只读态，标题带 `TC-028` / `TC-044`。
   - **优先级**：P0
   - **复杂度**：M（2–3d）
   - **依赖**：TASK-TD-033、TASK-TD-035、TASK-TD-036、TASK-TD-039
   - **对应 AC**：AC-009-3、AC-005-4
-  - **TC**：TC-028、TC-044（服务端断言；UI 人工验收）
-  - **估算**：14h [样板]，不确定性低
+  - **TC**：TC-028、TC-044（pytest 断言；Vitest 补 UI 状态证据）
+  - **估算**：16h [样板]，不确定性低
   - **状态**：pending
 
 - [ ] TASK-TD-035：实现文本输入接口
@@ -468,30 +480,30 @@
 
 - [ ] TASK-TD-037：实现文本输入面板与字数计数
   - **描述**：会话详情右栏 TextComposer，实时计数、超限禁用。
-  - **涉及文件**：`web/src/features/composer/{TextComposer,CharacterCounter}.tsx`
-  - **具体操作**：上限常量从模块导出（200000）；>90% 警告色、超限危险色且禁用提交；空正文就地错误；成功后清空并失效事件 query。
+  - **涉及文件**：`web/src/features/composer/{TextComposer,CharacterCounter}.tsx`、`web/src/features/composer/TextComposer.test.tsx`
+  - **具体操作**：上限常量从模块导出（200000）；>90% 警告色、超限危险色且禁用提交；空正文就地错误；成功后清空并失效事件 query；Vitest 覆盖计数分档与超限禁用，标题带 `TC-033` / `TC-034`。
   - **优先级**：P0
   - **复杂度**：M（2–3d）
   - **依赖**：TASK-TD-034、TASK-TD-035
   - **对应 AC**：AC-006-1 ~ AC-006-3
-  - **TC**：TC-032、TC-033、TC-034（服务端断言；UI 人工验收）
-  - **估算**：8h [样板]，不确定性低
+  - **TC**：TC-032、TC-033、TC-034（pytest 断言；Vitest 补 UI 状态证据）
+  - **估算**：10h [样板]，不确定性低
   - **状态**：pending
 
 - [ ] TASK-TD-038：实现文件上传与制品卡
   - **描述**：拖拽/选择上传，前端三查，逐文件标红，同名改名前提示。
-  - **涉及文件**：`web/src/features/composer/{FileUploader}.tsx`、`web/src/features/composer/ArtifactCard.tsx`
-  - **具体操作**：白名单/10MB/10 个；前端拒绝不阻止用户移除后重提；预览按纯文本转义，禁止 `dangerouslySetInnerHTML`；下载用 content `mode=download`。
+  - **涉及文件**：`web/src/features/composer/{FileUploader}.tsx`、`web/src/features/composer/ArtifactCard.tsx`、`web/src/features/composer/FileUploader.test.tsx`
+  - **具体操作**：白名单/10MB/10 个；前端拒绝不阻止用户移除后重提；预览按纯文本转义，禁止 `dangerouslySetInnerHTML`；下载用 content `mode=download`；Vitest 覆盖三查拒绝与同名提示，标题带 `TC-036` / `TC-038`。
   - **优先级**：P0
   - **复杂度**：M（2–3d）
   - **依赖**：TASK-TD-034、TASK-TD-036
   - **对应 AC**：AC-007-1 ~ AC-007-3
-  - **TC**：TC-036、TC-038（服务端断言；UI 人工验收）
-  - **估算**：10h [样板]，不确定性低
+  - **TC**：TC-036、TC-038（pytest 断言；Vitest 补 UI 状态证据）
+  - **估算**：12h [样板]，不确定性低
   - **状态**：pending
 
 - [ ] TASK-TD-039：实现发起调用接口
-  - **描述**：`POST /sessions/{id}/calls`，调用 `AiGateway.complete` 并映射错误。
+  - **描述**：`POST /sessions/{id}/ai/complete`，调用 `AiGateway.complete` 并映射错误（知识库引用扩展见 TASK-TD-053）。
   - **涉及文件**：`src/workbench/api/v1/calls.py`、`src/workbench/api/schemas/call.py`、`tests/test_calls_api.py`
   - **具体操作**：prompt 1–200000（`prompt_too_long`）；temperature/maxTokens 可选；前置拒绝 404/409 且无记录；成功 200 返回 callId/resultText/latencyMs/retryCount/模型摘要；失败 502 `ai_*`、504 `ai_timeout`、502 `provider_credential_unavailable`，details 含 callId/retryCount。用例 `test_tc041_api_call_success`、`test_tc042_api_call_failure`、`test_tc043_precondition_rejections_no_record`、`test_tc044_call_event_payload`、`test_tc045_api_retry_and_timeout`、`test_tc050_api_credential_unavailable`。
   - **优先级**：P0
@@ -504,14 +516,14 @@
 
 - [ ] TASK-TD-040：实现调用面板与本次参数覆盖
   - **描述**：会话详情 CallPanel：提示输入、字数、高级参数、调用中禁用、失败展示。
-  - **涉及文件**：`web/src/features/calls/{CallPanel,AdvancedParams}.tsx`
-  - **具体操作**：提示与文本共用 200000 上限；本次 temperature/max_tokens 不写回模型；前端超时 300s；成功后失效时间线与调用记录；失败保留面板内容并展示错误码。
+  - **涉及文件**：`web/src/features/calls/{CallPanel,AdvancedParams}.tsx`、`web/src/features/calls/CallPanel.test.tsx`
+  - **具体操作**：提示与文本共用 200000 上限；本次 temperature/max_tokens 不写回模型；前端超时 300s；成功后失效时间线与调用记录；失败保留面板内容并展示错误码；Vitest 覆盖超限禁用与调用中重复提交拦截，标题带 `TC-041`。
   - **优先级**：P0
   - **复杂度**：M（2–3d）
   - **依赖**：TASK-TD-034、TASK-TD-039
   - **对应 AC**：AC-005-1、AC-005-4、AC-004-3
-  - **TC**：TC-025、TC-041、TC-044（服务端断言；UI 人工验收）
-  - **估算**：12h [样板]，不确定性中（长请求体验）
+  - **TC**：TC-025、TC-041、TC-044（pytest 断言；Vitest 补 UI 状态证据）
+  - **估算**：14h [样板]，不确定性中（长请求体验）
   - **状态**：pending
 
 - [ ] TASK-TD-041：编写批次 B 最小闭环冒烟测试
@@ -540,50 +552,50 @@
 
 - [ ] TASK-TD-043：实现调用记录页面
   - **描述**：`/calls` 筛选（项目→会话级联、状态、默认近 7 天）、表格与行展开核对。
-  - **涉及文件**：`web/src/features/calls/{CallsPage,CallFilters,CallRecordTable,CallRecordRow}.tsx`
-  - **具体操作**：空态与 filtered-empty 区分；失败行展开显示错误与重试次数；成功行展开显示结果全文；不展示密钥。
+  - **涉及文件**：`web/src/features/calls/{CallsPage,CallFilters,CallRecordTable,CallRecordRow}.tsx`、`web/src/features/calls/CallsPage.test.tsx`
+  - **具体操作**：空态与 filtered-empty 区分；失败行展开显示错误与重试次数；成功行展开显示结果全文；不展示密钥；Vitest 覆盖筛选空态与失败行展开，标题带 `TC-046` / `TC-048`。
   - **优先级**：P1
   - **复杂度**：M（2–3d）
   - **依赖**：TASK-TD-042、TASK-TD-033
   - **对应 AC**：AC-010-1 ~ AC-010-3
-  - **TC**：TC-046、TC-047、TC-048（服务端断言；UI 人工验收）
-  - **估算**：12h [样板]，不确定性低
+  - **TC**：TC-046、TC-047、TC-048（pytest 断言；Vitest 补 UI 状态证据）
+  - **估算**：14h [样板]，不确定性低
   - **状态**：pending
 
 - [ ] TASK-TD-044：实现入口配置 API、首页与入口卡片
   - **描述**：`GET /entrances`；首页 6 卡片与最近 10 条会话；点击进入对应路径。
-  - **涉及文件**：`src/workbench/api/v1/entrances.py`、`web/src/features/entrances/{HomePage,EntranceGrid,EntranceCard,RecentSessionTable}.tsx`
-  - **具体操作**：配置来自 `core/entrances.py`；卡片含名称、用途、所属域、planned/live；整卡链接；最近会话复用 `GET /sessions?limit=10`，空态；未知 key 返回 `entrance_unknown`；SPA 刷新直达由后端 fallback 保证。用例 `test_tc051_api_entrances_six`、`test_tc052_spa_fallback_entrance_route`、`test_tc053_unknown_entrance_rejected`、`test_tc031_home_recent_sessions`。
+  - **涉及文件**：`src/workbench/api/v1/entrances.py`、`web/src/features/entrances/{HomePage,EntranceGrid,EntranceCard,RecentSessionTable}.tsx`、`web/src/features/entrances/HomePage.test.tsx`
+  - **具体操作**：配置来自 `core/entrances.py`；卡片含名称、用途、所属域、planned/live；整卡链接；最近会话复用 `GET /sessions?limit=10`，空态；未知 key 返回 `entrance_unknown`；SPA 刷新直达由后端 fallback 保证；Vitest 覆盖 6 卡片渲染与最近会话空态，标题带 `TC-051`。用例 `test_tc051_api_entrances_six`、`test_tc052_spa_fallback_entrance_route`、`test_tc053_unknown_entrance_rejected`、`test_tc031_home_recent_sessions`。
   - **优先级**：P0
   - **复杂度**：M（2–3d）
   - **依赖**：TASK-TD-021、TASK-TD-031
   - **对应 AC**：AC-001-1 ~ AC-001-3
-  - **TC**：TC-051、TC-052、TC-053、TC-031
-  - **估算**：12h [样板]，不确定性中（SPA fallback 与鉴权顺序）
+  - **TC**：TC-051、TC-052、TC-053、TC-031（pytest 断言；Vitest 补 UI 状态证据）
+  - **估算**：14h [样板]，不确定性中（SPA fallback 与鉴权顺序）
   - **状态**：pending
 
 - [ ] TASK-TD-045：实现入口占位页
   - **描述**：`/entrances/:key` 按配置渲染占位或 live 挂载点，占位页说明所属域与状态并可返回首页。
-  - **涉及文件**：`web/src/features/entrances/{EntrancePage,PlaceholderPanel}.tsx`
-  - **具体操作**：planned 不创建会话、不调用模型、不产生记录；live 预留域功能挂载点；配置缺失显示错误态；状态由 `GET /entrances` 驱动，改配置即可切换。用例 `test_tc054_placeholder_metadata`、`test_tc055_placeholder_has_no_side_effects`、`test_tc056_entrance_status_switch`。
+  - **涉及文件**：`web/src/features/entrances/{EntrancePage,PlaceholderPanel}.tsx`、`web/src/features/entrances/EntrancePage.test.tsx`
+  - **具体操作**：planned 不创建会话、不调用模型、不产生记录；live 预留域功能挂载点；配置缺失显示错误态；状态由 `GET /entrances` 驱动，改配置即可切换；Vitest 覆盖占位文案与无副作用渲染，标题带 `TC-054`。用例 `test_tc054_placeholder_metadata`、`test_tc055_placeholder_has_no_side_effects`、`test_tc056_entrance_status_switch`。
   - **优先级**：P0
   - **复杂度**：S（<1d）
   - **依赖**：TASK-TD-044
   - **对应 AC**：AC-002-1 ~ AC-002-3
-  - **TC**：TC-054、TC-055、TC-056
-  - **估算**：6h [样板]，不确定性低
+  - **TC**：TC-054、TC-055、TC-056（pytest 断言；Vitest 补 UI 状态证据）
+  - **估算**：8h [样板]，不确定性低
   - **状态**：pending
 
 - [ ] TASK-TD-046：实现删除会话的前端确认流程
   - **描述**：会话头部与列表提供删除，ConfirmDialog 列出级联范围（事件、制品目录、调用记录）。
-  - **涉及文件**：`web/src/features/sessions/SessionHeader.tsx`、`web/src/components/ui/ConfirmDialog.tsx`
-  - **具体操作**：二次确认、确认中 loading、成功后回列表并失效 `['sessions']`/`['calls']`；失败展示 `session_delete_failed`。
+  - **涉及文件**：`web/src/features/sessions/SessionHeader.tsx`、`web/src/components/ui/ConfirmDialog.tsx`、`web/src/features/sessions/SessionHeader.test.tsx`
+  - **具体操作**：二次确认、确认中 loading、成功后回列表并失效 `['sessions']`/`['calls']`；失败展示 `session_delete_failed`；Vitest 覆盖确认弹窗列出级联范围与取消不删除，标题带 `TC-030`。
   - **优先级**：P0
   - **复杂度**：S（<1d）
   - **依赖**：TASK-TD-033、TASK-TD-030
   - **对应 AC**：AC-009-5
-  - **TC**：TC-030（服务端断言；UI 人工验收）
-  - **估算**：4h [样板]，不确定性低
+  - **TC**：TC-030（pytest 断言；Vitest 补 UI 状态证据）
+  - **估算**：5h [样板]，不确定性低
   - **状态**：pending
 
 - [ ] TASK-TD-047：补充启动归并与调用取消的故障用例
@@ -611,10 +623,10 @@
   - **状态**：pending
   - 免测理由：部署工件无法在 pytest 内验证；由 `docker compose up` 启动与健康检查手工验收，验收步骤写入 `docs/dev-setup.md`。
 
-- [ ] TASK-TD-049：交付备份与恢复脚本 [no-test]
-  - **描述**：`scripts/backup.sh` 执行 mysqldump + 制品目录打包，排除 `.trash/` 与 `.tmp/`，并写明恢复顺序。
-  - **涉及文件**：`scripts/backup.sh`、`docs/dev-setup.md`（恢复步骤）
-  - **具体操作**：`--single-transaction --routines --triggers`；制品 `tar`；输出文件含时间戳；恢复先库后制品；提示 `AW_ENCRYPTION_KEY` 需独立保管。
+- [ ] TASK-TD-049：交付备份脚本与手工恢复演练记录 [no-test]
+  - **描述**：`scripts/backup.sh` 执行 mysqldump + 制品目录打包，排除 `.trash/` 与 `.tmp/`，并写明恢复顺序；本期只做一次手工演练并记录，不做自动恢复演练（OQ-TT-04 已确认）。
+  - **涉及文件**：`scripts/backup.sh`、`docs/dev-setup.md`（恢复步骤与演练记录）
+  - **具体操作**：`--single-transaction --routines --triggers`；制品 `tar`；输出文件含时间戳；恢复先库后制品；提示 `AW_ENCRYPTION_KEY` 需独立保管；在 `docs/dev-setup.md` 记录日期、备份文件标识、恢复耗时、`alembic_version` 与制品数量核对结果。
   - **优先级**：P1
   - **复杂度**：S（<1d）
   - **依赖**：TASK-TD-048
@@ -637,9 +649,100 @@
   - **状态**：pending
   - 免测理由：纯文档整理，无运行时行为。
 
+- [x] TASK-TD-051：新增迁移 0006 与知识库注入留痕列
+  - **描述**：`ai_call_record` 增加 `knowledge_injection`、`injected_chars`、`prompt_chars`、`total_chars`；`session_event.type` 的 CHECK 增加 `knowledge_injection`；作为线性迁移树 head。
+  - **涉及文件**：`migrations/versions/0006_knowledge_injection.py`、`src/workbench/db/models/ai_call_record.py`、`src/workbench/db/models/session_event.py`、`tests/test_db_migrations.py`
+  - **具体操作**：列类型按 `database-schema.md` §2.10（JSON NULL、三个整数默认 0、CHECK `total_chars = prompt_chars + injected_chars`）；SQLite 用 batch 模式重建 CHECK，MySQL 先 drop 旧 CHECK 再 add；`downgrade()` 可回退；不创建 `knowledge_base` 表、不建外键；`0006` 的 `down_revision` 指向 `0005`，并在文件注释写明 knowledge-base 的 `0007` 依赖本 revision。
+  - **优先级**：P0
+  - **复杂度**：S（<1d）
+  - **依赖**：TASK-TD-008、TASK-TD-009
+  - **对应 AC**：AC-TECH-2
+  - **TC**：TC-064
+  - **估算**：4h [逻辑]，不确定性低
+  - **状态**：pending
+
+- [ ] TASK-TD-052：网关注入参数与留痕序列化
+  - **描述**：`AiGateway.complete` 追加 keyword-only `injection`；同一事务写四列并追加 `knowledge_injection` 事件；调用记录与时间线序列化暴露 `knowledgeInjection` 与 `kbDeleted`。
+  - **涉及文件**：`src/workbench/services/ai_gateway.py`、`src/workbench/services/calls.py`、`src/workbench/services/sessions.py`、`src/workbench/core/ports.py`、`tests/test_ai_gateway_injection.py`、`tests/test_calls_api.py`
+  - **具体操作**：`InjectionSnapshot` / `InjectionItem` 按 `change-spec.md` §3.3；`injected_chars == sum(items)`、`total_chars == prompt_chars + injected_chars == len(prepared)`，不符抛 `injection_snapshot_mismatch` 且不写记录；`injection=None` 时四列为 NULL/0、不追加事件，既有行为不变；`kbDeleted` 读取时按 `kbId` 左连接 `knowledge_base`，表或行不存在为 `true`，快照字段不改写；`AIResult` 回传快照。
+  - **优先级**：P0
+  - **复杂度**：M（2–3d）
+  - **依赖**：TASK-TD-051、TASK-TD-039
+  - **对应 AC**：AC-TECH-1、AC-TECH-3
+  - **TC**：TC-065、TC-066、TC-067
+  - **估算**：8h [逻辑]，不确定性中
+  - **状态**：pending
+
+- [ ] TASK-TD-053：唯一调用入口 `/ai/complete` 与知识库引用
+  - **描述**：将调用端点统一为 `POST /api/v1/sessions/{sessionId}/ai/complete`；请求可选携带 `knowledgeRefs` / `confirmInvalidCodes`；core 通过 `InjectionPreparer` 协议调用 knowledge-base 的 `prepare_for_call`，完成失效重校验、组装与字符预算。
+  - **涉及文件**：`src/workbench/api/v1/calls.py`、`src/workbench/api/schemas/call.py`、`src/workbench/core/ports.py`、`tests/test_sessions_ai_complete.py`
+  - **具体操作**：保留 `{prompt, temperature?, maxTokens?}` 字段；`knowledgeRefs=[{kbId, entryCodes[]}]`、`confirmInvalidCodes=[{kbId, code}]`；未安装 preparer 且带 refs → 409 `knowledge_unavailable`；preparer 抛失效/空集/超预算 → 映射 409 `knowledge_invalid_entries` / 409 `knowledge_injection_empty` / 400 `prompt_budget_exceeded`，均不写 AiCallRecord、不发外部请求；精确匹配后把 `prepared` 与快照传给网关；响应带 `knowledgeInjection`；旧路径 `POST /sessions/{id}/calls` 不保留。
+  - **优先级**：P0
+  - **复杂度**：M（2–3d）
+  - **依赖**：TASK-TD-052
+  - **对应 AC**：AC-TECH-1、AC-TECH-3
+  - **TC**：TC-068、TC-069
+  - **估算**：8h [逻辑]，不确定性中
+  - **状态**：pending
+
+- [ ] TASK-TD-054：前端时间线与调用记录展示注入快照
+  - **描述**：新增 `KnowledgeInjectionEventCard`；调用记录行展开显示 `knowledgeInjection`，`kbDeleted=true` 标「知识库已删除」；无注入时不渲染。
+  - **涉及文件**：`web/src/features/sessions/KnowledgeInjectionEventCard.tsx`、`web/src/features/sessions/TimelineEvent.tsx`、`web/src/features/calls/CallRecordRow.tsx`、`web/src/features/calls/CallPanel.tsx`
+  - **具体操作**：只展示知识库名/版本、编号列表、分段字数与 `excludedCodes`，不展示正文；沿用 token，不新增样式变量；CallPanel 调用路径改为 `/ai/complete`，core 面板不带 `knowledgeRefs`；Vitest 用例标题带 TC-070（结果以 pytest 为准）。
+  - **优先级**：P1
+  - **复杂度**：S（<1d）
+  - **依赖**：TASK-TD-034、TASK-TD-052
+  - **对应 AC**：AC-009-3、AC-010-2
+  - **TC**：TC-070
+  - **估算**：4h [样板]，不确定性低
+  - **状态**：pending
+
+- [ ] TASK-TD-055：跨 spec 契约与迁移顺序测试
+  - **描述**：用假 `InjectionPreparer` 锁定 core 与 knowledge-base 的契约；验证 `0006` 先于 `0007` 的顺序约束与 core 迁移不依赖知识库表。
+  - **涉及文件**：`tests/conftest.py`、`tests/test_knowledge_contract.py`、`tests/test_db_migrations.py`
+  - **具体操作**：fixture 注册/注销假 preparer；用例覆盖 `knowledge_invalid_entries`、`knowledge_injection_empty`、`prompt_budget_exceeded`、`knowledge_unavailable` 与 `injection=None` 兼容；迁移测试断言 head 为 `0006`、空库升级不创建 `knowledge_base`；在测试注释写明「知识库导入/检索/失效判定/正文组装的实现与用例属 knowledge-base spec，本 spec 不重复」。TC 结果由 pytest 提供，不新增 Vitest 专属 TC。
+  - **优先级**：P0
+  - **复杂度**：S（<1d）
+  - **依赖**：TASK-TD-051、TASK-TD-052、TASK-TD-053
+  - **对应 AC**：AC-TECH-2、AC-TECH-5
+  - **TC**：TC-064（迁移顺序）、TC-068（契约共享）
+  - **估算**：3h [逻辑]，不确定性低
+  - **状态**：pending
+
+## 测试与门禁
+
+### TC 编号与实现的对应关系
+
+- **TC 编号范围**：TC-001 ~ TC-070。TC-001 ~ TC-063 为确认前基线；TC-064 ~ TC-070 为 2026-11-18 跨 spec 知识库注入扩展（A101 / A102 / A103 B）新增，全部由 pytest 用例给出结果。
+- **前端 Vitest 复用已有 TC 编号**：同一 TC 有两个实现——pytest（服务端/接口层，权威结果）+ Vitest（组件层，同一编号作为第二实现）。Vitest 用例标题形如 `TC-026 创建会话缺模型时禁用提交`，只用于定位与追溯，不产生新 TC。
+- **没有「只由 Vitest 提供结果」的 TC**：任何 AC 的可验证结论都必须能在 pytest 中找到对应用例；纯视觉效果（对比度、布局、动效）不设 TC，按 interaction-design 的人工/Playwright 记录验收。
+- **知识库注入的边界**：TC-064 ~ TC-070 只验证 core 的列/事件/序列化、唯一入口、错误映射与迁移顺序；知识库导入、检索、失效判定、正文组装与其 AC（AC-014 系列）由 knowledge-base spec 的测试覆盖，本 spec 不重复实现或用例。
+- 新增 UI 行为若无法映射到已有 TC，应先补 pytest 可验证的接口/契约断言，再写 Vitest；不得直接铸造新 TC，否则 `aw close` 会因该 TC 无结果而阻塞。
+
+### 结果可见性（`aw.py verify` 只解析 pytest）
+
+| 层 | 命令 / job | 是否进入 `aw verify` 证据 | 失败后果 |
+|----|-----------|--------------------------|---------|
+| pytest（SQLite） | `pytest` / CI job 1 `backend-tests` | 是；70 个 TC 的通过/失败全部来自这里 | `aw verify` 红，禁止 close |
+| pytest（MySQL） | `AW_TEST_DATABASE_URL=... pytest` / CI job 2 `mysql-tests` | 否（同一批 TC 的第二方言执行） | CI 红；RISK-011 视为未通过 |
+| Vitest | `cd web && npm run test -- --run` / CI job 3 `frontend-tests` | **否** | CI 红；分支保护阻止合并 |
+
+- **UI 用例的通过/失败如何被看见**：只在 CI 的 Vitest job（必过）与其上传的测试报告中可见；它**不写入** `.aw` 的 verify 证据，`aw.py verify` / `aw close` 不会读取。因此 UI 层失败靠 CI 必过 job 与分支保护兜底，评审时须同时看 CI 三个 job 全绿，不能只看 `aw verify` 绿。
+- 已知局限（明确记录）：`aw close` 只证明 pytest 的 70 个 TC 有结果，不证明 Vitest 通过；Vitest 的保障来自 CI 必过 job，二者缺一不可。
+
+### CI 三个 job 的门禁作用
+
+| job | 内容 | 门禁作用 |
+|-----|------|---------|
+| `backend-tests` | SQLite 上跑 `python3 .aw/aw.py verify`（或等价 pytest） | 产出 70 个 TC 的权威结果；必过 |
+| `mysql-tests` | `mysql:8.4` service + `alembic upgrade head` + 同一套 pytest | 证明双方言；不新增 TC；必过 |
+| `frontend-tests` | `npm ci && npm run test -- --run`（Vitest） | 证明 UI 层同一 TC 的第二实现；必过；不进 `aw verify` |
+
+- Playwright E2E 不进任何必过 job；其结果只作为人工验收的补充证据。
+
 ## TC ↔ AC 映射
 
-> `aw.py verify` 从测试报告用例名中读取 `TC-NNN`。所有 TC 均由 pytest 用例断言（前端任务引用同一 TC，不额外产生 pytest 用例；UI 视觉/交互由人工或 Playwright 记录，不计入 TC 结果）。
+> 口径见上节「测试与门禁」：`aw.py verify` 从 pytest 报告读取 `TC-NNN`；70 个 TC 全部由 pytest 给出结果（含 TC-064 ~ TC-070），Vitest 以同一编号提供 UI 层的第二实现（不新增专属 TC），其失败由 CI 必过 job 3 兜底。Playwright E2E 不进必过门禁。
 
 | TC | AC | 主要任务 | 验证点 |
 |----|----|---------|--------|
@@ -706,8 +809,15 @@
 | TC-061 | AC-TECH-3 | 011/020 | Origin 校验 403 |
 | TC-062 | AC-TECH-4 | 041 | 批次 B 最小闭环冒烟 |
 | TC-063 | AC-TECH-6 | 006 | 日志/响应无密钥与口令 |
+| TC-064 | AC-TECH-2 | 051/055 | 迁移 0006：四列 + CHECK，`0006` 先于 knowledge-base `0007` |
+| TC-065 | AC-005-1 | 052 | `injection=None` 时记录/事件与扩展前完全一致 |
+| TC-066 | AC-005-1 | 052 | 注入时同事务写四列 + `knowledge_injection` 事件，失败/超时保留 |
+| TC-067 | AC-010-2 | 052 | 序列化 `knowledgeInjection` 与 `kbDeleted`（有行/已删/无表） |
+| TC-068 | AC-TECH-3（A103 B） | 053/055 | 失效未精确确认 → 409，无外部请求、无 AiCallRecord |
+| TC-069 | AC-TECH-3（A103 B） | 053 | 精确确认后调用；空集 409、超预算 400 |
+| TC-070 | AC-009-3 / AC-010-2 | 054 | 时间线与调用详情展示注入快照与「知识库已删除」 |
 
-覆盖统计：42 条功能 AC 全覆盖（US-001 ~ US-011），6 条 AC-TECH 全覆盖；共 63 个 TC。
+覆盖统计：42 条功能 AC 全覆盖（US-001 ~ US-011），6 条 AC-TECH 全覆盖；共 70 个 TC（TC-064 ~ TC-070 为跨 spec 扩展，对应 A101 ~ A103；知识库自身 AC 由 knowledge-base spec 覆盖）。
 
 ## Critical 风险对照
 
@@ -718,13 +828,13 @@
 | RISK-005 上传穿越/伪装 | TC-037、TC-039、TC-040 | 服务端存储名；解析后包含校验；失败清理；必要时加文件头校验 |
 | RISK-009 范围蔓延 | 范围表（`requirements.md` §1） | P1 项（调用记录界面、参数覆盖、筛选、备份脚本）可删减，P0 基座保留 |
 | RISK-010 登录绕过/TLS | TC-001、TC-008、TC-010、TC-061 | 路由级鉴权；Cookie 属性；Origin 校验；文档要求 TLS 反代 |
-| RISK-011 双方言漂移 | TC-058、TC-059 | CI 两个 job；禁止方言语法；只在一种方言通过视为缺陷 |
+| RISK-011 双方言漂移 | TC-058、TC-059、TC-064 | CI 两个 job；禁止方言语法；只在一种方言通过视为缺陷 |
 | RISK-012 口令/令牌泄露 | TC-003、TC-004、TC-005、TC-008 | Argon2 参数；令牌只存哈希；锁定；统一错误；脱敏 |
 
 ## 估点摘要
 
-- 技术栈：Python 3.12+/FastAPI/SQLAlchemy 2.1/Alembic/MySQL 8.4+SQLite；React 19/TS/Vite/TanStack Query/Radix；pytest + httpx，MySQL 走 CI 第二 job。
-- 任务总数：50（XS 3 / S 18 / M 29），无 L/XL。
-- 批次工时：A 131h、B 228h、C 63h，合计 422h；按每日 4.8h 有效开发折算约 88 人日。
-- 风险与前置：CI 平台待确认（OQ-TT-01）；MySQL 用例依赖 service 容器（本地缺 Docker 时跳过并在报告标注）；前端 UI 状态以人工/Playwright 验收，不计入 pytest TC；`RISK-007` 依赖锁定由 `uv.lock` / `package-lock.json` 保证。
-- 批次验收：批次 A（pytest 全绿 + 迁移到 head）、批次 B（TC-001 ~ TC-050、TC-062）、批次 C（TC-046 ~ TC-048、TC-031、TC-051 ~ TC-056 + 手工验收项）。
+- 技术栈：Python 3.12+/FastAPI/SQLAlchemy 2.1/Alembic/MySQL 8.4+SQLite；React 19/TS/Vite/TanStack Query/Radix；pytest + httpx，Vitest + Testing Library，MySQL 走 CI 第二 job。
+- 任务总数：55（XS 3 / S 21 / M 31），无 L/XL；其中 TASK-TD-051 ~ 055 为 2026-11-18 跨 spec 知识库注入扩展新增。
+- 批次工时：A 133h、B 246h、C 70h、D 27h，合计 476h；按每日 4.8h 有效开发折算约 99 人日。
+- 风险与前置：CI 为 GitHub Actions（OQ-TT-01 已确认，仓库将建成 GitHub 公开仓库）；MySQL 用例依赖 service 容器（本地缺 Docker 时跳过并在报告标注）；前端 Vitest 为必过 job，Playwright E2E 可选；`RISK-007` 依赖锁定由 `uv.lock` / `package-lock.json` 保证。
+- 批次验收：批次 A（pytest 全绿 + 迁移到 head）、批次 B（TC-001 ~ TC-050、TC-062）、批次 C（TC-046 ~ TC-048、TC-031、TC-051 ~ TC-056 + 手工验收项）、批次 D（TC-064 ~ TC-070，pytest；MySQL job 复跑 `0006` 迁移）。

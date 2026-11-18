@@ -1,5 +1,8 @@
 # Tech Tasks · Requirements（技术要求与验收口径）
 
+> **文档状态：draft — 2026-11-18 因跨 spec 知识库注入扩展（A101 / A102 / A103 B）变更，待用户重新确认。**
+> 2026-11-18 依赖版本核实：FastAPI 0.163.2、SQLAlchemy 2.1.9、pydantic-settings 2.16.3，均为实际安装版本，无降级（见 ADR-043）。
+
 > 阶段：tech-tasks。范围：`workbench-core` 基座（US-001 ~ US-011，AC 42 条，EARS 17 条）。
 > 上游已确认：`approvals.md` 末行 `tech-design · 2026-11-18 10:47:44 · 确认`；`docs/architecture-decisions.md`（architecture-locked）、`change-spec.md`、`docs/database-schema.md`、`docs/api-spec.md`、`docs/component-tree.md`、`docs/flowchart.md`；5 项 OQ-TD 均按建议 A 定稿（`answers.md` 2026-11-18 10:44:10「全按建议」）。
 > 本文件定义 tech-tasks 阶段自身的技术验收标准（AC-TECH），任务与 TC 映射见 `tasks.md`。
@@ -9,7 +12,7 @@
 - 只实现 workbench-core：登录、入口导航、项目、提供商/模型、会话/事件、文本与文件输入、AI 调用、调用记录、制品、部署。
 - 知识库（US-012 ~ US-016）与仓库集成（US-017 ~ US-023）不在本 spec；不新增其表、端点、组件或依赖（`change-spec.md` §7）。
 - 冻结签名先行：`sessions.create` / `sessions.append_event` / `artifacts.save` / `AiGateway.complete` 的名称、参数顺序与语义按 `change-spec.md` §3 实现，作为批次 A 的独立任务并被契约测试覆盖；两个新 spec 只调用不修改（ADR-041）。
-- 仓库当前无 CI 配置（`.aw/install.json` 的 `ci: null`），本期新增 CI：job 1 跑 `pytest`（SQLite，等价 `aw verify`），job 2 用 MySQL 8.4 service 跑同一套用例（`AW_TEST_DATABASE_URL`）。CI 平台未在仓库中确定，见 `open-questions.md` OQ-TT-01。
+- 仓库当前无 CI 配置（`.aw/install.json` 的 `ci: null`），本期新增 GitHub Actions（OQ-TT-01 已确认，仓库将建成 GitHub 公开仓库）：job 1 跑 `pytest`（SQLite，等价 `aw verify`），job 2 用 MySQL 8.4 service 跑同一套用例（`AW_TEST_DATABASE_URL`），job 3 跑前端 Vitest 组件单测（OQ-TT-03 已确认为必过门禁；Playwright E2E 不进必过门禁）。
 - 本地 `python3 .aw/aw.py verify` 只跑 SQLite；「SQLite 绿」不等于双方言通过（RISK-011）。
 
 ## 2. AC-TECH（EARS）
@@ -22,12 +25,12 @@ THEN 只使用已确认的技术栈与目录约定（Python 3.12+/FastAPI/SQLAlc
 **AC-TECH-2（数据模型与双方言迁移）**
 GIVEN `docs/database-schema.md` 的 10 张表（admin_credential、login_session、login_attempt、project_context、provider_config、model_binding、analysis_session、session_event、artifact、ai_call_record）
 WHEN 从空库执行 Alembic 迁移到 head
-THEN 每张表的字段类型、空值、默认值、CHECK、唯一约束、索引、外键与级联动作与文档一致；SQLite（aiosqlite）与 MySQL 8.4 均升级成功且关键约束（唯一、CHECK、级联、大小写归一）在两方言均通过用例；迁移拆为 0001 ~ 0005 五个 revision。
+THEN 每张表的字段类型、空值、默认值、CHECK、唯一约束、索引、外键与级联动作与文档一致；`ai_call_record` 的知识库注入四列与 `session_event.type=knowledge_injection` 一并成立；SQLite（aiosqlite）与 MySQL 8.4 均升级成功且关键约束（唯一、CHECK、级联、大小写归一）在两方言均通过用例；迁移拆为 0001 ~ 0006 六个 revision，其中 `0006` 先于 knowledge-base 的 `0007`。
 
 **AC-TECH-3（HTTP 契约一致性）**
 GIVEN `docs/api-spec.md` 的 30 个端点
 WHEN 客户端按文档请求
-THEN 路径、方法、请求体、成功响应字段、错误码与 HTTP 状态、`limit`+`cursor` 分页、`aw_session` Cookie 属性与 `{code, message, details[], requestId}` 错误体均与文档一致；除 `POST /api/v1/auth/login` 外均受 `require_session` 保护；所有非安全方法校验 Origin。
+THEN 路径、方法、请求体、成功响应字段、错误码与 HTTP 状态、`limit`+`cursor` 分页、`aw_session` Cookie 属性与 `{code, message, details[], requestId}` 错误体均与文档一致；调用入口为 `POST /api/v1/sessions/{sessionId}/ai/complete`（可选 `knowledgeRefs` / `confirmInvalidCodes`，不新增 `/knowledge-injection/calls`）；除 `POST /api/v1/auth/login` 外均受 `require_session` 保护；所有非安全方法校验 Origin。
 
 **AC-TECH-4（文件清单与批次可独立验收）**
 GIVEN `docs/file-structure.md` 的创建顺序与 `tasks.md` 的批次划分
@@ -56,13 +59,14 @@ THEN 每个风险至少有一个可执行 TC 或明确的范围约束与之对�
 - 常量：200,000 字符、10MB、10 个、120s、10s、8h、5 次/5 分钟集中 `core/constants.py` / `config.py`，不散写魔法数字。
 - 秘密：口令、哈希、令牌、API 密钥原文不得进入响应、日志、AiCallRecord、前端可读存储。
 - UI：只消费 `interaction-design` 的 Design Tokens（`web/src/styles/tokens.css`），不新增 token，不引入带主题组件库。
+- 跨 spec 挂载位：项目上下文页只预留 `ProjectKnowledgeSummary` 空占位（`data-mount="knowledge-summary"`，不渲染内容），本期不新增端点、不改数据模型；数据由 `specs/knowledge-base_20261117205011` 的只读接口提供（UXAMB-004，2026-11-18 11:02 用户拍板），不影响 AC-008 系列验收。
 
 ## 4. 交付物
 
 | 文件 | 内容 |
 |------|------|
 | `requirements.md`（本文件） | AC-TECH 与实现约定 |
-| `tasks.md` | 50 个任务、批次、依赖、TC↔AC 映射、估点摘要 |
+| `tasks.md` | 55 个任务、批次、依赖、TC↔AC 映射（TC-001 ~ TC-070）、估点摘要 |
 | `docs/file-structure.md` | 目录树、文件职责、创建顺序 |
 | `docs/context.md` | 交给 test-verification 的上下文 |
 | `docs/dev-setup.md` | 本地环境、命令、环境变量 |

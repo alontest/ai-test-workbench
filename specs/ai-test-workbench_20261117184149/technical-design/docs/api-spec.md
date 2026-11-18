@@ -1,5 +1,7 @@
 # API Specification（API Spec）— workbench-core
 
+> **文档状态：draft — 2026-11-18 因跨 spec 知识库注入扩展（A101 / A102 / A103 B）变更，待用户重新确认。**
+
 > 阶段：tech-design（步骤 6，`api=yes`）。依据 `technical-design/docs/architecture-decisions.md`（ADR-009 / ADR-013 / ADR-022 ~ ADR-026）与 `docs/database-schema.md`。
 > 基址 `/api/v1`，JSON；前端由同源静态文件托管（ADR-008 / ADR-027）。
 > 跨域说明：本 spec 的对外 HTTP 端点只服务浏览器界面；后续业务域通过 `change-spec.md` 冻结的**进程内接口**接入（`sessions.create` / `sessions.append_event` / `artifacts.save` / `AiGateway.complete`），因此本文件没有 `[cross-domain]` 端点。
@@ -49,6 +51,11 @@
 | 409 | `model_name_duplicate` | 同提供商下模型名重复（大小写不敏感） |
 | 409 | `provider_disabled` / `model_disabled` | 目标不可用于新调用 |
 | 409 | `session_closed` | 会话已结束，拒绝写入/调用 |
+| 400 | `prompt_budget_exceeded` | 提示 + 注入块 >200,000 字符（`details` 含分段字数与上限） |
+| 400 | `injection_snapshot_mismatch` | 注入快照字符数与实际组装正文不一致（内部契约错误） |
+| 409 | `knowledge_invalid_entries` | 知识库条目失效且 `confirmInvalidCodes` 未精确匹配（`details.invalidItems`） |
+| 409 | `knowledge_injection_empty` | 确认后有效条目为空，拒绝发起空注入调用 |
+| 409 | `knowledge_unavailable` | 请求携带 `knowledgeRefs` 但未安装 knowledge-base 进程内服务 |
 | 410 | `artifact_file_missing` | 制品行存在但文件缺失 |
 | 429 | `login_locked` | 来源 IP 连续失败锁定；带 `Retry-After` 秒数 |
 | 500 | `internal_error` | 未捕获异常（日志含 requestId，响应不含堆栈） |
@@ -89,7 +96,7 @@
 | 25 | POST | `/sessions/{sessionId}/artifacts` | 上传会话制品 | Session | US-007 |
 | 26 | GET | `/artifacts/{artifactId}` | 制品元数据 | Session | US-007 |
 | 27 | GET | `/artifacts/{artifactId}/content` | 制品预览/下载 | Session | US-007 |
-| 28 | POST | `/sessions/{sessionId}/calls` | 发起 AI 调用 | Session | US-005 |
+| 28 | POST | `/sessions/{sessionId}/ai/complete` | 发起 AI 调用（可选知识库注入） | Session | US-005 |
 | 29 | GET | `/calls` | 调用记录查询 | Session | US-010 |
 | 30 | GET | `/calls/{callId}` | 调用记录详情 | Session | US-010 |
 
@@ -274,7 +281,7 @@
 {"items":[{"eventId":7,"sessionId":42,"type":"input_text","payload":{"title":"报错日志","text":"…","charCount":1280},"createdAt":"…"}],"nextCursor":null}
 ```
 
-- 事件类型与 payload 见 `database-schema.md` §2.8；404：`session_not_found`。
+- 事件类型与 payload 见 `database-schema.md` §2.8；`knowledge_injection` 事件序列化时每个 item 附 `kbDeleted`（读取时按 `kbId` 左连接 `knowledge_base`）；404：`session_not_found`。
 
 ##### POST /sessions/{sessionId}/inputs/text
 
@@ -315,18 +322,45 @@
 
 ## AI 调用
 
-##### POST /sessions/{sessionId}/calls
+##### POST /sessions/{sessionId}/ai/complete
 
-- 描述：基座验证面板发起调用，模型固定为会话模型；可覆盖 temperature / max_tokens（UXAMB-010）。每次进入提供商（成功、失败、超时、中断）都写 AiCallRecord。
+- 描述：基座验证面板发起调用，模型固定为会话模型；可覆盖 temperature / max_tokens（UXAMB-010）；可选携带知识库引用，由 core 在调用前调用 knowledge-base 的进程内服务做失效重校验、组装与字符预算（A103 B / ADR-042）。每次进入提供商（成功、失败、超时、中断）都写 AiCallRecord。
 - 认证：需要。关联 US-005 / US-010。
-- 请求：`{"prompt":"…","temperature":0.2,"maxTokens":2048}`（`prompt` 1–200,000；覆盖参数可选，缺省用模型默认）
-- 200：`{"callId":17,"sessionId":42,"status":"success","resultText":"…","latencyMs":2140,"retryCount":0,"model":{"modelId":3,"displayName":"GPT-4.1","modelName":"gpt-4.1","providerId":1,"providerName":"OpenAI"},"createdAt":"…","finishedAt":"…"}`
+- 请求：
+
+```json
+{
+  "prompt": "请分析以下日志…",
+  "temperature": 0.2,
+  "maxTokens": 2048,
+  "knowledgeRefs": [{"kbId": 5, "entryCodes": ["ENT-012", "BR-003"]}],
+  "confirmInvalidCodes": [{"kbId": 5, "code": "ENT-009"}]
+}
+```
+
+- 字段：`prompt` 1–200,000；`temperature` 0–2；`maxTokens` 1–1,000,000；`knowledgeRefs` 可选（缺省 = 不注入，行为与旧版完全一致）；`confirmInvalidCodes` 可选，只在用户已看到失效清单后回传，服务端要求与重算失效集**完全相等**。
+- 200：
+
+```json
+{"callId":17,"sessionId":42,"status":"success","resultText":"…","latencyMs":2140,"retryCount":0,
+ "model":{"modelId":3,"displayName":"GPT-4.1","modelName":"gpt-4.1","providerId":1,"providerName":"OpenAI"},
+ "knowledgeInjection":[{"kbId":5,"kbName":"支付中心知识库","kbVersion":2,"entryCodes":["ENT-012","BR-003"],"injectedChars":1840,"kbDeleted":false}],
+ "createdAt":"…","finishedAt":"…"}
+```
+
+- 无注入时 `knowledgeInjection = null`。
 - 失败（均已写 AiCallRecord，`details` 含 `callId`、`retryCount`）：
   - 502 `ai_auth` / `ai_rate_limit` / `ai_server_error` / `ai_unreachable` / `ai_invalid_request`
   - 504 `ai_timeout`
   - 502 `provider_credential_unavailable`（未进入提供商，不写记录）
-- 前置拒绝（不写 AiCallRecord，AC-005-3）：404 `session_not_found`；409 `session_closed|model_disabled|provider_disabled`；400 `validation_error|prompt_too_long`。
+- 前置拒绝（不写 AiCallRecord，AC-005-3）：404 `session_not_found`；409 `session_closed|model_disabled|provider_disabled`；400 `validation_error|prompt_too_long|prompt_budget_exceeded|injection_snapshot_mismatch`。
+- 知识库注入拒绝（不发起外部请求、不写 AiCallRecord）：
+  - 409 `knowledge_invalid_entries`：`details.invalidItems = [{kbId, code, reason}]`，需用户确认后带 `confirmInvalidCodes` 重试；
+  - 409 `knowledge_injection_empty`：确认后有效集为空；
+  - 409 `knowledge_unavailable`：请求携带 `knowledgeRefs` 但本部署未安装 knowledge-base 的进程内服务；
+  - 400 `prompt_budget_exceeded`：`details = {promptChars, injectedChars, totalChars, limit}`（上限 `AW_PROMPT_MAX_CHARS=200000`）。
 - 并发：进程内信号量默认 4；排队等待不计入 `latencyMs`。
+- 说明：本路径取代早期草案的 `POST /sessions/{sessionId}/calls`（未实现）；按 ADR-103 B 不新增 `/knowledge-injection/calls`。
 
 ##### GET /calls
 
@@ -335,16 +369,17 @@
 - 200：
 
 ```json
-{"items":[{"callId":17,"sessionId":42,"project":{"projectId":1,"name":"支付中心"},"model":{"modelId":3,"displayName":"GPT-4.1","providerName":"OpenAI"},"status":"failed","promptPreview":"请分析以下日志…","promptCharCount":1820,"latencyMs":120000,"retryCount":1,"errorCode":"timeout","errorMessage":"upstream request timed out","createdAt":"…","finishedAt":"…"}],"nextCursor":null}
+{"items":[{"callId":17,"sessionId":42,"project":{"projectId":1,"name":"支付中心"},"model":{"modelId":3,"displayName":"GPT-4.1","providerName":"OpenAI"},"status":"failed","promptPreview":"请分析以下日志…","promptCharCount":1820,"knowledgeInjection":[{"kbId":5,"kbName":"支付中心知识库","kbVersion":2,"entryCodes":["ENT-012"],"injectedChars":1840,"kbDeleted":false}],"latencyMs":120000,"retryCount":1,"errorCode":"timeout","errorMessage":"upstream request timed out","createdAt":"…","finishedAt":"…"}],"nextCursor":null}
 ```
 
 - 无匹配返回空 `items` 与 `nextCursor:null`（AC-010-3），不报错。
 - `promptPreview` 与 `errorMessage` 不含密钥；`resultText` 不在列表返回。
+- `knowledgeInjection`：无注入为 `null`；有注入时每个条目带 `kbDeleted`（读取时按 `kbId` 左连接 `knowledge_base`，行或表不存在为 `true`），历史快照不因知识库删除而改写（ADR-042）。
 
 ##### GET /calls/{callId}
 
 - 认证：需要。关联 US-010 / AC-010-2。
-- 200：调用对象（含 `resultText`，成功时）；404：`call_not_found`。
+- 200：调用对象（含 `resultText`，成功时；含 `knowledgeInjection` 与 `kbDeleted`）；404：`call_not_found`。
 
 ## 健康检查（无匿名端点）
 
@@ -360,5 +395,5 @@ curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/v1/auth/session
 - 写请求统一带 `Content-Type: application/json`（上传除外）；服务端校验 Origin。
 - 错误：读取 `code` 做分支，`message` 直接展示；字段错误按 `details[].field` 定位到 `FormField`。
 - 分页：TanStack Query 用 `useInfiniteQuery`，`getNextPageParam: (last) => last.nextCursor`。
-- 调用面板：`POST /sessions/{id}/calls` 前端超时设为 300s（大于服务端最坏 2×120s + 退避），失败后刷新时间线与调用记录。
+- 调用面板：`POST /sessions/{id}/ai/complete` 前端超时设为 300s（大于服务端最坏 2×120s + 退避），失败后刷新时间线与调用记录；知识库引用由 knowledge-base 页面按同一端点提交，core 面板不注入时省略 `knowledgeRefs`。
 - 上传：`FormData` 逐文件追加到 `files`；前端先做白名单/大小/数量三查，服务端仍独立校验。

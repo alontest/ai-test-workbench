@@ -74,3 +74,14 @@
 - **发布域**：`workbench-core`
 - **订阅方**：引用过该会话的域（本期无；后续域需按 ID 处理「已删除」）
 - **来源 spec**：`specs/ai-test-workbench_20261117184149`（US-009 / AC-009-5）
+
+### DE-C9 知识库注入已留痕
+
+> 2026-11-18 跨 spec 扩展（A101 / A102 / A103 B）新增，编号顺延；DE-C1 ~ DE-C8 原文不改。
+
+- **对应图谱**：未覆盖
+- **触发条件**：`AiGateway.complete(..., injection=snapshot)` 插入 `running` 记录时同事务写入 `knowledge_injection` 四列并追加 `session_event(type="knowledge_injection")`。
+- **载荷**：`{callId, sessionId, items:[{kbId, kbName, kbVersion, entryCodes, injectedChars, kbDeleted}], promptChars, injectedChars, totalChars, excludedCodes}`
+- **发布域**：`workbench-core`
+- **订阅方**：调用记录查询、会话时间线、knowledge-base 的历史留痕展示
+- **来源 spec**：`specs/ai-test-workbench_20261117184149`（A101 / A102 / ADR-042）

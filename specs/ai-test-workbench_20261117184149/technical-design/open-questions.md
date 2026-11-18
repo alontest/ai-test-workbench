@@ -9,6 +9,7 @@
 
 - **A（采用）**：Python 3.12+ / FastAPI 0.163 + SQLAlchemy 2.1 / Alembic + SQLite（WAL）+ OpenAI 3.52 / Anthropic 2.9 官方 SDK + cryptography；
   前端 React 19.3 + TypeScript 7.0 + Vite 8.3 + React Router 8.5 + TanStack Query；CSS 变量 + Radix Primitives；单进程 Uvicorn 同源托管。
+- **版本核实（2026-11-18）**：选项 A 的实际安装版本为 FastAPI 0.163.2、SQLAlchemy 2.1.9、pydantic-settings 2.16.3，无降级；此前的版本误报已更正，见 ADR-043。
 - 未采用：B（Node.js 24 + Fastify/NestJS + Drizzle）、C（Go + Chi）。
 - 选 A 后 `.aw/config.json` 的 pytest 测试命令保持不变。
 
@@ -171,18 +172,21 @@
 - **背景**：`technical-design/change-spec.md` §5 写「29 个端点」，`docs/api-spec.md` 端点总览列出 30 个（差异为 `POST /sessions/{sessionId}/inputs/text`）。
 - **选项**：A（默认）以 `api-spec.md` 的 30 个为准，任务按 30 个实现；B 以 change-spec 的 29 个为准，把文本输入并入会话事件端点（改变契约）；C 回退 tech-design 统一文档后再开工。
 - **建议**：A。api-spec 是逐端点契约，change-spec 的 29 是概述笔误；不改任何已确认契约，只在任务说明中注明差异。
-- **影响**：无功能差异；仅文档一致性与评审口径。
+- **结论**：✅ 已确认 A（2026-11-18）：以 `docs/api-spec.md` 端点总览的 30 个为准（1–30 连续），任务按 30 个实现；`technical-design/change-spec.md` 的「29 个」按笔误处理，不改上游原文。
+- **影响**：无功能差异；TASK-TD-019 ~ 043 的端点覆盖以 api-spec 为准；`requirements.md` AC-TECH-3 的「30 个端点」成立。
 
 ## OQ-TT-03：前端自动化测试是否进入门禁
 
 - **背景**：`change-spec.md` §6.1 列了 Vitest + Testing Library 与可选 Playwright，但 `.aw/config.json` 的 `test` 只有 pytest，`aw verify` / `aw close` 只认 pytest 报告里的 TC。
 - **选项**：A（默认）前端不进门禁：TC 由服务端 pytest 承担，UI 状态用人工或 Playwright 记录，Vitest/Playwright 作为 P1 可选；B 把 Vitest 接进 `aw verify`（需改 `.aw/config.json` 与报告解析，超出本阶段范围）；C 只保留 Playwright E2E 手工脚本，不写组件测试。
 - **建议**：A。保持门禁单一来源，避免「UI 绿」与「接口绿」两套证据；后续要接前端门禁时单独走配置变更。
-- **影响**：TASK-TD-021/024/028/029/033/034/037/038/040/043/044/045/046 的验证方式写成「服务端 TC + 人工/Playwright 验收」。
+- **结论**：✅ 已确认**按用户口径**（2026-11-18，「其他按建议」之外单独指定）：Vitest 组件单测进入**必过门禁**；Playwright E2E 不进必过门禁。落地方式：CI 新增 `frontend-tests` job（`npm ci && npm run test -- --run`）为必过；本地开发同样要求 `npm run test -- --run` 通过。`aw verify` / `aw close` 仍只解析 pytest 报告，因此每个 TC 继续由 pytest 用例断言；Vitest 用例标题带同一 TC 编号（如 `TC-026 …`），作为前端实现的额外证据，不新增没有 pytest 结果的 TC。
+- **影响**：TASK-TD-018 增加第三个 job；TASK-TD-021 增加 Vitest 配置与 setup；TASK-TD-024/028/029/033/034/037/038/040/043/044/045/046 各增加对应的组件用例；Playwright 保持 P1 可选。
 
 ## OQ-TT-04：备份恢复演练的验收方式
 
 - **背景**：ADR-019 与 OQ-ARCH-05 A 要求提供 `scripts/backup.sh` 并做恢复演练，但该过程依赖真实 MySQL 与文件系统，无法在 pytest 内可信模拟。
 - **选项**：A（默认）TASK-TD-049 标 `[no-test]`，以一次手工演练（备份 → 空库恢复 → 校验 `alembic_version` 与制品数量）作为验收证据并记录在 `docs/dev-setup.md`；B 用 testcontainers 写自动化恢复用例（成本高、CI 时间显著增加）；C 只交脚本，不做演练。
 - **建议**：A。恢复演练是一次性运维验收，手工证据足够且成本最低；自动化恢复测试留到多环境部署阶段。
-- **影响**：`aw close` 前需要一条人工验收记录；选 B 需新增 CI job 与 Docker 依赖。
+- **结论**：✅ 已确认 A（2026-11-18，「其他按建议」）：本期只交付 `scripts/backup.sh` 与一次手工演练记录（备份 → 空库恢复 → 校验 `alembic_version` 与制品数量），不做自动恢复演练。
+- **影响**：TASK-TD-049 保持 `[no-test]`，验收证据为 `docs/dev-setup.md` 中的演练记录；`aw close` 前需补该记录。

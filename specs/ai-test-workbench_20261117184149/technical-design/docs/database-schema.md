@@ -1,5 +1,7 @@
 # Database Schema（数据库 Schema）— workbench-core
 
+> **文档状态：draft — 2026-11-18 因跨 spec 知识库注入扩展（A101 / A102 / A103 B）变更，待用户重新确认。**
+
 > 阶段：tech-design（步骤 5，`data=yes`）。上游：`technical-design/docs/architecture-decisions.md`（architecture-locked，2026-11-18 用户重新确认）、`requirements-analysis/docs/context.md`、`interaction-design/docs/context.md`。
 > 生产 MySQL 8.4 LTS（InnoDB / utf8mb4 / `utf8mb4_0900_ai_ci`）；开发与默认测试 SQLite（aiosqlite）。所有类型与写法必须同时成立（ADR-015 / ADR-016 / ADR-017）。
 > 本 spec 只含 `workbench-core` 的 10 张表；知识库与仓库集成不在此处，由各自 spec 扩展。
@@ -185,7 +187,7 @@ erDiagram
 |----|------|----|------|------|
 | `event_id` | BigInt PK | 否 | — | 时间线排序与游标键 |
 | `session_id` | BigInt FK → `analysis_session` | 否 | — | `ON DELETE CASCADE` |
-| `type` | `VARCHAR(32)` | 否 | — | `input_text` / `artifact` / `call` / `status_change`；CHECK |
+| `type` | `VARCHAR(32)` | 否 | — | `input_text` / `artifact` / `call` / `status_change` / `knowledge_injection`；CHECK |
 | `payload` | `JSON` | 否 | — | 见下表 |
 | `created_at` | `DateTime` | 否 | — | |
 
@@ -200,6 +202,7 @@ erDiagram
 | `artifact` | `{artifactId, fileName, byteSize, mimeType, kind}` | AC-007-1 |
 | `call` | `{callId, modelId, modelDisplayName, status, latencyMs, retryCount, promptPreview, errorCode}` | AC-009-3 / ADR-011 |
 | `status_change` | `{from, to, actor, at, reason}`；`actor` = `local-user` / `system` | ADR-012 |
+| `knowledge_injection` | `{items:[{kbId, kbName, kbVersion, entryCodes[], injectedChars}], promptChars, injectedChars, totalChars, excludedCodes[]}` | A101 / ADR-042 |
 
 - `status_change` 的 `at` 为 ISO-8601 UTC；`reason` 可空。
 - 启动归并（§7.1）为每条被归并的 `running` 调用追加一条 `call` 事件、`actor=system` 的来源记在 `errorCode=interrupted`。
@@ -241,7 +244,11 @@ erDiagram
 | `status` | `VARCHAR(16)` | 否 | `'running'` | `running` / `success` / `failed` / `timeout`；CHECK |
 | `prompt_digest` | `CHAR(64)` | 否 | — | `sha256(prepared)` 十六进制 |
 | `prompt_preview` | `VARCHAR(200)` | 否 | — | 前 200 字符；脱敏后写入 |
-| `prompt_char_count` | `Integer` | 否 | — | `len(prepared)`；`CHECK >= 0` |
+| `prompt_char_count` | `Integer` | 否 | — | `len(prepared)`（等于 `total_chars`，保留兼容）；`CHECK >= 0` |
+| `knowledge_injection` | `JSON` | 是 | NULL | 注入快照 `[{kbId, kbName, kbVersion, entryCodes[], injectedChars}]`；只记标识/编号/字符数，不存正文 |
+| `injected_chars` | `Integer` | 否 | 0 | 注入块字符数；`CHECK >= 0` |
+| `prompt_chars` | `Integer` | 否 | 0 | 用户提示字符数（不含注入块）；`CHECK >= 0` |
+| `total_chars` | `Integer` | 否 | 0 | `prompt_chars + injected_chars`；`CHECK (total_chars = prompt_chars + injected_chars)` |
 | `result_text` | Text（MySQL MEDIUMTEXT） | 是 | NULL | 仅成功时写全文（ADR-011） |
 | `result_format` | `VARCHAR(16)` | 否 | `'text'` | 本期固定 `text` |
 | `latency_ms` | `Integer` | 是 | NULL | 从发起第一次外部请求到最终结束的总耗时；失败/超时也写 |
@@ -281,6 +288,8 @@ erDiagram
 - 每次进入提供商的调用（含失败/超时/被中断）必须有 AiCallRecord（BG-03）。
 - 制品行必须对应一个 `relative_path` 位于 `sessions/<session_id>/` 下的文件；行与文件不一致由启动孤儿扫描收敛。
 - 口令哈希、令牌哈希、来源 IP 哈希是库中唯一的凭据形态；任何列都不存明文口令或令牌。
+- `knowledge_injection` 只存标识快照，不存正文；`ai_call_record` 不建指向 `knowledge_base` 的外键（该表由 knowledge-base spec 创建），`kbDeleted` 在读取时计算（ADR-042）。
+- 无注入时 `knowledge_injection IS NULL` 且 `injected_chars = 0`、`total_chars = prompt_chars = prompt_char_count`；有注入时四列与 `knowledge_injection` 事件同事务写入。
 
 ## 5. 迁移策略
 
@@ -291,7 +300,9 @@ erDiagram
    - `0003_session_event`：`analysis_session`、`session_event`
    - `0004_artifact`：`artifact`
    - `0005_ai_call_record`：`ai_call_record`
+   - `0006_knowledge_injection`（2026-11-18 追加）：`ai_call_record` 四个留痕列 + `session_event.type` CHECK 增加 `knowledge_injection`
 3. **执行时机**：compose 入口脚本 `alembic upgrade head` 后起 Uvicorn；应用启动只读 `alembic_version` 并校验等于 head，不做自动迁移（ADR-017 / ADR-020）。
+   - **跨 spec 顺序约束**：core 的 `0006` 必须先于 knowledge-base 的 `0007` 应用；knowledge-base 原计划的 `0006` 作废。core `0006` 不创建或引用 `knowledge_base` 表，二者在同一 Alembic 线性树上按编号顺序执行。
 4. **双方言验证**：`tests/test_db_migrations.py` 从空库升级到 head，默认 SQLite；`AW_TEST_DATABASE_URL` 指向 MySQL 时同一用例跑第二方言。CI 两个 job（SQLite / MySQL service）都必须绿。
 5. **数据初始化**：不通过迁移写业务数据；管理员凭据在启动自检阶段写入/轮换（ADR-021）；入口配置是代码常量（`core/entrances.py`），不入库。
 6. **回滚**：每个 revision 提供 `downgrade()`（未发布前允许直接改）；已发布的修正只能新增 revision。MySQL DDL 隐式提交，失败后按 revision 重放而不是半手工修补。
@@ -336,7 +347,7 @@ for each row:
 ### 7.2 并发调用上限与 `running` 回收
 
 - `AW_AI_MAX_CONCURRENCY` 默认 4，进程内 `asyncio.Semaphore` 只包住「外部请求 + 重试」，不包 DB 事务。
-- 先做前置校验（会话进行中、模型/提供商启用、凭据可解密）→ 获取信号量 → 插入 `running` → 发起请求。排队等待期间不产生记录（尚未进入提供商）。
+- 先做前置校验（会话进行中、模型/提供商启用、凭据可解密）→ 获取信号量 → 插入 `running`（若 `injection` 非空，同事务写入 `knowledge_injection` / `injected_chars` / `prompt_chars` / `total_chars` 并追加 `knowledge_injection` 事件）→ 发起请求。排队等待期间不产生记录（尚未进入提供商）。
 - 请求被取消（客户端断开 / 进程收到取消）时 `finally` 中把记录终结为 `failed(interrupted)`；硬崩溃由 §7.1 兜底。
 - 每次尝试 `asyncio.timeout(120)`；仅网络错误与 5xx 重试 1 次；`retry_count` 记录实际重试次数；`latency_ms` 含重试与退避的总墙钟时间（不含排队时间）。
 - 超时终态 `status='timeout'`、`error_code='timeout'`、`latency_ms≈120000`；不重试。
@@ -353,6 +364,14 @@ for each row:
 - 写：`storage_name` 由服务端生成（uuid + 白名单扩展名），原始文件名只进 `file_name` 列，不参与任何路径拼接。
 - 读：`path = (AW_DATA_DIR / relative_path).resolve()`，要求 `path.is_relative_to(session_dir.resolve())`，且路径链上不含符号链接（`lstat` 检查）；不满足 → 404 `artifact_not_found`（不暴露内部路径），并记告警日志。
 - `relative_path` 与行的 `session_id` 必须一致：从 URL 取 `artifactId` 查行，再用行的 `session_id` 组装目录，不接受客户端传入 sessionId。
+
+### 7.5 知识库注入留痕与 `kbDeleted` 序列化
+
+- 写入：`AiGateway.complete(..., injection=snapshot)` 在插入 `running` 的同一事务内写四列并追加 `session_event(type='knowledge_injection')`；调用失败/超时/中断不回滚这两处写入（它们描述的是「发起时用了什么」）。
+- 快照结构（只记标识与字符数）：`InjectionSnapshot(items=[{kb_id, kb_name, kb_version, entry_codes, injected_chars}], prompt_chars, injected_chars, total_chars, excluded_codes)`；落库 JSON 用 camelCase 键。
+- 校验：`injected_chars = sum(item.injected_chars)`、`total_chars = prompt_chars + injected_chars = len(prepared)`；不满足抛 `injection_snapshot_mismatch`（400），不写记录。
+- 读取：调用记录与时间线序列化时按 `knowledge_injection[].kbId` 左连接 `knowledge_base`（knowledge-base spec 的表）。行存在 → `kbDeleted=false`；行不存在或该表尚未创建 → `kbDeleted=true`；不修改历史快照，界面用快照中的 `kbName` 展示并标注「知识库已删除」。
+- 无注入的记录：`knowledgeInjection = null`、`kbDeleted = false`，前端不渲染注入区块。
 
 ## 8. 客户端会话清理任务
 

@@ -58,6 +58,16 @@ STK-001 A，STK-002 A，STK-003 A，STK-004 A
 - OQ-TD-04 制品磁盘文件名：uuid，原名只存库。
 - OQ-TD-05 网关错误映射：上游 5xx → 502，超时 → 504。
 
+## 2026-11-18 11:23:27
+
+用户原话：「A101 A、A102 A、A103 B」（跨 spec 扩展，由编排者转达）。
+
+- **A101 A**：`ai_call_record` 追加 `knowledge_injection`（JSON NULL）、`injected_chars`、`prompt_chars`、`total_chars`；`session_event.type` 的 CHECK 增加 `knowledge_injection`；core 的调用记录与时间线序列化暴露 `knowledgeInjection` 与 `kbDeleted`（按 `kbId` 左连接 `knowledge_base`，该表由 knowledge-base spec 建）。
+- **A102 A**：`AiGateway.complete(...)` 追加 keyword-only 可选参数 `injection: InjectionSnapshot | None = None`，缺省行为与现状完全一致；插入 `running` 记录时同事务写上述列并追加 `knowledge_injection` 事件。
+- **A103 B**：不新增 `/knowledge-injection/calls` 端点；扩展 core 的 `POST /api/v1/sessions/{sessionId}/ai/complete` 请求体，接受知识库引用（`knowledgeRefs`、`confirmInvalidCodes`），由 core 在调用前调用 knowledge-base 的进程内服务做失效重校验、组装与字符预算。
+- **迁移顺序**：core 新增 revision `0006`（现有 head `0005`）；knowledge-base 的表迁移从 `0007` 起。
+- **状态说明**：tech-design 已于 2026-11-18 10:47:44 确认；本次为确认后的跨 spec additive 变更，`technical-design/` 相关文档标注「2026-11-18 因跨 spec 扩展变更，待用户重新确认」，不视为已确认。
+
 ## 2026-11-18 11:02:41
 
 用户原话：「TT-01 A 建 GitHub 公开仓库并 push 走 Actions，配置好 .gitignore ，其他按建议」
@@ -66,3 +76,11 @@ STK-001 A，STK-002 A，STK-003 A，STK-004 A
 - OQ-TT-02 端点口径：30（以 api-spec.md 端点总览表为准，1–30 连续，29 为误计）。
 - OQ-TT-03 前端测试：单测（vitest）进 CI 必过门禁；E2E（Playwright）不进必过门禁。
 - OQ-TT-04 备份恢复：本期交付 `scripts/backup.sh` + 手工演练记录，不做自动恢复演练。
+
+## 2026-11-18 依赖版本核实记录（实现侧反馈，非用户决策）
+
+实现侧两次报错版本：先报 FastAPI 0.162.5，再报「SQLAlchemy 2.1 不可用」；均已由编排者运行时核实更正。
+
+- **最终版本**：FastAPI **0.163.2**（`fastapi.__version__` 与 `uv.lock` 一致，pyproject 约束 `>=0.162,<0.164`）、SQLAlchemy **2.1.9**（`pyproject.toml` 为 `sqlalchemy>=2.1.9,<2.2`）、pydantic-settings **2.16.3**。
+- **验证**：`uv lock`/`uv sync` 实装 2.1.9；`pytest` 36 passed；`alembic upgrade head` 在 SQLite 上 0001→0006 全过；`aw.py verify` 36 通过 / 0 失败；生产代码零改动。
+- **结论**：本次没有任何降级；记录见 `docs/architecture-decisions.md` ADR-043。

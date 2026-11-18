@@ -55,7 +55,8 @@ npm run build      # 产物 web/dist，由后端同源托管
 ```
 
 - 前端只消费 `web/src/styles/tokens.css`，不新增 token（需要新 token 应回到 interaction-design）。
-- 可选（P1，不进门禁）：`npm run test`（Vitest）、`npx playwright test`（关键闭环）。
+- 必过门禁：`npm run test -- --run`（Vitest + Testing Library，OQ-TT-03 已确认）；提交前与 CI 都要求通过。
+- 可选（P1，不进门禁）：`npx playwright test`（关键闭环 E2E）。
 
 ## 5. 测试与门禁
 
@@ -63,6 +64,7 @@ npm run build      # 产物 web/dist，由后端同源托管
 pytest                                   # 默认 SQLite，等价 aw verify 的测试命令
 python3 .aw/aw.py verify                 # 跑 .aw/config.json 的 pytest 并解析 TC
 AW_TEST_DATABASE_URL='mysql+asyncmy://...?charset=utf8mb4' pytest tests/test_db_migrations.py
+cd web && npm run test -- --run          # Vitest 组件单测（必过）
 ```
 
 - 用例名必须带 TC 编号：`test_tc012_upload_rejects_oversize`。
@@ -82,8 +84,8 @@ docker compose up --build
 
 ## 7. CI
 
-- 当前仓库无 CI（`.aw/install.json` 的 `ci: null`）；TASK-TD-018 新增 `.github/workflows/ci.yml`（平台待 OQ-TT-01 确认）。
-- job 1：SQLite 跑 pytest；job 2：`mysql:8.4` service + `AW_TEST_DATABASE_URL`，先迁移后跑同一套用例；两个 job 都必须绿。
+- 当前仓库无 CI（`.aw/install.json` 的 `ci: null`）；TASK-TD-018 新增 `.github/workflows/ci.yml`。平台已确认 GitHub Actions，仓库将建成 GitHub 公开仓库并 push（OQ-TT-01）。
+- job 1：SQLite 跑 pytest；job 2：`mysql:8.4` service + `AW_TEST_DATABASE_URL`，先迁移后跑同一套用例；job 3：`cd web && npm ci && npm run test -- --run`（Vitest，OQ-TT-03）。三个 job 都是必过；Playwright E2E 不进必过门禁。
 - `python3 .aw/aw.py ci` 从零重跑测试，与 job 1 等价。
 
 ## 8. 常见问题

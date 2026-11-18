@@ -1,5 +1,7 @@
 # Component Tree（组件树）— workbench-core
 
+> **文档状态：draft — 2026-11-18 因跨 spec 知识库注入扩展（A101 / A102 / A103 B）变更，待用户重新确认。**
+
 > 阶段：tech-design（步骤 4，`ui=yes`）。依据 `interaction-design/design.md`（2026-11-18 重新确认）、`interaction-design/docs/context.md`、`docs/design-system.md`。
 > 技术：React 19 + TypeScript + Vite + React Router + TanStack Query + Radix Primitives + CSS Modules（ADR-002 / ADR-007）。
 > 视觉：**只消费 interaction-design 的 Design Tokens，不新增任何颜色/字号/间距/圆角/阴影变量**；token 落在 `web/src/styles/tokens.css`，组件内只用 `var(--…)` 与 CSS Modules。
@@ -88,7 +90,7 @@ App
             │   └── CreateSessionDialog
             ├── SessionDetailPage (/sessions/:id)
             │   ├── SessionHeader → StatusPill
-            │   ├── SessionTimeline → TimelineEvent（InputEventCard / CallEventCard / ArtifactEventCard / StatusChangeEvent）
+            │   ├── SessionTimeline → TimelineEvent（InputEventCard / CallEventCard / ArtifactEventCard / StatusChangeEvent / KnowledgeInjectionEventCard）
             │   └── SidePanel (Tabs)
             │       ├── TextComposer → CharacterCounter
             │       ├── FileUploader → ArtifactCard
@@ -157,17 +159,18 @@ App
 | `SessionHeader` | 标题、项目、模型、状态、标记完成、删除 | `session`、`onComplete`、`onDelete` | `in-progress / completed / failed` | `StatusPill`、`ConfirmDialog` | AC-009-4/5 |
 | `StatusPill` | 状态徽标（进行中/已完成/失败/planned/live） | `status`、`size?` | — | token 色 | AC-002 / AC-009 |
 | `SessionTimeline` | 事件升序渲染；loading / empty / error；只读态 | `sessionId`、`readOnly` | `loading / empty / success / error / read-only` | `useEvents`（infinite） | AC-009-3 |
-| `TimelineEvent` | 按 `type` 分发到四类卡片；显示时间与操作 | `event` | — | 四类事件卡 | AC-009-3 |
+| `TimelineEvent` | 按 `type` 分发到五类卡片；显示时间与操作 | `event` | — | 五类事件卡 | AC-009-3 / ADR-042 |
 | `InputEventCard` | 标题、字数、折叠摘要、展开全文 | `payload`（`title/text/charCount`） | `collapsed / expanded` | — | AC-006-1 / AC-009-3 |
 | `CallEventCard` | 模型、耗时、状态、提示摘要；失败显示重试与错误 | `payload` | `collapsed / expanded` | `StatusPill` | AC-005-4 / AC-010-2 |
 | `ArtifactEventCard` | 文件名、大小、预览/下载按钮 | `payload`、`artifactId` | `default` | `useArtifactContent` | AC-007-1 |
 | `StatusChangeEvent` | from → to、actor、时间、原因 | `payload` | — | — | ADR-012 |
+| `KnowledgeInjectionEventCard` | 知识库名/版本、编号列表、分段字数；`kbDeleted=true` 时标「知识库已删除」；不展示正文 | `payload`（`items/promptChars/injectedChars/totalChars/excludedCodes`） | `collapsed / expanded` | Badge | A101 / ADR-042 |
 | `TextComposer` | 标题 + 正文提交；实时计数；>90% 警告；超限禁用提交 | `sessionId`、`maxChars=200000`、`readOnly` | `default / counter-warning / counter-exceeded / empty-error / submitting / read-only` | `CharacterCounter`、`useAppendText` | AC-006-1/2/3 |
 | `CharacterCounter` | `当前 / 上限`；>90% 警告色；超限危险色 | `value`、`max` | `normal / warning / exceeded` | token 色 | UXAMB-007 / AC-UX-19 |
 | `FileUploader` | 拖拽/选择；前端三查（类型/大小/数量）；逐文件标红可移除；提交 | `sessionId`、`accept`、`maxFiles=10`、`maxFileSize=10MB`、`readOnly` | `idle / dragging / validating / rejected / uploading / success / renamed / read-only` | `ArtifactCard`、`useUploadArtifacts` | AC-007-1/2/3 |
 | `ArtifactCard` | 文件名（改名后）、大小、预览/下载；预览按纯文本转义 | `artifact` | `default / previewing / error` | `useArtifactContent` | ADR-013 |
 | `SidePanel` | Radix Tabs：文本 / 上传 / 发起调用；终态只读 | `session`、`readOnly` | `activeTab` | Radix Tabs | UX 会话详情 |
-| `CallPanel` | 提示输入 + 字数 + 高级参数（temperature/max_tokens）；调用中禁用重复提交 | `session`、`readOnly` | `default / advanced-open / counter-warning / counter-exceeded / submitting / success / failed / read-only` | `useCreateCall`、`CharacterCounter` | US-005 / AC-004-3 |
+| `CallPanel` | 提示输入 + 字数 + 高级参数（temperature/max_tokens）；调用中禁用重复提交；调用 `POST /sessions/{id}/ai/complete`（core 面板不带 `knowledgeRefs`，知识库页面由 knowledge-base spec 传） | `session`、`readOnly`、`knowledgeRefs?` | `default / advanced-open / counter-warning / counter-exceeded / submitting / success / failed / read-only` | `useCreateCall`、`CharacterCounter` | US-005 / AC-004-3 / ADR-042 |
 | `AdvancedParams` | 本次 temperature / max_tokens 覆盖；不写回模型默认 | `value`、`onChange` | `collapsed / open / invalid` | `FormField` | UXAMB-010 |
 
 ### 2.6 调用记录与通用组件
@@ -177,7 +180,7 @@ App
 | `CallsPage` | 筛选 + 列表 + 展开核对 | — | — | `useCalls` | US-010 |
 | `CallFilters` | 项目 → 会话级联、状态、时间范围（默认近 7 天）、清除筛选 | `value`、`onChange`、`projects` | `default / filtered` | Select、日期输入 | AC-010-1/3 / UXAMB-009 |
 | `CallRecordTable` | 模型、状态、耗时、重试、时间；按时间倒序；空态 | `calls`、`loading`、`error` | `loading / success / empty / filtered-empty / error` | `CallRecordRow` | AC-010-1/3 |
-| `CallRecordRow` | 行展开：提示摘要、错误信息、结果全文（成功） | `call` | `collapsed / expanded` | — | AC-010-2 |
+| `CallRecordRow` | 行展开：提示摘要、错误信息、结果全文（成功）、知识库注入快照（`knowledgeInjection`，含 `kbDeleted` 标记） | `call` | `collapsed / expanded` | Badge | AC-010-2 / ADR-042 |
 | `ConfirmDialog` | 破坏性操作二次确认；展示级联范围；确认中 loading | `open`、`title`、`description`、`confirmLabel`、`onConfirm`、`onCancel`、`danger?` | `default / confirm-loading` | Radix AlertDialog | AC-009-5 |
 | `EmptyState` | 空态图标/文案/可选操作 | `title`、`description`、`action?` | — | — | 各列表 |
 | `ErrorState` | 错误文案 + 重试 | `message`、`onRetry?`、`retryable?` | `retryable / fatal` | — | 各列表 |

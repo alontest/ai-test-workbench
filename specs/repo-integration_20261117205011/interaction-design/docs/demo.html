@@ -237,7 +237,10 @@
   .dot.muted{background:var(--color-muted-foreground)}
 
   /* ===== Repo integration（本 spec 增量） ===== */
-  .split{display:grid;grid-template-columns:360px minmax(0,1fr);gap:var(--spacing-4);align-items:start}
+  .project-grid{display:grid;grid-template-columns:280px minmax(0,1fr);gap:var(--spacing-4);align-items:start}
+  .project-row{display:flex;align-items:center;justify-content:space-between;gap:var(--spacing-2);width:100%;text-align:left;border:1px solid transparent;border-radius:var(--radius-sm);background:none;color:inherit;padding:var(--spacing-2);cursor:pointer}
+  .project-row:hover{background:var(--color-muted)}
+  .project-row.active{background:var(--color-muted);border-color:var(--color-border)}
   .panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--spacing-3);flex-wrap:wrap;margin-bottom:var(--spacing-3)}
   .panel-notes{display:flex;flex-direction:column;gap:var(--spacing-1);margin-bottom:var(--spacing-3)}
   .binding{border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--spacing-3) var(--spacing-4);display:flex;justify-content:space-between;gap:var(--spacing-3);flex-wrap:wrap;background:var(--color-card)}
@@ -267,7 +270,7 @@
   .tree-row[aria-disabled="true"]{opacity:.45;cursor:not-allowed}
   .tree-row[aria-disabled="true"]:hover{background:transparent}
   .tree-caret{width:14px;display:inline-block;color:var(--color-muted-foreground)}
-  .tree-icon{width:16px;text-align:center;color:var(--color-muted-foreground);font-size:11px}
+  .tree-icon{width:30px;flex:none;text-align:left;color:var(--color-muted-foreground);font-size:10px;letter-spacing:.02em}
   .tree-name{font-family:var(--font-family-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .tree-size{margin-left:auto;color:var(--color-muted-foreground);font-size:var(--font-size-xs);white-space:nowrap}
   .tree-note{margin:var(--spacing-1) 0 var(--spacing-2) var(--spacing-6);font-size:var(--font-size-xs);color:var(--color-warning);display:flex;gap:var(--spacing-2);align-items:center;flex-wrap:wrap}
@@ -305,7 +308,7 @@
 
   /* ===== Responsive ===== */
   @media (max-width:1180px){
-    .split{grid-template-columns:1fr}
+    .project-grid{grid-template-columns:1fr}
     .browse-grid{grid-template-columns:1fr}
   }
   @media (max-width:768px){
@@ -375,6 +378,7 @@
 
   /* ================= 数据 ================= */
   const NOW = '2026-11-18 10:52';
+  const BASE_REMARKS = {p1:'git@git.example.com:pay/checkout.git（历史备注）', p2:''};
 
   const state = {
     page:'projects', theme:'dark', ui:'default', navOpen:false, notice:null, toast:null,
@@ -393,8 +397,8 @@
     repoQuery:'',
     branchQuery:'',
     projectDraft:{
-      p1:{name:'支付台', remark:'git@git.example.com:pay/checkout.git（历史备注）', stack:'Java 17, MySQL 8, Redis', source:'支付台 4.2 需求评审稿', notes:'核心链路：下单、支付回调'},
-      p2:{name:'风控台', remark:'', stack:'Go 1.22, PostgreSQL', source:'风控规则 2.0 需求', notes:'规则命中与名单管理'}
+      p1:{name:'支付台', updated:'2026-11-17 10:20', remark:'git@git.example.com:pay/checkout.git（历史备注）', stack:'Java 17, MySQL 8, Redis', source:'支付台 4.2 需求评审稿', notes:'核心链路：下单、支付回调'},
+      p2:{name:'风控台', updated:'2026-11-16 17:40', remark:'', stack:'Go 1.22, PostgreSQL', source:'风控规则 2.0 需求', notes:'规则命中与名单管理'}
     }
   };
 
@@ -549,24 +553,30 @@
     }
     html += '<div class="page-head spread" style="margin-bottom:var(--spacing-4)">' +
       '<div><div class="h1">项目上下文</div><div class="muted small">项目资料沿用 workbench-core；仓库信息以「仓库绑定」为准。</div></div>' +
-      '<div class="row"><label class="small muted" for="projectSelect">当前项目</label><select id="projectSelect" data-field="project" style="width:180px">' +
-      '<option value="p1"' + (state.project === 'p1' ? ' selected' : '') + '>支付台</option>' +
-      '<option value="p2"' + (state.project === 'p2' ? ' selected' : '') + '>风控台</option></select></div></div>';
+      '<div class="row small muted">当前项目 <strong>' + esc(p.name) + '</strong></div></div>';
 
-    html += '<div class="split">';
-    /* 左：core 项目资料（只读展示 + 仓库地址降级） */
+    /* core：左项目列表 / 右项目详情表单（本 spec 不改两栏结构） */
+    html += '<div class="project-grid">';
+    html += '<aside class="card"><div class="spread" style="margin-bottom:var(--spacing-2)"><div class="h2">项目</div><button class="btn btn-sm" data-action="new-project">新建</button></div>' +
+      ['p1','p2'].map(function(id){
+        const x = state.projectDraft[id];
+        return '<button class="project-row' + (state.project === id ? ' active' : '') + '" data-action="select-project" data-id="' + id + '">' +
+          '<span class="row" style="gap:6px"><span class="dot' + (state.project === id ? '' : ' muted') + '"></span><strong>' + esc(x.name) + '</strong></span>' +
+          '<span class="small muted">' + esc(x.updated) + '</span></button>';
+      }).join('') +
+      '<div class="small muted" style="margin-top:var(--spacing-3)">创建会话前必须先选择或创建项目。</div></aside>';
     html += '<section class="card">' +
-      '<div class="spread" style="margin-bottom:var(--spacing-3)"><div class="h2">项目资料</div><span class="small muted">最后更新 2026-11-17 10:20</span></div>' +
+      '<div class="spread" style="margin-bottom:var(--spacing-3)"><div class="h2">项目详情</div><span class="small muted">最后更新 ' + esc(p.updated) + '</span></div>' +
       '<div class="field"><label>项目名</label><input type="text" value="' + esc(p.name) + '" disabled></div>' +
-      '<div class="field"><label>仓库地址（自由备注）</label><input type="text" value="' + esc(p.remark) + '" data-field="remark"><span class="hint">人工备注，实际拉取以右侧「仓库绑定」为准（AMB-030）</span></div>' +
+      '<div class="field"><label>仓库地址（自由备注）</label><input type="text" value="' + esc(p.remark) + '" data-field="remark"><span class="hint">人工备注，实际拉取以下方「仓库绑定」为准（AMB-030）</span></div>' +
       '<div class="field"><label>技术栈</label><input type="text" value="' + esc(p.stack) + '" disabled></div>' +
       '<div class="field"><label>需求来源</label><textarea rows="2" disabled>' + esc(p.source) + '</textarea></div>' +
       '<div class="field"><label>备注</label><textarea rows="2" disabled>' + esc(p.notes) + '</textarea></div>' +
-      '<button class="btn btn-sm" data-action="save-remark">保存备注</button>' +
-      '<div class="readonly-note" style="margin-top:var(--spacing-3)">除「仓库地址（自由备注）」外，其余项目资料为 workbench-core 字段，本 spec 不改交互。</div>' +
-      '</section>';
+      '<div class="readonly-note">除「仓库地址（自由备注）」外，其余项目详情为 workbench-core 字段，本 spec 不改交互。</div>' +
+      '<div class="form-foot"><button class="btn" data-action="cancel-remark">取消</button><button class="btn btn-primary" data-action="save-remark">保存</button></div>' +
+      '</section></div>';
 
-    /* 右：仓库绑定 */
+    /* 增量：项目详情表单下方的纵向「仓库绑定」区块 */
     html += '<section class="card" data-testid="repo-panel">' +
       '<div class="panel-head"><div><div class="h2">仓库绑定</div>' +
       '<div class="small muted">只读取元数据与按需文件内容，不克隆仓库、不建立代码索引。</div></div>' +
@@ -589,7 +599,7 @@
     }
 
     if(state.form) html += formHtml();
-    html += '</section></div>';
+    html += '</section>';
     return html;
   }
 
@@ -644,14 +654,14 @@
     const t = f.test;
     let strip = '';
     if(t && t.testing){
-      strip = '<div class="test-strip" data-testid="test-result"><span class="badge badge-info">测试中</span><span class="test-detail">正在发起一次只读请求，10s 内返回…</span></div>';
+      strip = '<div class="test-strip" data-testid="test-result"><span data-testid="connection-test-badge"><span class="badge badge-info">测试中</span></span><span class="test-detail">正在发起一次只读请求，10s 内返回…</span></div>';
     } else if(t && t.stale){
-      strip = '<div class="test-strip stale" data-testid="test-result"><span class="badge badge-muted">结果已失效</span><span class="test-detail">表单字段已修改，请重新测试；上一次结果仅作参考（' + esc(t.at) + ' · ' + esc(t.kind) + '）。</span></div>';
+      strip = '<div class="test-strip stale" data-testid="test-result"><span data-testid="connection-test-badge"><span class="badge badge-muted">已失效（' + esc(t.at) + ' · ' + esc(t.kind) + '）</span></span><span class="test-detail">表单字段已修改，请重新测试；上一次结果仅作参考。</span></div>';
     } else if(t && t.kind){
       const cls = t.kind === '成功' ? 'ok' : (t.kind === '权限不足' ? 'warn' : 'bad');
       const next = t.kind === '成功' ? '保存后状态为「已连接」。' : (t.kind === '鉴权失败' ? '请重新填写令牌；保存前测试不落库。' : (t.kind === '权限不足' ? '请授予目标仓库 Contents / Metadata 只读权限（GitHub）或代码库读取权限（云效）。' : '请检查域名、DNS 与网络连通性后重试；未写同步记录。'));
-      strip = '<div class="test-strip ' + cls + '" data-testid="test-result">' + badge(t.kind) +
-        '<span class="test-detail"><strong>' + esc(t.kind) + '</strong> · ' + esc(t.at) + '<br>' + esc(t.detail) + '<br><span class="small muted">' + esc(next) + '</span></span></div>';
+      strip = '<div class="test-strip ' + cls + '" data-testid="test-result"><span data-testid="connection-test-badge">' + badge(t.kind) + '</span>' +
+        '<span class="test-detail">' + esc(t.at) + '<br>' + esc(t.detail) + '<br><span class="small muted">' + esc(next) + '</span></span></div>';
     }
     const apiHint = f.provider === 'yunxiao'
       ? '云效默认 https://openapi-rdc.aliyuncs.com，可填地域域名'
@@ -1003,6 +1013,13 @@
       case 'back-projects': state.page = 'projects'; state.notice = null; render(); break;
       case 'toggle-records': state.recordsOpen[id] = !state.recordsOpen[id]; render(); break;
       case 'save-remark': toast('备注已保存（仅自由备注，不影响绑定）'); render(); break;
+      case 'cancel-remark': {
+        const d = state.projectDraft[state.project];
+        d.remark = BASE_REMARKS[state.project];
+        render(); break;
+      }
+      case 'select-project': state.project = id; state.form = null; render(); break;
+      case 'new-project': toast('新建项目属于 workbench-core，本 spec 不重做', 'info'); break;
       case 'retry':
       case 'refresh': state.ui = 'success'; state.notice = banner('success', '已刷新 · 列表为供应商实时结果'); render(); break;
       case 'toggle-dir':
@@ -1050,7 +1067,7 @@
         const strip = document.querySelector('[data-testid="test-result"]');
         if(strip){
           strip.className = 'test-strip stale';
-          strip.innerHTML = '<span class="badge badge-muted">结果已失效</span><span class="test-detail">表单字段已修改，请重新测试；上一次结果仅作参考（' + esc(state.form.test.at) + ' · ' + esc(state.form.test.kind) + '）。</span>';
+          strip.innerHTML = '<span data-testid="connection-test-badge"><span class="badge badge-muted">已失效（' + esc(state.form.test.at) + ' · ' + esc(state.form.test.kind) + '）</span></span><span class="test-detail">表单字段已修改，请重新测试；上一次结果仅作参考。</span>';
         }
       }
       return;

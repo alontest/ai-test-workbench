@@ -1233,7 +1233,7 @@
     });
 
     var stt = injectStats();
-    $('budgetLine').textContent = '已选 ' + stt.n + ' 条 · 注入 ' + fmt(stt.injected) + ' 字符 · 提示 ' + fmt(stt.prompt) + ' 字符';
+    $('budgetLine').textContent = '已选 ' + stt.n + ' 条 · 注入 ' + fmt(stt.injected) + ' 字符（含编号与标题）· 提示 ' + fmt(stt.prompt) + ' 字符';
     $('totalLine').textContent = '合计 ' + fmt(stt.total) + ' / 200,000 字符';
     $('totalLine').className = 'budget-line' + (stt.total > 200000 ? ' over' : (stt.total > 180000 ? ' warn' : ''));
     $('promptCounter').textContent = '提示 ' + fmt(stt.prompt) + ' 字符';

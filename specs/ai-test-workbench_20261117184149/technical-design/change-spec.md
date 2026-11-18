@@ -1,5 +1,7 @@
 # Change Spec
 
+> **文档状态：draft — 2026-11-18 因跨 spec 知识库注入扩展（A101 / A102 / A103 B）变更，待用户重新确认。** 变更前版本已于 2026-11-18 10:47:44 确认。
+
 涉及本体：无（`specs/ai-test-workbench_20261117184149/ontology-slices/tech-design.md` 不存在，项目尚无 `ontology-work/views/index.json`；业务对象名沿用 `_shared/domain-map.md`，候选领域事件见 `_shared/ontology/domain-events.md`）
 
 > 阶段：tech-design。范围：`workbench-core` 基座（US-001 ~ US-011，AC 42 条，EARS 17 条）。
@@ -24,7 +26,8 @@ ai-test-workbench/
 │       ├── 0002_project_provider_model.py
 │       ├── 0003_session_event.py
 │       ├── 0004_artifact.py
-│       └── 0005_ai_call_record.py
+│       ├── 0005_ai_call_record.py
+│       └── 0006_knowledge_injection.py   # core 迁移先于 knowledge-base 的 0007
 ├── src/workbench/
 │   ├── __init__.py
 │   ├── main.py                       # create_app()：路由、静态托管、异常处理、启动钩子
@@ -65,7 +68,8 @@ ai-test-workbench/
 │   │   ├── password.py               # Argon2id
 │   │   ├── redaction.py              # 日志脱敏过滤器
 │   │   ├── entrances.py              # 6 入口配置（唯一来源）
-│   │   └── constants.py              # 200000 字符、10MB、10 个、120s 等
+│   │   ├── constants.py              # 200000 字符、10MB、10 个、120s 等
+│   │   └── ports.py                  # InjectionPreparer 协议与注册（A103 B）
 │   └── db/
 │       ├── base.py                   # Declarative Base、naming_convention、类型助手
 │       ├── engine.py                 # 双方言引擎与连接池（ADR-018）
@@ -116,7 +120,7 @@ EntranceKey = Literal[
     "case-library", "bug-analysis", "log-triage",
     "sql-analysis", "regression-list", "test-report",
 ]
-EventType = Literal["input_text", "artifact", "call", "status_change"]
+EventType = Literal["input_text", "artifact", "call", "status_change", "knowledge_injection"]
 SessionStatus = Literal["in_progress", "completed", "failed"]
 
 class SessionView(TypedDict):
@@ -184,6 +188,22 @@ async def save(
 
 ```python
 @dataclass(frozen=True)
+class InjectionItem:
+    kb_id: int
+    kb_name: str
+    kb_version: int
+    entry_codes: tuple[str, ...]
+    injected_chars: int
+
+@dataclass(frozen=True)
+class InjectionSnapshot:
+    items: tuple[InjectionItem, ...]
+    prompt_chars: int
+    injected_chars: int
+    total_chars: int
+    excluded_codes: tuple[str, ...] = ()
+
+@dataclass(frozen=True)
 class AIResult:
     call_id: int
     text: str
@@ -192,6 +212,7 @@ class AIResult:
     retry_count: int
     model_id: int
     model_display_name: str
+    knowledge_injection: tuple[InjectionItem, ...] | None = None
 
 class AiGateway:
     async def complete(
@@ -202,6 +223,7 @@ class AiGateway:
         *,
         temperature: float | None = None,
         max_tokens: int | None = None,
+        injection: InjectionSnapshot | None = None,
     ) -> AIResult: ...
 ```
 
@@ -209,6 +231,8 @@ class AiGateway:
 - 前置校验（会话存在且 `in_progress`、模型存在且启用、提供商启用、凭据可解密）在写记录与外部请求之前；`session_not_found` / `session_closed` / `model_disabled` / `provider_disabled` / `provider_credential_unavailable` 均不产生记录。
 - 参数合并：`temperature`/`max_tokens` 为 `None` 时取 `model_binding` 默认值；非 `None` 时只影响本次，不回写模型。
 - 记录语义：获取并发信号量后插入 `running` → 调适配器（每次尝试 `asyncio.timeout(120)`；仅网络错误与 5xx 重试 1 次，退避 2s）→ 终结为 `success` / `failed` / `timeout`，写 `latency_ms`、`retry_count`、`error_code`、`result_text`（仅成功）→ 同一事务追加 `call` 事件并刷新会话 `updated_at`。
+- 知识库注入（A102 / ADR-042）：`injection is None` 时行为、记录与事件与扩展前完全一致；非空时先校验 `injected_chars == sum(items.injected_chars)` 且 `total_chars == prompt_chars + injected_chars == len(prepared)`，不符抛 `injection_snapshot_mismatch`（不写记录）。插入 `running` 的同事务写 `knowledge_injection` / `injected_chars` / `prompt_chars` / `total_chars`，并追加 `session_event(type="knowledge_injection")`；后续失败/超时/中断不回滚这两处留痕。
+- `AIResult.knowledge_injection` 回传快照供 HTTP 序列化；`prepared` 仍由调用方组装（core 的 `/ai/complete` 在带 `knowledgeRefs` 时调用 `InjectionPreparer` 组装，网关不解析知识库）。
 - 失败抛 `AIError(code, message, call_id, retry_count)`；不返回空串冒充成功；不自动切模型（AC-005-2 / AC-005-5）。
 
 ### 3.4 其他内部接口（不冻结，供本 spec 的 API 层使用）
@@ -237,6 +261,32 @@ def artifact_dir(session_id: int) -> Path
 def safe_artifact_path(session_id: int, relative_path: str) -> Path            # 包含校验 + 符号链接拒绝
 def move_to_trash(session_id: int) -> Path | None
 def scan_orphans(max_age: timedelta) -> int
+
+# core/ports.py（A103 B：knowledge-base 实现并注册，core 只依赖协议）
+@dataclass(frozen=True)
+class KnowledgeRef:
+    kb_id: int
+    entry_codes: tuple[str, ...]
+
+@dataclass(frozen=True)
+class InvalidCodeRef:
+    kb_id: int
+    code: str
+
+@dataclass(frozen=True)
+class PreparedInjection:
+    prepared: str
+    snapshot: InjectionSnapshot
+
+class InjectionPreparer(Protocol):
+    async def prepare_for_call(
+        self, *, session_id: int, project_id: int, prompt: str,
+        knowledge_refs: Sequence[KnowledgeRef],
+        confirm_invalid_codes: Sequence[InvalidCodeRef],
+    ) -> PreparedInjection: ...          # 返回 prepared 文本 + InjectionSnapshot；失效/空集/超预算抛领域错误
+
+def register_injection_preparer(impl: InjectionPreparer | None) -> None
+def get_injection_preparer() -> InjectionPreparer | None
 ```
 
 - `fail_session` 的触发：会话作用域端点出现**未捕获异常（500）**时，异常处理器 best-effort 调用 `fail_session(session_id, reason="unhandled error")`，写 `status_change(actor="system")`；数据库不可用则跳过并记日志。可预期的业务错误（400/404/409/502/504）不改变会话状态；启动归并 `running` 也不改变会话状态（会话仍可继续输入）。
@@ -251,13 +301,14 @@ def scan_orphans(max_age: timedelta) -> int
 | 磁盘写失败与半成品清理 | `adapters/fs/storage.py` 临时文件 + 原子移动 + 回滚；507 `artifact_write_failed`；启动孤儿扫描（§7.4 / §6） |
 | 路径穿越防护 | `safe_artifact_path` 解析后包含校验 + 拒绝符号链接；存储名服务端生成（`database-schema.md` §7.4） |
 | 登录限流 | `login_attempt` 行锁计数、5 次/5 分钟、成功清零、429 + `Retry-After`（ADR-025 / `database-schema.md` §2.3） |
+| 知识库注入留痕与唯一入口 | `InjectionSnapshot`、`AiGateway.complete` 可选 `injection`、四列 + `knowledge_injection` 事件同事务、`/ai/complete` 的 `knowledgeRefs`/`confirmInvalidCodes`、`InjectionPreparer` 协议与 `kbDeleted` 序列化（ADR-042 / `database-schema.md` §7.5 / `api-spec.md` 调用端点） |
 
 ## 5. 改动文件
 
 | 文件 | 改动类型 | 改什么 |
 |------|---------|--------|
 | `pyproject.toml` | 修改 | 写入后端依赖（fastapi/uvicorn/sqlalchemy/alembic/asyncmy/aiosqlite/argon2-cffi/cryptography/openai/anthropic/pydantic-settings/python-multipart）与 pytest 配置；删除占位 `dependencies = []` |
-| `alembic.ini`、`migrations/env.py`、`migrations/versions/0001~0005` | 新增 | 双方言迁移树与 10 张表 |
+| `alembic.ini`、`migrations/env.py`、`migrations/versions/0001~0006` | 新增 | 双方言迁移树与 10 张表；`0006` 为知识库注入留痕列（先于 knowledge-base 的 `0007`） |
 | `src/workbench/config.py`、`startup.py`、`main.py` | 新增 | 环境变量、启动自检、应用装配 |
 | `src/workbench/core/*` | 新增 | 加密、口令、脱敏、入口配置、常量 |
 | `src/workbench/db/*` | 新增 | Base、引擎、10 个 ORM 模型、仓储 |
@@ -297,6 +348,10 @@ def scan_orphans(max_age: timedelta) -> int
 - **CSRF**：缺 Origin、错 Origin、跨站 POST → 403；同源 → 通过。
 - **级联删除**：会话删除后事件/制品/调用记录 0 行、目录不存在；其他会话不受影响；trash 重命名失败时 DB 不动。
 - **同名上传**：`app.log` 两次 → `app.log` + `app-1.log`，两文件都在。
+- **注入兼容与留痕**：`injection=None` 时记录四列为 NULL/0 且不追加 `knowledge_injection` 事件；`injection` 非空时 `running` 同事务写四列并追加事件，调用失败仍保留；`total_chars != len(prepared)` → 400 且无记录。
+- **失效确认与预算**：假 `InjectionPreparer` 返回失效集 → 未带/不等 `confirmInvalidCodes` 时 409 `knowledge_invalid_entries`（无上游请求、无 AiCallRecord）；精确匹配后成功；有效集为空 → 409 `knowledge_injection_empty`；超 200,000 → 400 `prompt_budget_exceeded`（含分段字数）。
+- **kbDeleted 序列化**：快照 `kbId` 在 `knowledge_base` 有行 → false；行不存在或表不存在 → true；历史快照字段不被改写。
+- **迁移顺序**：`0006` 在空库升级中先于 `0007`；core 测试只验证 `0006`，knowledge-base 测试从 `0007` 继续。
 
 ### 6.3 命名与门禁
 
@@ -306,7 +361,8 @@ def scan_orphans(max_age: timedelta) -> int
 
 ## 7. 不改动的部分
 
-- ADR-041 冻结的 `sessions.create` / `sessions.append_event` / `artifacts.save` / `AiGateway.complete(session_id, model_id, prepared, *, temperature, max_tokens)` 的名称、参数顺序与语义；本文件只展开类型。
+- ADR-041 冻结的 `sessions.create` / `sessions.append_event` / `artifacts.save` / `AiGateway.complete(session_id, model_id, prepared, *, temperature, max_tokens)` 的名称、参数顺序与语义；本文件只展开类型。2026-11-18 按 A102 在 `complete` 末尾追加 keyword-only 可选参数 `injection=None`，缺省行为与扩展前完全一致（ADR-042）。
+- core 不实现知识库导入、检索、失效判定与正文组装；`InjectionPreparer` 的具体实现由 knowledge-base spec 提供，core 只定义协议与错误映射。
 - `projectId` 作为跨域主数据：其他域只引用 ID，不跨域查询项目表。
 - `technical-design/docs/architecture-decisions.md` 全部决策原文（仅恢复文档状态为 architecture-locked）。
 - 知识库与仓库集成：不新增其表、端点、组件或依赖；两者在各自 spec 中扩展本 spec 的加密、错误体、分页、认证与双方言约定。

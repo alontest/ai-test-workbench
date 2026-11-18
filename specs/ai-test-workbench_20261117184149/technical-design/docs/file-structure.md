@@ -5,7 +5,8 @@
 
 ## 技术栈
 
-- 后端：Python 3.12+ / FastAPI 0.163 / Uvicorn 0.54 / Pydantic 2.14 / SQLAlchemy 2.1 async / Alembic 1.20 / aiosqlite（开发测试）/ asyncmy（MySQL 8.4 生产）。
+- 后端：Python 3.12+ / FastAPI 0.163.2 / Uvicorn 0.54 / Pydantic 2.14 / pydantic-settings 2.16.3 / SQLAlchemy 2.1.9 async / Alembic 1.20 / aiosqlite（开发测试）/ asyncmy（MySQL 8.4 生产）。
+- 版本说明：2026-11-18 依赖版本核实为 FastAPI 0.163.2、SQLAlchemy 2.1.9、pydantic-settings 2.16.3，无降级（见 ADR-043）。
 - 安全：argon2-cffi（口令）、cryptography AES-256-GCM（提供商密钥）、SHA-256（令牌与来源 IP 哈希）。
 - AI：openai 3.52（`base_url` 兼容）与 anthropic 2.9 官方 SDK，统一封装在 `AiGateway`。
 - 前端：React 19.3 + TypeScript 7.0 + Vite 8.3 + React Router 8.5 + TanStack Query 5.107 + Radix Primitives 1.8 + CSS Modules。
@@ -31,7 +32,8 @@ ai-test-workbench/
 │       ├── 0002_project_provider_model.py
 │       ├── 0003_session_event.py
 │       ├── 0004_artifact.py
-│       └── 0005_ai_call_record.py
+│       ├── 0005_ai_call_record.py
+│       └── 0006_knowledge_injection.py   # 先于 knowledge-base 的 0007
 ├── scripts/
 │   ├── docker-entrypoint.sh             # alembic upgrade head 后启动 uvicorn
 │   └── backup.sh                        # mysqldump + 制品打包
@@ -45,7 +47,8 @@ ai-test-workbench/
 │   │   ├── entrances.py                 # 6 入口唯一来源（key/name/description/domain/status）
 │   │   ├── crypto.py                    # AES-256-GCM、掩码、解密错误
 │   │   ├── password.py                  # Argon2 哈希与校验
-│   │   └── redaction.py                 # 日志脱敏过滤器
+│   │   ├── redaction.py                 # 日志脱敏过滤器
+│   │   └── ports.py                     # InjectionPreparer 协议与注册（A103 B）
 │   ├── db/
 │   │   ├── base.py                      # Declarative Base、naming_convention、类型助手
 │   │   ├── engine.py                    # 双方言引擎与连接池
@@ -105,6 +108,7 @@ ai-test-workbench/
 │   ├── package.json                     # 前端依赖与脚本
 │   ├── package-lock.json
 │   ├── vite.config.ts                   # dev proxy → 后端；构建到 dist
+│   ├── vitest.config.ts                 # Vitest + Testing Library + jsdom（必过门禁）
 │   ├── tsconfig.json
 │   ├── index.html
 │   └── src/
@@ -134,12 +138,13 @@ ai-test-workbench/
 │       ├── features/
 │       │   ├── auth/                    # LoginPage / PasswordField / AuthBanner / hooks
 │       │   ├── entrances/               # HomePage / EntranceGrid / EntranceCard / EntrancePage / PlaceholderPanel / RecentSessionTable
-│       │   ├── projects/                # ProjectsPage / ProjectList / ProjectForm / ProjectDialog
+│       │   ├── projects/                # ProjectsPage / ProjectList / ProjectForm / ProjectDialog / ProjectKnowledgeSummary（空挂载位）
 │       │   ├── providers/               # ProvidersPage / ProviderTable / ProviderDialog / ProviderForm / SecretField / ConnectionTestBadge
 │       │   ├── models/                  # ModelsPage / ModelTable / ModelDialog / ModelForm
 │       │   ├── sessions/                # SessionsPage / SessionFilters / SessionTable / CreateSessionDialog / SessionDetailPage / SessionHeader / SessionTimeline / TimelineEvent / 四类事件卡
 │       │   ├── composer/                # TextComposer / CharacterCounter / FileUploader / ArtifactCard
 │       │   └── calls/                   # CallPanel / AdvancedParams / CallsPage / CallFilters / CallRecordTable / CallRecordRow
+│       ├── test/setup.ts                # Vitest setup（Testing Library、jsdom 清理）
 │       └── vite-env.d.ts
 └── tests/
     ├── conftest.py                      # app/client/db/seeded fixtures、假 AI 适配器
@@ -199,7 +204,7 @@ ai-test-workbench/
 | `api/v1/models.py` | GET/POST/PATCH | `/models`、`/providers/{id}/models`、`/models/{id}` | US-004 |
 | `api/v1/sessions.py` | GET/POST/PATCH/DELETE | `/sessions`、`/sessions/{id}`、`complete`、`events`、`inputs/text` | US-006 / US-009 |
 | `api/v1/artifacts.py` | GET/POST | `/sessions/{id}/artifacts`、`/artifacts/{id}`、`/artifacts/{id}/content` | US-007 |
-| `api/v1/calls.py` | GET/POST | `/sessions/{id}/calls`、`/calls`、`/calls/{id}` | US-005 / US-010 |
+| `api/v1/calls.py` | GET/POST | `/sessions/{id}/ai/complete`、`/calls`、`/calls/{id}` | US-005 / US-010 |
 
 ### 前端关键文件
 
@@ -209,6 +214,7 @@ ai-test-workbench/
 | `web/src/features/auth/LoginPage.tsx` | 登录页（default/submitting/error/locked/expired） | AC-011-2 ~ AC-011-6 |
 | `web/src/features/entrances/HomePage.tsx` | 6 入口 + 最近 10 条会话 | AC-001-1 ~ AC-001-3 |
 | `web/src/features/entrances/PlaceholderPanel.tsx` | planned 占位，无副作用 | AC-002-1 / AC-002-2 |
+| `web/src/features/projects/ProjectKnowledgeSummary.tsx` | 项目关联知识库空挂载位（`data-mount="knowledge-summary"`），本期不渲染内容、不新增端点 | `specs/knowledge-base_20261117205011`（UXAMB-004） |
 | `web/src/features/providers/ProviderForm.tsx` | 提供商表单、掩码密钥、连接测试 | AC-003-1 ~ AC-003-3 |
 | `web/src/features/sessions/SessionTimeline.tsx` | 时间线与四类事件卡 | AC-009-3 / AC-005-4 |
 | `web/src/features/composer/TextComposer.tsx` | 文本粘贴与 200,000 字符计数 | AC-006-1 ~ AC-006-3 |
@@ -227,7 +233,7 @@ ai-test-workbench/
 ### 第二批（数据层）
 5. `src/workbench/db/base.py`、`db/engine.py`（TASK-TD-007）
 6. `src/workbench/db/models/*.py`（10 个，TASK-TD-008）
-7. `alembic.ini`、`migrations/env.py`、`migrations/versions/0001~0005`（TASK-TD-009）
+7. `alembic.ini`、`migrations/env.py`、`migrations/versions/0001~0006`（TASK-TD-009、TASK-TD-051）
 8. `tests/test_db_migrations.py`（TASK-TD-010）
 
 ### 第三批（应用骨架与冻结契约）
@@ -249,12 +255,12 @@ ai-test-workbench/
 22. `api/v1/calls.py` 发起调用（TASK-TD-039）
 
 ### 第五批（前端）
-23. `web/package.json`、`vite.config.ts`、`tsconfig.json`、`index.html`、`src/main.tsx`、`router.tsx`、`styles/tokens.css`、`app/*`（TASK-TD-021）
+23. `web/package.json`、`vite.config.ts`、`vitest.config.ts`、`src/test/setup.ts`、`tsconfig.json`、`index.html`、`src/main.tsx`、`router.tsx`、`styles/tokens.css`、`app/*`（TASK-TD-021）
 24. `components/ui/*` 原子与分子组件（TASK-TD-021）
-25. `features/auth/*`（TASK-TD-021）
-26. `features/projects/*`、`features/providers/*`、`features/models/*`（TASK-TD-024 / 028 / 029）
-27. `features/sessions/*`、`features/composer/*`、`features/calls/*`（TASK-TD-033 / 034 / 037 / 038 / 040 / 043）
-28. `features/entrances/*`（TASK-TD-044 / 045）
+25. `features/auth/*` 与其 `*.test.tsx`（TASK-TD-021）
+26. `features/projects/*`（含 `ProjectKnowledgeSummary` 空挂载位与测试）、`features/providers/*`、`features/models/*`（TASK-TD-024 / 028 / 029）
+27. `features/sessions/*`、`features/composer/*`、`features/calls/*` 及各自 `*.test.tsx`（TASK-TD-033 / 034 / 037 / 038 / 040 / 043）
+28. `features/entrances/*` 及测试（TASK-TD-044 / 045）
 
 ### 第六批（查询、部署与文档）
 29. `services/calls.py`、`api/v1/calls.py` 查询端点（TASK-TD-042）
@@ -266,12 +272,12 @@ ai-test-workbench/
 
 | 类别 | 文件数 |
 |------|--------|
-| 配置文件 | 12（pyproject/uv.lock/alembic.ini/.env.example/.dockerignore/Dockerfile/compose/README/package.json/lock/vite/tsconfig） |
+| 配置文件 | 13（pyproject/uv.lock/alembic.ini/.env.example/.dockerignore/Dockerfile/compose/README/package.json/lock/vite/vitest/tsconfig） |
 | 迁移 | 8（env、mako、5 个 revision） |
 | 后端源码 | 约 45（core 5、db 19、services 8、adapters 4、api 约 20、main/config/startup 3） |
-| 前端源码 | 约 55（app 3、lib 3、styles 2、ui 10、features 约 37） |
-| 测试 | 30 |
+| 前端源码 | 约 59（app 3、lib 3、styles 2、ui 10、test setup 1、features 约 40） |
+| 测试 | pytest 30 + Vitest 约 13 |
 | 脚本 | 2 |
-| **合计** | **约 152** |
+| **合计** | **约 159** |
 
 > 数量按模块估算，允许实现时合并同目录小文件；不得改变模块边界与文件名约定（`technical-design/change-spec.md` §2）。
