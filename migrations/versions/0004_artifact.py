@@ -63,5 +63,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index("ix_artifact_session_id_created_at", table_name="artifact")
+    # 索引随 DROP TABLE 删除；MySQL 不允许先删支撑外键的索引（错误 1553）。
     op.drop_table("artifact")

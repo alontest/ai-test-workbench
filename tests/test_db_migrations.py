@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import os
 import sqlite3
+import uuid
 
 import pytest
 from alembic import command
@@ -16,7 +17,7 @@ from sqlalchemy import delete, func, inspect, select, text
 from sqlalchemy.exc import DBAPIError
 
 from workbench.core.crypto import encrypt
-from workbench.db.base import utcnow
+from workbench.db.base import Base, utcnow
 from workbench.db.engine import Database, create_engine_from_url
 from workbench.db.models import (
     AiCallRecord,
@@ -66,14 +67,35 @@ def _url(tmp_path) -> str:
     )
 
 
-def _upgrade(url: str) -> None:
+def _alembic_config(url: str) -> Config:
     config = Config("alembic.ini")
     config.set_main_option("sqlalchemy.url", url)
+    return config
+
+
+async def _drop_all_tables(url: str) -> None:
+    """清空 schema（含 alembic 版本表），让用例从真正的空库开始。
+
+    MySQL 是共享库，且 DDL 非事务：不能靠 ``downgrade base`` 兜底，否则
+    downgrade 一旦失败就会留下半旧 schema 与残留数据；也不吞异常。
+    """
+    engine = create_engine_from_url(url)
     try:
-        command.downgrade(config, "base")
-    except Exception:
-        pass
-    command.upgrade(config, "head")
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.drop_all)
+            await connection.execute(text("DROP TABLE IF EXISTS alembic_version"))
+    finally:
+        await engine.dispose()
+
+
+def _upgrade(url: str) -> None:
+    asyncio.run(_drop_all_tables(url))
+    command.upgrade(_alembic_config(url), "head")
+
+
+def _test_name(prefix: str = "支付中心") -> str:
+    """共享 MySQL 库下用唯一名，避免与历史残留数据撞唯一键。"""
+    return f"{prefix}-{uuid.uuid4().hex}"
 
 
 async def _constraint_scenario(url: str) -> None:
@@ -81,12 +103,13 @@ async def _constraint_scenario(url: str) -> None:
     try:
         sm = database.sessionmaker
         async with sm() as db:
-            project = ProjectContext(name="支付中心", name_key="支付中心")
+            name = _test_name()
+            project = ProjectContext(name=name, name_key=name)
             db.add(project)
             await db.commit()
             project_id = project.project_id
 
-            db.add(ProjectContext(name="支付中心", name_key="支付中心"))
+            db.add(ProjectContext(name=name, name_key=name))
             with pytest.raises(DBAPIError) as err:
                 await db.commit()
             _assert_constraint_violation(err)
@@ -220,6 +243,21 @@ async def _assert_schema(url: str) -> tuple[set[str], str]:
     return tables, str(version)
 
 
+async def _insert_project_context(url: str, name: str) -> None:
+    database = Database(create_engine_from_url(url))
+    try:
+        async with database.sessionmaker() as db:
+            db.add(ProjectContext(name=name, name_key=name))
+            await db.commit()
+    finally:
+        await database.dispose()
+
+
+def _table_names(url: str) -> set[str]:
+    tables, _version = asyncio.run(_assert_schema(url))
+    return tables
+
+
 def test_tc058_migrate_empty_db_to_head(tmp_path) -> None:
     url = _url(tmp_path)
     _upgrade(url)
@@ -261,6 +299,26 @@ def test_tc064_migration_order_and_no_knowledge_table(tmp_path) -> None:
     con.close()
 
 
+def test_tc064_downgrade_base_resets_shared_database(tmp_path) -> None:
+    """downgrade 必须真正回到 base，才能在共享 MySQL 库上隔离各用例。
+
+    回归：MySQL 不允许先删支撑外键的索引（错误 1553），旧 downgrade 因此在
+    0005 处中断；_upgrade 又吞掉异常，导致 project_context 残留数据撞唯一键。
+    """
+    url = _url(tmp_path)
+    name = _test_name("迁移隔离探针")
+
+    _upgrade(url)
+    asyncio.run(_insert_project_context(url, name))
+
+    command.downgrade(_alembic_config(url), "base")
+    assert "project_context" not in _table_names(url)
+
+    command.upgrade(_alembic_config(url), "head")
+    # 同名可再次插入，说明旧数据随 downgrade 一并清除。
+    asyncio.run(_insert_project_context(url, name))
+
+
 def test_tc064_migration_0006_injection_columns(tmp_path) -> None:
     """知识库导入/检索/失效判定/正文组装属 knowledge-base spec，本 spec 不重复。"""
     from pathlib import Path
@@ -283,7 +341,8 @@ async def _assert_injection_check(url: str) -> None:
     try:
         sm = database.sessionmaker
         async with sm() as db:
-            project = ProjectContext(name="支付中心", name_key="支付中心")
+            name = _test_name()
+            project = ProjectContext(name=name, name_key=name)
             db.add(project)
             await db.flush()
             provider = ProviderConfig(

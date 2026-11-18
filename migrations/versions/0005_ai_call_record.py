@@ -92,9 +92,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index("ix_ai_call_record_provider_id", table_name="ai_call_record")
-    op.drop_index("ix_ai_call_record_model_id", table_name="ai_call_record")
-    op.drop_index("ix_ai_call_record_created_at", table_name="ai_call_record")
-    op.drop_index("ix_ai_call_record_status_created_at", table_name="ai_call_record")
-    op.drop_index("ix_ai_call_record_session_id_call_id", table_name="ai_call_record")
+    # DROP TABLE 会一并删除表上的索引。MySQL/InnoDB 不允许先删支撑外键的索引
+    # （错误 1553），所以这里不单独 DROP INDEX。
     op.drop_table("ai_call_record")
