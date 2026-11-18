@@ -1,0 +1,95 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen
+      - name: Run aw verify (SQLite)
+        run: python3 .aw/aw.py verify specs/ai-test-workbench_20261117184149
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-reports
+          path: |
+            .aw/tmp/**
+            reports/**
+          if-no-files-found: ignore
+
+  mysql-tests:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root
+          MYSQL_DATABASE: workbench_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci-root"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      AW_TEST_DATABASE_URL: mysql+asyncmy://root:ci-root@127.0.0.1:3306/workbench_test?charset=utf8mb4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen
+      - name: alembic upgrade head
+        run: uv run alembic upgrade head
+        env:
+          AW_DATABASE_URL: mysql+asyncmy://root:ci-root@127.0.0.1:3306/workbench_test?charset=utf8mb4
+      - name: Run same pytest suite on MySQL
+        run: uv run pytest -q --junitxml=reports/mysql.xml
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mysql-reports
+          path: reports/**
+          if-no-files-found: ignore
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Detect frontend
+        id: detect
+        run: |
+          if [ -f web/package.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Install and run Vitest
+        if: steps.detect.outputs.present == 'true'
+        working-directory: web
+        run: |
+          npm ci
+          npm run test -- --run
+      - name: Upload frontend reports
+        if: always() && steps.detect.outputs.present == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-reports
+          path: |
+            web/coverage/**
+            web/test-results/**
+          if-no-files-found: ignore

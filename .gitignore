@@ -45,3 +45,12 @@ logs/
 .coverage.*
 playwright-report/
 test-results/
+
+# 前端构建与覆盖率产物
+web/node_modules/
+web/dist/
+coverage/
+htmlcov/
+.vscode/
+.idea/
+*.swp
