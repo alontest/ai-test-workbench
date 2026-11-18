@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>知识库 · 交互原型（knowledge-base）</title>
+<style>
+  /* ===== Design Tokens（与 core / design.md 逐字一致，无新增） ===== */
+  :root{
+    --color-primary:#1E293B;
+    --color-on-primary:#FFFFFF;
+    --color-primary-hover:#0F172A;
+    --color-secondary:#475569;
+    --color-on-secondary:#FFFFFF;
+    --color-accent:#16A34A;
+    --color-on-accent:#FFFFFF;
+    --color-background:#F8FAFC;
+    --color-foreground:#0F172A;
+    --color-card:#FFFFFF;
+    --color-card-foreground:#0F172A;
+    --color-muted:#F1F5F9;
+    --color-muted-foreground:#475569;
+    --color-border:#CBD5E1;
+    --color-input:#FFFFFF;
+    --color-destructive:#DC2626;
+    --color-on-destructive:#FFFFFF;
+    --color-success:#16A34A;
+    --color-warning:#B45309;
+    --color-info:#0284C7;
+    --color-ring:#1E293B;
+    --font-family-base:"IBM Plex Sans","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --font-family-heading:"JetBrains Mono","SFMono-Regular",Menlo,monospace;
+    --font-family-mono:"JetBrains Mono","SFMono-Regular",Menlo,monospace;
+    --font-size-xs:12px;
+    --font-size-sm:13px;
+    --font-size-base:14px;
+    --font-size-md:16px;
+    --font-size-lg:18px;
+    --font-size-xl:24px;
+    --font-size-2xl:32px;
+    --font-weight-normal:400;
+    --font-weight-medium:500;
+    --font-weight-bold:600;
+    --line-height-tight:1.25;
+    --line-height-base:1.5;
+    --line-height-relaxed:1.7;
+    --spacing-1:4px;
+    --spacing-2:8px;
+    --spacing-3:12px;
+    --spacing-4:16px;
+    --spacing-6:24px;
+    --spacing-8:32px;
+    --spacing-12:48px;
+    --spacing-16:64px;
+    --radius-sm:4px;
+    --radius-md:8px;
+    --radius-lg:12px;
+    --radius-full:9999px;
+    --shadow-sm:0 1px 2px rgba(15,23,42,0.08);
+    --shadow-md:0 4px 6px rgba(15,23,42,0.12);
+    --shadow-lg:0 10px 15px rgba(15,23,42,0.18);
+    --duration-fast:120ms;
+    --duration-base:180ms;
+    --duration-slow:240ms;
+    --easing-standard:cubic-bezier(0.2,0,0,1);
+    --sidebar-width:248px;
+    --topbar-height:64px;
+    --content-max-width:1280px;
+  }
+  html[data-theme="dark"]{
+    --color-primary:#EDEDED;
+    --color-on-primary:#0A0A0B;
+    --color-primary-hover:#D4D4D8;
+    --color-secondary:#26262B;
+    --color-on-secondary:#EDEDED;
+    --color-accent:#22C55E;
+    --color-on-accent:#0A0A0B;
+    --color-background:#0A0A0B;
+    --color-foreground:#EDEDED;
+    --color-card:#141416;
+    --color-card-foreground:#EDEDED;
+    --color-muted:#1C1C1F;
+    --color-muted-foreground:#A1A1AA;
+    --color-border:#2A2A2E;
+    --color-input:#0A0A0B;
+    --color-destructive:#EF4444;
+    --color-on-destructive:#0A0A0B;
+    --color-success:#22C55E;
+    --color-warning:#F59E0B;
+    --color-info:#38BDF8;
+    --color-ring:#22C55E;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.6);
+    --shadow-md:0 4px 10px rgba(0,0,0,.55);
+    --shadow-lg:0 16px 32px rgba(0,0,0,.6);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  [hidden]{display:none!important}
+  body{
+    font-family:var(--font-family-base);
+    font-size:var(--font-size-base);
+    line-height:var(--line-height-base);
+    color:var(--color-foreground);
+    background:var(--color-background);
+    -webkit-font-smoothing:antialiased;
+  }
+  button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+  a{color:var(--color-accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  :focus-visible{outline:2px solid var(--color-ring);outline-offset:2px}
+  .app{display:grid;grid-template-columns:var(--sidebar-width) 1fr;min-height:100vh}
+
+  /* ===== Sidebar ===== */
+  .sidebar{
+    background:var(--color-card);border-right:1px solid var(--color-border);
+    padding:var(--spacing-4);display:flex;flex-direction:column;gap:var(--spacing-6);
+    position:sticky;top:0;height:100vh;overflow:auto;
+  }
+  .brand{display:flex;align-items:center;gap:var(--spacing-2);font-family:var(--font-family-heading);font-weight:var(--font-weight-bold);font-size:var(--font-size-md)}
+  .brand-mark{width:24px;height:24px;border-radius:var(--radius-sm);background:var(--color-accent);color:var(--color-on-accent);display:grid;place-items:center;font-size:11px;font-weight:700}
+  .nav-group{display:flex;flex-direction:column;gap:2px}
+  .nav-title{font-size:var(--font-size-xs);letter-spacing:.08em;text-transform:uppercase;color:var(--color-muted-foreground);padding:0 var(--spacing-2);margin-bottom:var(--spacing-1)}
+  .nav-item{
+    display:flex;align-items:center;justify-content:space-between;gap:var(--spacing-2);
+    padding:var(--spacing-2) var(--spacing-3);border-radius:var(--radius-sm);
+    background:transparent;border:1px solid transparent;cursor:pointer;text-align:left;
+    color:var(--color-foreground);transition:background var(--duration-fast) var(--easing-standard);
+  }
+  .nav-item:hover{background:var(--color-muted)}
+  .nav-item.active{background:var(--color-muted);border-color:var(--color-border);font-weight:var(--font-weight-medium)}
+  .nav-tag{font-size:10px;color:var(--color-muted-foreground);border:1px solid var(--color-border);border-radius:var(--radius-full);padding:0 6px}
+
+  /* ===== Main ===== */
+  .main{min-width:0;display:flex;flex-direction:column}
+  .topbar{
+    height:var(--topbar-height);display:flex;align-items:center;justify-content:space-between;gap:var(--spacing-3);
+    padding:0 var(--spacing-6);border-bottom:1px solid var(--color-border);
+    background:var(--color-background);position:sticky;top:0;z-index:20;
+  }
+  .topbar-left{display:flex;align-items:center;gap:var(--spacing-3);min-width:0}
+  .menu-btn{display:none}
+  .page-title{font-family:var(--font-family-heading);font-size:var(--font-size-md);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .page-sub{font-size:var(--font-size-xs);color:var(--color-muted-foreground);margin:0}
+  .topbar-actions{display:flex;align-items:center;gap:var(--spacing-2);flex-wrap:wrap;justify-content:flex-end}
+  .content{padding:var(--spacing-6);max-width:var(--content-max-width);width:100%;margin:0 auto}
+
+  /* ===== Demo chrome ===== */
+  .demo-bar{
+    display:flex;align-items:center;justify-content:space-between;gap:var(--spacing-3);flex-wrap:wrap;
+    padding:var(--spacing-2) var(--spacing-6);border-bottom:1px solid var(--color-border);
+    background:var(--color-card);
+  }
+  .demo-tabs{display:flex;gap:2px;border:1px solid var(--color-border);border-radius:var(--radius-full);padding:2px;background:var(--color-background);flex-wrap:wrap}
+  .demo-tab{border:0;background:transparent;padding:6px 12px;border-radius:var(--radius-full);font-size:var(--font-size-xs);cursor:pointer;color:var(--color-muted-foreground);transition:background var(--duration-fast) var(--easing-standard)}
+  .demo-tab:hover{background:var(--color-muted)}
+  .demo-tab.active{background:var(--color-primary);color:var(--color-on-primary)}
+  .statebar{display:flex;align-items:center;gap:var(--spacing-2);flex-wrap:wrap}
+  .state-switch{display:flex;border:1px solid var(--color-border);border-radius:var(--radius-full);overflow:hidden;background:var(--color-background)}
+  .state-switch button{
+    border:0;background:transparent;padding:6px 10px;cursor:pointer;font-size:var(--font-size-xs);
+    color:var(--color-muted-foreground);transition:background var(--duration-fast) var(--easing-standard);
+  }
+  .state-switch button:hover{background:var(--color-muted)}
+  .state-switch button.active{background:var(--color-primary);color:var(--color-on-primary)}
+
+  /* ===== Generic ===== */
+  .h1{font-family:var(--font-family-heading);font-size:var(--font-size-xl);line-height:var(--line-height-tight);margin:0 0 var(--spacing-1)}
+  .h2{font-size:var(--font-size-lg);margin:0 0 var(--spacing-2)}
+  .h3{font-size:var(--font-size-md);margin:0 0 var(--spacing-2)}
+  .muted{color:var(--color-muted-foreground)}
+  .small{font-size:var(--font-size-xs)}
+  .mono{font-family:var(--font-family-mono)}
+  .row{display:flex;align-items:center;gap:var(--spacing-2);flex-wrap:wrap}
+  .spread{display:flex;align-items:center;justify-content:space-between;gap:var(--spacing-3);flex-wrap:wrap}
+  .stack{display:flex;flex-direction:column;gap:var(--spacing-3)}
+  .section{margin-top:var(--spacing-6)}
+  .section-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--spacing-3);margin-bottom:var(--spacing-3);flex-wrap:wrap}
+  .card{background:var(--color-card);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--spacing-4)}
+  .page-head{margin-bottom:var(--spacing-4)}
+  .toolbar{display:flex;align-items:center;justify-content:space-between;gap:var(--spacing-3);margin-bottom:var(--spacing-3);flex-wrap:wrap}
+  .toolbar label{display:flex;align-items:center;gap:var(--spacing-2);font-size:var(--font-size-sm);color:var(--color-muted-foreground)}
+  .right{justify-content:flex-end}
+
+  .btn{
+    border:1px solid var(--color-border);background:var(--color-card);color:var(--color-foreground);
+    padding:8px 14px;border-radius:var(--radius-sm);cursor:pointer;min-height:36px;
+    transition:background var(--duration-fast) var(--easing-standard);
+  }
+  .btn:hover{background:var(--color-muted)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn-primary{background:var(--color-primary);border-color:var(--color-primary);color:var(--color-on-primary)}
+  .btn-primary:hover:not(:disabled){background:var(--color-primary-hover)}
+  .btn-danger{background:var(--color-destructive);border-color:var(--color-destructive);color:var(--color-on-destructive)}
+  .btn-sm{padding:4px 10px;min-height:28px;font-size:var(--font-size-xs)}
+  .link{border:0;background:none;color:var(--color-accent);cursor:pointer;padding:0;font-size:inherit}
+  .link:hover{text-decoration:underline}
+  .link-danger{color:var(--color-destructive)}
+
+  .badge{display:inline-flex;align-items:center;gap:4px;border-radius:var(--radius-full);padding:1px 10px;font-size:var(--font-size-xs);border:1px solid transparent;white-space:nowrap}
+  .badge-info{color:var(--color-info);border-color:var(--color-info);background:color-mix(in srgb,var(--color-info) 12%,transparent)}
+  .badge-success{color:var(--color-success);border-color:var(--color-success);background:color-mix(in srgb,var(--color-success) 12%,transparent)}
+  .badge-danger{color:var(--color-destructive);border-color:var(--color-destructive);background:color-mix(in srgb,var(--color-destructive) 12%,transparent)}
+  .badge-warning{color:var(--color-warning);border-color:var(--color-warning);background:color-mix(in srgb,var(--color-warning) 12%,transparent)}
+  .badge-muted{color:var(--color-muted-foreground);border-color:var(--color-border)}
+
+  .banner{display:flex;gap:var(--spacing-2);align-items:flex-start;border-radius:var(--radius-md);padding:var(--spacing-3);border:1px solid;margin-bottom:var(--spacing-4);font-size:var(--font-size-sm)}
+  .banner-success{color:var(--color-success);border-color:color-mix(in srgb,var(--color-success) 40%,transparent);background:color-mix(in srgb,var(--color-success) 8%,transparent)}
+  .banner-error{color:var(--color-destructive);border-color:color-mix(in srgb,var(--color-destructive) 40%,transparent);background:color-mix(in srgb,var(--color-destructive) 8%,transparent)}
+  .banner-info{color:var(--color-info);border-color:color-mix(in srgb,var(--color-info) 40%,transparent);background:color-mix(in srgb,var(--color-info) 8%,transparent)}
+  .banner-warning{color:var(--color-warning);border-color:color-mix(in srgb,var(--color-warning) 40%,transparent);background:color-mix(in srgb,var(--color-warning) 8%,transparent)}
+
+  table{width:100%;border-collapse:collapse;font-size:var(--font-size-sm)}
+  th{text-align:left;font-weight:var(--font-weight-medium);color:var(--color-muted-foreground);background:var(--color-muted);padding:var(--spacing-2) var(--spacing-3);border-bottom:1px solid var(--color-border);white-space:nowrap}
+  td{padding:var(--spacing-3);border-bottom:1px solid var(--color-border);vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  tr.clickable{cursor:pointer}
+  tr.clickable:hover td{background:color-mix(in srgb,var(--color-muted) 60%,transparent)}
+  .table-wrap{background:var(--color-card);border:1px solid var(--color-border);border-radius:var(--radius-md);overflow:auto}
+  .empty{text-align:center;padding:var(--spacing-12) var(--spacing-4);color:var(--color-muted-foreground);border:1px dashed var(--color-border);border-radius:var(--radius-md);display:flex;flex-direction:column;align-items:center;gap:var(--spacing-3)}
+  .empty .big{font-family:var(--font-family-heading);font-size:var(--font-size-lg);color:var(--color-foreground)}
+
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:var(--spacing-3)}
+  .field label{font-size:var(--font-size-sm);font-weight:var(--font-weight-medium)}
+  .field .hint{font-size:var(--font-size-xs);color:var(--color-muted-foreground)}
+  .field .err{font-size:var(--font-size-xs);color:var(--color-destructive)}
+  input[type=text],input[type=search],select,textarea{
+    background:var(--color-input);border:1px solid var(--color-border);border-radius:var(--radius-sm);
+    padding:8px 10px;min-height:36px;width:100%;transition:border-color var(--duration-fast) var(--easing-standard);
+  }
+  input:focus,select:focus,textarea:focus{border-color:var(--color-ring);outline:2px solid color-mix(in srgb,var(--color-ring) 25%,transparent);outline-offset:0}
+  textarea{resize:vertical;line-height:var(--line-height-relaxed);font-family:var(--font-family-mono);font-size:var(--font-size-sm)}
+  .counter{font-size:var(--font-size-xs);color:var(--color-muted-foreground);text-align:right;margin-top:4px}
+  .counter.warn{color:var(--color-warning)}
+  .counter.over{color:var(--color-destructive)}
+
+  .dropzone{border:1px dashed var(--color-border);border-radius:var(--radius-md);padding:var(--spacing-6);text-align:center;font-size:var(--font-size-sm);color:var(--color-muted-foreground);background:var(--color-background)}
+  .dropzone:hover,.dropzone:focus-within{border-color:var(--color-accent)}
+  .file-list{display:flex;flex-direction:column;gap:6px;margin-top:var(--spacing-3)}
+  .file-row{display:grid;grid-template-columns:minmax(0,1fr) 80px 190px auto;gap:var(--spacing-2);align-items:center;font-size:var(--font-size-xs);border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:6px 8px}
+  .file-row.bad{border-color:var(--color-destructive);color:var(--color-destructive)}
+
+  .detail-cols{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:var(--spacing-4);align-items:start}
+  .kv{display:grid;grid-template-columns:110px minmax(0,1fr);gap:var(--spacing-2);font-size:var(--font-size-sm);margin:0}
+  .kv dt{color:var(--color-muted-foreground)}
+  .kv dd{margin:0;font-family:var(--font-family-mono);font-size:var(--font-size-xs);overflow-wrap:anywhere}
+  .body-block{background:var(--color-muted);border-radius:var(--radius-md);padding:var(--spacing-3);font-family:var(--font-family-mono);font-size:var(--font-size-sm);line-height:var(--line-height-relaxed);white-space:pre-wrap;overflow-wrap:anywhere}
+
+  .kb-pick{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--spacing-2)}
+  .pick-row{display:flex;align-items:center;gap:var(--spacing-2);padding:6px 8px;border-radius:var(--radius-sm);font-size:var(--font-size-sm)}
+  .pick-row:hover{background:var(--color-muted)}
+  .pick-row.disabled{opacity:.6}
+  .pick-row .code{font-family:var(--font-family-mono);font-size:var(--font-size-xs);min-width:74px}
+  .pick-row .title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pick-row input{width:16px;height:16px;min-height:0}
+
+  .budget-track{height:8px;background:var(--color-muted);border-radius:var(--radius-full);overflow:hidden;margin:var(--spacing-2) 0}
+  .budget-fill{height:100%;width:0;background:var(--color-accent);transition:width var(--duration-base) var(--easing-standard)}
+  .budget-fill.warn{background:var(--color-warning)}
+  .budget-fill.over{background:var(--color-destructive)}
+  .budget-line{font-size:var(--font-size-sm);font-family:var(--font-family-mono)}
+  .budget-line .total{font-weight:var(--font-weight-bold)}
+  .budget-line.over{color:var(--color-destructive)}
+  .budget-line.warn{color:var(--color-warning)}
+
+  .timeline{display:flex;flex-direction:column}
+  .event{display:grid;grid-template-columns:48px 1fr;gap:var(--spacing-3);padding:var(--spacing-3) 0;border-bottom:1px solid var(--color-border)}
+  .event:last-child{border-bottom:0}
+  .event-time{font-family:var(--font-family-mono);font-size:var(--font-size-xs);color:var(--color-muted-foreground)}
+  .event-title{font-weight:var(--font-weight-medium);font-size:var(--font-size-sm)}
+  .event-body{font-family:var(--font-family-mono);font-size:var(--font-size-xs);color:var(--color-muted-foreground);white-space:pre-wrap;margin-top:4px;overflow-wrap:anywhere}
+
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:grid;place-items:center;z-index:100;padding:var(--spacing-4)}
+  .modal{background:var(--color-card);border:1px solid var(--color-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);max-width:520px;width:100%;padding:var(--spacing-6);max-height:90vh;overflow:auto}
+  .modal h3{margin:0 0 var(--spacing-2);font-size:var(--font-size-lg)}
+  .modal ul{margin:var(--spacing-2) 0;padding-left:18px;font-size:var(--font-size-sm);color:var(--color-muted-foreground)}
+  .modal-foot{display:flex;justify-content:flex-end;gap:var(--spacing-2);margin-top:var(--spacing-4);flex-wrap:wrap}
+  .toast{position:fixed;right:var(--spacing-6);bottom:var(--spacing-6);background:var(--color-card);border:1px solid var(--color-border);border-left:4px solid var(--color-success);border-radius:var(--radius-md);padding:var(--spacing-3) var(--spacing-4);box-shadow:var(--shadow-lg);z-index:200;font-size:var(--font-size-sm);max-width:360px}
+  .toast.error{border-left-color:var(--color-destructive)}
+  .toast.info{border-left-color:var(--color-info)}
+  .skeleton{background:var(--color-muted);border-radius:var(--radius-sm);height:14px;margin-bottom:var(--spacing-2);animation:pulse 1.4s ease-in-out infinite}
+  .skeleton.row{height:36px;margin-bottom:1px}
+  .skeleton.title{height:28px;width:40%}
+  @keyframes pulse{0%,100%{opacity:.55}50%{opacity:.9}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  @media (max-width:1024px){
+    .detail-cols{grid-template-columns:1fr}
+  }
+  @media (max-width:768px){
+    .app{grid-template-columns:1fr}
+    .sidebar{position:fixed;left:0;top:0;bottom:0;width:280px;z-index:60;transform:translateX(-100%);transition:transform var(--duration-base) var(--easing-standard)}
+    .sidebar.open{transform:translateX(0)}
+    .menu-btn{display:inline-flex}
+    .content{padding:var(--spacing-4)}
+    .topbar,.demo-bar{padding:0 var(--spacing-4)}
+    .demo-bar{padding-top:var(--spacing-2);padding-bottom:var(--spacing-2)}
+    .file-row{grid-template-columns:1fr;gap:2px}
+    .kv{grid-template-columns:1fr;gap:2px}
+    .btn{min-height:44px}
+    .btn-sm{min-height:32px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar" aria-label="主导航">
+    <div class="brand"><span class="brand-mark">AW</span> AI Test Workbench</div>
+    <nav class="nav-group" aria-label="工作台">
+      <div class="nav-title">工作台</div>
+      <button class="nav-item" data-nav="首页">首页</button>
+      <button class="nav-item" data-nav="分析会话">分析会话</button>
+    </nav>
+    <nav class="nav-group" aria-label="业务入口">
+      <div class="nav-title">入口</div>
+      <button class="nav-item" data-nav="用例库">用例库 <span class="nav-tag">planned</span></button>
+      <button class="nav-item" data-nav="分析 bug">分析 bug <span class="nav-tag">planned</span></button>
+      <button class="nav-item" data-nav="排查日志">排查日志 <span class="nav-tag">planned</span></button>
+      <button class="nav-item" data-nav="分析 SQL">分析 SQL <span class="nav-tag">planned</span></button>
+      <button class="nav-item" data-nav="生成回归清单">生成回归清单 <span class="nav-tag">planned</span></button>
+      <button class="nav-item" data-nav="生成测试报告">生成测试报告 <span class="nav-tag">planned</span></button>
+    </nav>
+    <nav class="nav-group" aria-label="基座管理">
+      <div class="nav-title">基座管理</div>
+      <button class="nav-item" data-nav="项目上下文">项目上下文</button>
+      <button class="nav-item" data-nav="AI 提供商与模型">AI 提供商与模型</button>
+      <button class="nav-item" data-nav="调用记录">调用记录</button>
+      <button class="nav-item active" id="navKb" data-nav="知识库" aria-current="page">知识库</button>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="icon-btn btn menu-btn" id="menuBtn" aria-label="打开导航">菜单</button>
+        <div>
+          <h1 class="page-title" id="pageTitle">知识库</h1>
+          <p class="page-sub" id="pageSub">项目级只读资产 · 导入、浏览与按编号注入</p>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-sm" id="themeBtn" aria-label="切换明暗主题">主题：暗色</button>
+        <button class="btn btn-sm" id="userBtn" aria-haspopup="true" aria-expanded="false">管理员 ▾</button>
+      </div>
+    </header>
+
+    <div class="demo-bar">
+      <nav class="demo-tabs" role="tablist" aria-label="原型页面">
+        <button class="demo-tab active" role="tab" aria-selected="true" data-view="list">列表 · US-012/016</button>
+        <button class="demo-tab" role="tab" aria-selected="false" data-view="import">导入 · US-012</button>
+        <button class="demo-tab" role="tab" aria-selected="false" data-view="browse">浏览 · US-013/015</button>
+        <button class="demo-tab" role="tab" aria-selected="false" data-view="detail">详情 · US-013/015</button>
+        <button class="demo-tab" role="tab" aria-selected="false" data-view="inject">会话注入 · US-014/015</button>
+      </nav>
+      <div class="statebar">
+        <span class="muted small">当前页 UI 状态</span>
+        <div class="state-switch" id="stateSwitch" role="group" aria-label="切换演示状态">
+          <button class="active" data-state="default">默认</button>
+          <button data-state="loading">加载</button>
+          <button data-state="success">成功</button>
+          <button data-state="error">错误</button>
+          <button data-state="empty">空态</button>
+        </div>
+      </div>
+    </div>
+
+    <main class="content">
+      <!-- ===================== 列表 ===================== -->
+      <section class="view" id="view-list" aria-label="知识库列表">
+        <div class="spread page-head">
+          <div>
+            <h2 class="h1">知识库</h2>
+            <p class="muted small" style="margin:0">项目级只读资产：导入后可在浏览页按编号查看，并在会话调用时注入。</p>
+          </div>
+          <button class="btn btn-primary" id="goImport">+ 导入知识库</button>
+        </div>
+        <div class="banner banner-success" id="listBanner" hidden>导入成功 · 新增 1 个知识库</div>
+        <div class="toolbar">
+          <label>项目
+            <select id="listProject" style="width:auto">
+              <option value="all">全部</option>
+              <option value="支付台">支付台</option>
+              <option value="风控台">风控台</option>
+            </select>
+          </label>
+          <span class="muted small" id="listCount">共 2 个知识库</span>
+        </div>
+        <div class="card" id="listSkeleton" hidden aria-label="加载中">
+          <div class="skeleton title"></div>
+          <div class="skeleton row"></div><div class="skeleton row"></div><div class="skeleton row"></div><div class="skeleton row"></div>
+        </div>
+        <div class="banner banner-error" id="listError" hidden>加载失败，请检查网络后重试。<button class="btn btn-sm" id="listRetry">重试</button></div>
+        <div class="empty" id="listEmpty" hidden>
+          <span class="big">还没有知识库</span>
+          <span>先在本地用 ontology-builder-native / ontology-consumption 生成知识库文件，再导入到项目。</span>
+          <button class="btn btn-primary" id="listEmptyImport">导入知识库</button>
+        </div>
+        <div class="table-wrap" id="listTableWrap">
+          <table>
+            <thead>
+              <tr><th>名称</th><th>项目</th><th>版本</th><th>生成时间</th><th>条目</th><th>状态</th><th>操作</th></tr>
+            </thead>
+            <tbody id="kbRows"></tbody>
+          </table>
+        </div>
+        <p class="small muted section">只读导入：工作台不修改上传文件，也不在线编辑条目；同名重新导入会生成新版本，旧版本只读保留。</p>
+
+        <div class="card section" id="projectSummary">
+          <div class="section-head">
+            <div>
+              <h3 class="h3" style="margin:0">项目上下文页 · 关联知识库区块</h3>
+              <p class="muted small" style="margin:2px 0 0">AC-012-6：选中项目下展示 0..n 个知识库，最多 3 条 + 查看全部。</p>
+            </div>
+            <button class="link" id="summaryAll">查看全部 →</button>
+          </div>
+          <div class="stack">
+            <div class="spread"><span><span class="mono">支付台业务知识库</span> <span class="badge badge-muted">v3</span> · 42 条 · 生成于 2026-11-17 09:12</span><button class="link" data-browse-kb="支付台业务知识库">浏览</button></div>
+            <div class="spread"><span><span class="mono">支付规范术语库</span> <span class="badge badge-muted">v1</span> · 18 条 · 生成时间未知</span><button class="link" data-browse-kb="支付规范术语库">浏览</button></div>
+            <p class="small muted" style="margin:0">还有 1 个（最多展示 3 个）</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== 导入 ===================== -->
+      <section class="view" id="view-import" aria-label="导入知识库" hidden>
+        <div class="spread page-head">
+          <div>
+            <button class="link small" id="importBack">← 知识库</button>
+            <h2 class="h1" style="margin-top:6px">导入知识库</h2>
+            <p class="muted small" style="margin:0">同名重新导入会生成新版本，旧版本只读保留。</p>
+          </div>
+          <label class="row small muted">项目
+            <select id="importProject" style="width:auto">
+              <option value="">请选择项目</option>
+              <option value="支付台" selected>支付台</option>
+              <option value="风控台">风控台</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="card" id="importSkeleton" hidden aria-label="校验中">
+          <div class="skeleton title"></div><div class="skeleton row"></div><div class="skeleton row"></div><div class="skeleton row"></div>
+        </div>
+
+        <div id="importPanel">
+          <div class="dropzone" id="dropzone">
+            <p style="margin:0 0 8px">拖拽文件到这里，或点击选择（可多选）</p>
+            <p class="small" style="margin:0 0 12px">仅 .json / .md / .markdown；必须包含 index.json</p>
+            <p class="small" style="margin:0 0 12px">index.json ≤20MB · 其他单文件 ≤10MB · 单次 ≤50 个 · 单库合计 ≤100MB</p>
+            <button class="btn" id="pickFiles">选择示例文件</button>
+            <input type="file" id="fileInput" multiple accept=".json,.md,.markdown" hidden>
+          </div>
+          <p class="small muted" id="importSummary">请选择至少包含 index.json 的文件</p>
+          <div class="file-list" id="fileList"></div>
+          <div class="banner banner-error" id="importOverall" hidden></div>
+          <div class="banner banner-error" id="importStateError" hidden>index.json 结构不合法：需要版本标识与条目集合，且条目不能为空。</div>
+          <div class="row right section">
+            <button class="btn" id="importCancel">取消</button>
+            <button class="btn btn-primary" id="importSubmit" disabled>提交导入</button>
+          </div>
+        </div>
+
+        <div class="card" id="importReport" hidden>
+          <div class="section-head">
+            <h3 class="h3" style="margin:0">导入报告</h3>
+            <span class="badge badge-success">已就绪</span>
+          </div>
+          <div id="importReportBody"></div>
+          <div class="row right" style="margin-top:16px">
+            <button class="btn" id="importAgain">再导入一个</button>
+            <button class="btn btn-primary" id="viewKb">查看知识库</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== 浏览 ===================== -->
+      <section class="view" id="view-browse" aria-label="知识库浏览" hidden>
+        <div class="spread page-head">
+          <div>
+            <h2 class="h1">知识库浏览</h2>
+            <p class="muted small" style="margin:0" id="browseSub">支付台业务知识库 v3 · 生成于 2026-11-17 09:12</p>
+          </div>
+        </div>
+        <div class="banner banner-success" id="browseBanner" hidden>已加载最新版本 · 条目与状态徽标已刷新。</div>
+        <div class="banner banner-info" id="supersededBanner" hidden>
+          当前查看 v2，已被新版本取代；浏览默认展示最新版本。<button class="link" id="latestVersion">查看最新版本</button>
+        </div>
+        <div class="toolbar">
+          <div class="row">
+            <label>项目
+              <select id="browseProject" style="width:auto"><option>全部</option><option selected>支付台</option></select>
+            </label>
+            <label>知识库
+              <select id="browseKb" style="width:auto">
+                <option value="v3">支付台业务知识库 v3</option>
+                <option value="v2">支付台业务知识库 v2（只读）</option>
+              </select>
+            </label>
+          </div>
+          <span class="muted small" id="browseCount">共 8 条</span>
+        </div>
+        <div class="row" style="margin-bottom:12px">
+          <input type="search" id="kbSearch" placeholder="检索：TERM- / TERM-001 / 支付单" aria-label="检索条目" style="max-width:420px">
+        </div>
+        <div class="demo-tabs" id="typeTabs" role="tablist" aria-label="条目类型" style="margin-bottom:12px"></div>
+        <div class="card" id="browseSkeleton" hidden aria-label="加载中">
+          <div class="skeleton row"></div><div class="skeleton row"></div><div class="skeleton row"></div><div class="skeleton row"></div>
+        </div>
+        <div class="banner banner-error" id="browseError" hidden>加载失败，请重试。<button class="btn btn-sm" id="browseRetry">重试</button></div>
+        <div class="empty" id="browseEmpty" hidden>
+          <span class="big">没有符合条件的条目</span>
+          <span>试试更换编号前缀、关键词或类型筛选。</span>
+          <button class="btn" id="clearFilters">清除筛选</button>
+        </div>
+        <div class="table-wrap" id="browseTableWrap">
+          <table>
+            <thead><tr><th>编号</th><th>标题</th><th>类型</th><th>所属知识库</th><th>状态</th></tr></thead>
+            <tbody id="entryRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===================== 详情 ===================== -->
+      <section class="view" id="view-detail" aria-label="条目详情" hidden>
+        <div class="page-head">
+          <button class="link small" id="detailBack">← 知识库浏览</button>
+        </div>
+        <div class="banner banner-success" id="detailBanner" hidden>条目详情已加载：字段、表、代码路径与一跳邻居均为当前版本数据。</div>
+        <div class="card" id="detailSkeleton" hidden aria-label="加载中">
+          <div class="skeleton title"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+        </div>
+        <div class="banner banner-error" id="detailError" hidden>该条目不存在，或已随知识库删除。<button class="btn btn-sm" id="detailErrorBack">返回浏览</button></div>
+        <div id="detailContent">
+          <div class="detail-cols">
+            <div class="stack">
+              <div id="detailHead"></div>
+              <div class="card">
+                <h3 class="h3">摘要</h3>
+                <p id="detailSummary" style="margin:0;line-height:var(--line-height-relaxed)"></p>
+              </div>
+              <div class="card">
+                <h3 class="h3" id="bodyHeading">正文</h3>
+                <div class="body-block" id="detailBody"></div>
+              </div>
+              <div class="card">
+                <h3 class="h3">结构化信息</h3>
+                <dl class="kv" id="detailFields"></dl>
+              </div>
+            </div>
+            <div class="stack" id="detailAside"></div>
+          </div>
+        </div>
+        <div class="empty" id="detailEmpty" hidden>
+          <span class="big" id="detailEmptyTitle">字段信息缺失</span>
+          <span>该条目只有编号、标题与摘要，index.json 未提供字段、表或代码路径。</span>
+        </div>
+      </section>
+
+      <!-- ===================== 会话注入 ===================== -->
+      <section class="view" id="view-inject" aria-label="会话知识库注入" hidden>
+        <div class="spread page-head">
+          <div>
+            <h2 class="h1">分析会话 · 发起调用</h2>
+            <p class="muted small" style="margin:0">会话 #S-1024 · 项目 支付台 · 状态 进行中</p>
+          </div>
+          <span class="badge badge-info">进行中</span>
+        </div>
+
+        <div class="empty" id="injectEmpty" hidden>
+          <span class="big">该项目还没有知识库</span>
+          <span>本次调用只能使用提示文本。</span>
+          <button class="btn btn-primary" id="injectGoImport">去导入</button>
+        </div>
+
+        <div class="detail-cols" id="injectPanel">
+          <div class="card">
+            <h3 class="h2">发起调用</h3>
+            <label class="small" for="promptInput" style="font-weight:var(--font-weight-medium)">提示（必填）</label>
+            <textarea id="promptInput" rows="3" placeholder="请分析以下登录报错的可能原因"></textarea>
+            <div class="counter" id="promptCounter">提示 0 字符</div>
+
+            <div class="row" style="margin:8px 0 12px">
+              <button class="btn btn-sm" id="fillOver">填入超限演示文本</button>
+              <button class="btn btn-sm" id="clearPrompt">清空</button>
+              <button class="btn btn-sm" id="simulateVersion">模拟：新版本导入后 ENT-002 失效</button>
+            </div>
+
+            <div class="section-head" style="margin-top:12px">
+              <h4 class="h3" style="margin:0">知识库注入（按编号勾选）</h4>
+              <span class="small muted" id="kbVersionLabel">支付台业务知识库 v3 · 生成于 2026-11-17 09:12</span>
+            </div>
+            <div class="kb-pick" id="pickList"></div>
+
+            <div style="margin-top:12px">
+              <div class="budget-line" id="budgetLine">已选 0 条 · 注入 0 字符 · 提示 0 字符</div>
+              <div class="budget-line" id="totalLine">合计 0 / 200,000 字符</div>
+              <div class="budget-track"><div class="budget-fill" id="budgetFill"></div></div>
+              <div class="banner banner-error" id="overLimit" hidden></div>
+              <div class="banner banner-info" id="injectNote" hidden></div>
+            </div>
+
+            <div class="row right" style="margin-top:12px">
+              <button class="btn btn-primary" id="callBtn">发起调用</button>
+            </div>
+            <div class="banner banner-error" id="callError" hidden>调用失败：上游超时（已重试 1 次，错误码 504）。提示与勾选已保留。</div>
+            <div class="call-result ok" id="callResult" hidden></div>
+          </div>
+
+          <div class="card">
+            <h3 class="h2">调用时间线</h3>
+            <div class="timeline" id="timeline"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- 对话框 -->
+<div class="overlay" id="overlay" hidden>
+  <div class="modal" id="deleteDialog" role="dialog" aria-modal="true" aria-labelledby="deleteTitle" hidden>
+    <h3 id="deleteTitle">删除知识库？</h3>
+    <p class="small" style="margin:0 0 8px">删除后不可恢复。历史会话与调用记录不受影响，相关编号将标注「知识库已删除」。将同时删除：</p>
+    <ul>
+      <li>知识库「<span id="deleteKbName"></span>」及其全部版本（<span id="deleteVersions"></span>）</li>
+      <li>条目索引（该知识库全部条目）</li>
+      <li>已存文件（index.json 与 .md 附件）</li>
+      <li>项目与该知识库的关联</li>
+    </ul>
+    <div class="banner banner-error" id="deleteError" hidden>删除失败，请重试。</div>
+    <div class="modal-foot">
+      <button class="link small" id="deleteFailDemo" style="margin-right:auto">模拟失败</button>
+      <button class="btn" id="deleteCancel">取消</button>
+      <button class="btn btn-danger" id="deleteConfirm">删除</button>
+    </div>
+  </div>
+
+  <div class="modal" id="invalidDialog" role="alertdialog" aria-modal="true" aria-labelledby="invalidTitle" hidden>
+    <h3 id="invalidTitle">部分条目不可用，是否继续？</h3>
+    <p class="small" style="margin:0">以下编号已被剔除，不会注入本次调用：</p>
+    <ul id="invalidList"></ul>
+    <p class="small" style="margin:0 0 4px">其余 <strong id="invalidValidCount">0</strong> 条有效条目将照常注入并产生调用记录。</p>
+    <p class="small muted" style="margin:0 0 4px">取消后不会发起调用，也不会产生调用记录。</p>
+    <div class="modal-foot">
+      <button class="btn" id="invalidCancel">取消</button>
+      <button class="btn btn-primary" id="invalidConfirm">继续调用</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ================= 数据 ================= */
+  var KB = {id:'kb-pay', name:'支付台业务知识库', project:'支付台', version:'v3', generated:'2026-11-17 09:12'};
+
+  var ENTRIES = [
+    {code:'TERM-001', title:'支付单', type:'term', typeLabel:'术语',
+     summary:'一次支付行为的业务单据，记录支付单号、金额、币种、支付方式与状态。',
+     body:'支付单是支付台对一次支付行为的业务记录，包含支付单号、金额、币种、支付方式与状态。一笔支付单在同一商户下唯一，状态变更以支付网关回调为准。创建后金额与币种不可修改，退款须基于原支付单发起。',
+     fields:{'支付单号':'pay_no','金额':'amount','状态':'status','币种':'currency'},
+     tables:['pay_order','pay_order_item'], codePaths:['src/pay/order.ts:42','src/pay/order.service.ts:88'],
+     neighbors:['ENT-002','ST-005'], freshness:'12 天前', stale:false,
+     conflict:true, conflictSources:[{kb:'支付台业务知识库',version:'v2',generated:'2026-10-02 14:30'}]},
+    {code:'ENT-002', title:'支付订单', type:'entity', typeLabel:'实体',
+     summary:'面向收银台的订单聚合，可包含多笔支付单，用于处理分次支付与部分退款。',
+     body:'支付订单是面向收银台的订单聚合，可包含多笔支付单，用于处理分次支付与部分退款。订单状态由子支付单汇总得出：全部成功即为已支付，任一失败则进入部分支付状态，由人工或定时任务处理。',
+     fields:{'订单号':'order_no','商户号':'merchant_id','状态':'status'},
+     tables:['pay_order','pay_refund'], codePaths:['src/order/order.ts:17'],
+     neighbors:['TERM-001','DE-007'], freshness:'48 天前', stale:true,
+     conflict:false, conflictSources:[]},
+    {code:'BR-003', title:'重复支付拦截', type:'rule', typeLabel:'业务规则',
+     summary:'同一订单在 60 秒内重复发起相同金额的支付请求时，拦截后一次请求并返回重复支付错误码。',
+     body:null, bodyMissing:true,
+     fields:{'触发条件':'60s 内相同 order_no 与 amount','返回码':'DUPLICATE_PAYMENT'},
+     tables:['pay_order'], codePaths:['src/pay/guard.ts:61'],
+     neighbors:['ENT-002'], freshness:null, stale:false,
+     conflict:false, conflictSources:[]},
+    {code:'BP-004', title:'支付回调处理', type:'process', typeLabel:'流程',
+     summary:'支付网关回调到达后，先验签再按支付单号幂等更新状态，并触发支付完成事件。',
+     body:'支付网关回调到达后，先校验签名与时间戳，再按支付单号幂等更新状态；重复回调直接返回成功。状态更新成功后发布支付完成事件，由订单与通知服务消费。',
+     fields:{'触发':'网关回调','幂等键':'pay_no','下游':'DE-007'},
+     tables:['pay_callback_log'], codePaths:['src/callback/handler.ts:23'],
+     neighbors:['DE-007','ST-999'], freshness:null, stale:false,
+     conflict:false, conflictSources:[]},
+    {code:'API-006', title:'创建支付接口', type:'api', typeLabel:'接口',
+     summary:'创建支付接口用于收银台发起支付，返回支付单号与跳转地址。',
+     body:'POST /api/v1/payments 接收订单号、金额、支付方式与回调地址，创建支付单并返回支付单号与收银台跳转地址。金额以分为单位，回调地址必须为 https。',
+     fields:{'方法':'POST','路径':'/api/v1/payments','鉴权':'商户签名'},
+     tables:['pay_order'], codePaths:['src/api/payment.controller.ts:31'],
+     neighbors:['TERM-001'], freshness:'5 天前', stale:false,
+     conflict:true, conflictSources:[{kb:'支付台业务知识库',version:'v2',generated:'2026-10-02 14:30'}]},
+    {code:'ST-005', title:'支付成功', type:'state', typeLabel:'状态',
+     summary:'支付成功表示支付网关已确认扣款完成，该状态不可回退。',
+     body:'支付成功表示支付网关已确认扣款完成。该状态不可回退；退款不改变支付单状态，只新增退款单并累计退款金额。',
+     fields:{'进入条件':'网关确认扣款','是否终态':'是'},
+     tables:['pay_order'], codePaths:['src/pay/state.ts:12'],
+     neighbors:['TERM-001','BP-004'], freshness:'3 天前', stale:false,
+     conflict:false, conflictSources:[]},
+    {code:'DE-007', title:'支付完成事件', type:'domain_event', typeLabel:'领域事件',
+     summary:'支付完成事件在支付单状态变为成功时发布，供订单与通知服务消费。',
+     body:'支付完成事件在支付单状态变为成功时发布，载荷只包含支付单号、订单号与金额，不包含用户敏感信息。消费者需按支付单号幂等处理。',
+     fields:{'事件名':'payment.completed','载荷':'pay_no, order_no, amount'},
+     tables:[], codePaths:['src/events/payment.ts:9'],
+     neighbors:['ST-005'], freshness:'7 天前', stale:false,
+     conflict:false, conflictSources:[]},
+    {code:'TERM-008', title:'退款单', type:'term', typeLabel:'术语',
+     summary:'退款单记录一次退款申请及结果，必须关联原支付单。',
+     body:'退款单记录一次退款申请及结果，必须关联原支付单。支持全额与部分退款；累计退款金额不得超过支付金额。',
+     fields:{'退款单号':'refund_no','原支付单':'pay_no','金额':'amount'},
+     tables:['pay_refund'], codePaths:['src/refund/refund.ts:14'],
+     neighbors:['TERM-001'], freshness:'20 天前', stale:false,
+     conflict:false, conflictSources:[]}
+  ];
+
+  var TYPE_LABELS = [
+    {key:'all', label:'全部'}, {key:'term', label:'术语'}, {key:'entity', label:'实体'},
+    {key:'state', label:'状态'}, {key:'rule', label:'业务规则'}, {key:'process', label:'流程'},
+    {key:'api', label:'接口'}, {key:'domain_event', label:'领域事件'}, {key:'other', label:'其他'}
+  ];
+
+  var KB_ROWS = [
+    {id:'kb-pay', name:'支付台业务知识库', project:'支付台', version:'v3', old:1, generated:'2026-11-17 09:12', count:42},
+    {id:'kb-risk', name:'风控规则知识库', project:'风控台', version:'v1', old:0, generated:'未知', count:18}
+  ];
+
+  var S = {
+    view:'list',
+    theme:'dark',
+    states:{list:'default', import:'default', browse:'default', detail:'default', inject:'default'},
+    list:{project:'all', deleted:false, banner:false},
+    import:{files:[], report:null, structureError:false, submitting:false},
+    browse:{version:'v3', type:'all', q:'', state:'default'},
+    detail:{code:'TERM-001'},
+    inject:{prompt:'请分析以下登录报错的可能原因', checked:{'TERM-001':true,'ENT-002':true}, invalid:{}, calling:false, note:'', callResult:null, callError:false},
+    dialog:{open:null, kb:null, pendingInvalid:[], deleting:false}
+  };
+
+  var $ = function(id){ return document.getElementById(id); };
+  var esc = function(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  };
+  var cp = function(s){ return Array.from(String(s == null ? '' : s)).length; };
+  var fmt = function(n){ return Number(n).toLocaleString('en-US'); };
+
+  /* ================= 主题 ================= */
+  function applyTheme(){
+    document.documentElement.setAttribute('data-theme', S.theme);
+    $('themeBtn').textContent = S.theme === 'dark' ? '主题：暗色' : '主题：浅色';
+  }
+  $('themeBtn').addEventListener('click', function(){
+    S.theme = S.theme === 'dark' ? 'light' : 'dark';
+    applyTheme();
+  });
+
+  /* ================= 通用 ================= */
+  var toastTimer = null;
+  function toast(msg, type){
+    var t = $('toast');
+    t.textContent = msg;
+    t.className = 'toast' + (type ? ' ' + type : '');
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.hidden = true; }, 2400);
+  }
+
+  var PAGE_META = {
+    list:['知识库','项目级只读资产 · 导入、浏览与按编号注入'],
+    import:['导入知识库','校验文件并建立编号索引'],
+    browse:['知识库浏览','按项目、知识库、类型与编号检索条目'],
+    detail:['条目详情','核对定义、代码落点、来源与新鲜度'],
+    inject:['会话 · 发起调用','按编号注入知识库条目并核对字符预算']
+  };
+
+  function setView(view){
+    S.view = view;
+    ['list','import','browse','detail','inject'].forEach(function(v){
+      $('view-' + v).hidden = v !== view;
+    });
+    document.querySelectorAll('.demo-tab').forEach(function(b){
+      var on = b.getAttribute('data-view') === view;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    var meta = PAGE_META[view];
+    $('pageTitle').textContent = meta[0];
+    $('pageSub').textContent = meta[1];
+    syncStateButtons();
+    renderAll();
+  }
+
+  function syncStateButtons(){
+    var active = S.states[S.view] || 'default';
+    document.querySelectorAll('#stateSwitch button').forEach(function(b){
+      b.classList.toggle('active', b.getAttribute('data-state') === active);
+    });
+  }
+
+  document.querySelectorAll('.demo-tab').forEach(function(b){
+    b.addEventListener('click', function(){ setView(b.getAttribute('data-view')); });
+  });
+  document.querySelectorAll('#stateSwitch button').forEach(function(b){
+    b.addEventListener('click', function(){
+      var st = b.getAttribute('data-state');
+      S.states[S.view] = st;
+      applyState(S.view, st);
+      syncStateButtons();
+      renderAll();
+    });
+  });
+
+  function applyState(view, state){
+    if (view === 'list'){
+      S.list.banner = state === 'success';
+    }
+    if (view === 'import'){
+      if (state === 'success' && !S.import.report) { S.import.report = sampleReport(); }
+      if (state !== 'error') S.import.structureError = false;
+      if (state === 'error') S.import.structureError = true;
+      if (state === 'empty') { S.import.files = []; }
+    }
+    if (view === 'browse'){
+      S.browse.state = state;
+    }
+    if (view === 'detail'){
+      S.states.detail = state;
+    }
+    if (view === 'inject'){
+      if (state === 'loading') { S.inject.calling = true; S.inject.callError = false; }
+      else if (state === 'error') { S.inject.calling = false; S.inject.callError = true; }
+      else if (state === 'success') { S.inject.calling = false; S.inject.callError = false; S.inject.callResult = '调用完成 · 知识库注入记录已写入时间线'; }
+      else { S.inject.calling = false; S.inject.callError = false; S.inject.callResult = null; }
+    }
+  }
+
+  /* ================= 列表 ================= */
+  function filteredKbs(){
+    return KB_ROWS.filter(function(k){ return S.list.project === 'all' || k.project === S.list.project; });
+  }
+
+  function renderList(){
+    var st = S.states.list;
+    $('listSkeleton').hidden = st !== 'loading';
+    $('listError').hidden = st !== 'error';
+    $('listBanner').hidden = !(st === 'success' && S.list.banner);
+    var rows = filteredKbs();
+    var showEmpty = st === 'empty' || rows.length === 0;
+    $('listEmpty').hidden = !showEmpty;
+    $('listTableWrap').hidden = showEmpty || st === 'loading' || st === 'error';
+    $('projectSummary').hidden = st === 'loading' || st === 'error';
+    $('listCount').textContent = '共 ' + rows.length + ' 个知识库';
+
+    $('kbRows').innerHTML = rows.map(function(k){
+      return '<tr>' +
+        '<td><div style="font-weight:500">' + esc(k.name) + '</div>' +
+        (k.old ? '<div class="small muted">另有 ' + k.old + ' 个旧版本（只读）</div>' : '') + '</td>' +
+        '<td>' + esc(k.project) + '</td>' +
+        '<td class="mono">' + esc(k.version) + '</td>' +
+        '<td class="mono small">' + esc(k.generated) + '</td>' +
+        '<td>' + k.count + '</td>' +
+        '<td><span class="badge badge-success">已就绪</span></td>' +
+        '<td><div class="row"><button class="btn btn-sm" data-browse="' + esc(k.id) + '">浏览</button>' +
+        '<button class="btn btn-sm link-danger" data-delete="' + esc(k.id) + '">删除</button></div></td>' +
+      '</tr>';
+    }).join('');
+
+    $('kbRows').querySelectorAll('[data-browse]').forEach(function(b){
+      b.addEventListener('click', function(){
+        S.browse.version = 'v3';
+        setView('browse');
+      });
+    });
+    $('kbRows').querySelectorAll('[data-delete]').forEach(function(b){
+      b.addEventListener('click', function(){
+        var kb = KB_ROWS.filter(function(k){ return k.id === b.getAttribute('data-delete'); })[0];
+        openDelete(kb);
+      });
+    });
+  }
+
+  $('listProject').addEventListener('change', function(){
+    S.list.project = this.value;
+    renderList();
+  });
+  $('listRetry').addEventListener('click', function(){
+    S.states.list = 'default'; syncStateButtons(); renderAll();
+  });
+  $('listEmptyImport').addEventListener('click', function(){ setView('import'); });
+  $('goImport').addEventListener('click', function(){ setView('import'); });
+  $('summaryAll').addEventListener('click', function(){ toast('已按项目筛选全部知识库', 'info'); });
+  document.querySelectorAll('[data-browse-kb]').forEach(function(b){
+    b.addEventListener('click', function(){ S.browse.version='v3'; setView('browse'); });
+  });
+
+  /* ================= 导入 ================= */
+  function sampleFiles(){
+    return [
+      {name:'index.json', size:'240 KB', ok:true, reason:'通过'},
+      {name:'glossary.md', size:'12 KB', ok:true, reason:'通过'},
+      {name:'notes.txt', size:'3 KB', ok:false, reason:'不支持 .txt；知识库仅允许 .json / .md / .markdown'}
+    ];
+  }
+  function sampleReport(){
+    return {
+      name:'支付台业务知识库', version:'v3', imported:3, sameName:true,
+      skipped:[
+        {line:128, reason:'缺少编号，已跳过'},
+        {line:302, reason:'编号重复（TERM-001），已跳过'}
+      ]
+    };
+  }
+  function hasIndex(){ return S.import.files.some(function(f){ return f.name === 'index.json'; }); }
+
+  function importValidity(){
+    var files = S.import.files;
+    var overall = null;
+    if (!files.length) overall = '请选择至少包含 index.json 的文件';
+    else if (!hasIndex()) overall = '缺少 index.json：知识库必须包含 index.json';
+    else if (files.length > 50) overall = '单次最多导入 50 个文件（当前 ' + files.length + ' 个）';
+    var bad = files.some(function(f){ return !f.ok; });
+    return {overall:overall, bad:bad};
+  }
+
+  function renderImport(){
+    var st = S.states.import;
+    var validating = st === 'loading' || S.import.submitting;
+    $('importSkeleton').hidden = !validating;
+    $('importPanel').hidden = st === 'success' || validating;
+    $('importReport').hidden = st !== 'success' || !S.import.report;
+    $('importStateError').hidden = !(st === 'error' || S.import.structureError);
+
+    $('fileList').innerHTML = S.import.files.map(function(f){
+      return '<div class="file-row ' + (f.ok ? '' : 'bad') + '">' +
+        '<span class="mono">' + esc(f.name) + '</span>' +
+        '<span class="small">' + esc(f.size) + '</span>' +
+        '<span class="small">' + (f.ok ? '✓ 通过' : '✗ ' + esc(f.reason)) + '</span>' +
+        '<button class="link small" data-remove="' + esc(f.name) + '">移除</button>' +
+      '</div>';
+    }).join('');
+
+    var v = importValidity();
+    $('importOverall').hidden = !v.overall;
+    $('importOverall').textContent = v.overall || '';
+    var total = S.import.files.length;
+    $('importSummary').textContent = total
+      ? '已选择 ' + total + ' 个文件 · ' + (v.bad ? '存在不合规文件，请移除或替换后再提交。' : '全部通过前端校验。')
+      : '请选择至少包含 index.json 的文件';
+    $('importSubmit').disabled = !!v.overall || v.bad || validating;
+    $('importSubmit').textContent = validating ? '校验中…' : '提交导入';
+
+    $('fileList').querySelectorAll('[data-remove]').forEach(function(b){
+      b.addEventListener('click', function(){
+        var name = b.getAttribute('data-remove');
+        S.import.files = S.import.files.filter(function(f){ return f.name !== name; });
+        renderImport();
+      });
+    });
+
+    if (S.import.report){
+      var r = S.import.report;
+      var html = '<p class="small" style="margin:0 0 8px">知识库 <strong>' + esc(r.name) + '</strong> <span class="badge badge-muted">' + esc(r.version) + '</span></p>' +
+        '<p style="margin:0 0 8px">已导入 <strong>' + r.imported + '</strong> 条 · 跳过 <strong style="color:var(--color-warning)">' + r.skipped.length + '</strong> 条</p>' +
+        (r.sameName ? '<div class="banner banner-info">同名重新导入：已生成 ' + esc(r.version) + '，旧版本只读保留。</div>' : '') +
+        '<ul style="margin:0;padding-left:18px;font-size:var(--font-size-sm);color:var(--color-muted-foreground)">' +
+        r.skipped.map(function(s){ return '<li>第 ' + s.line + ' 行：' + esc(s.reason) + '</li>'; }).join('') + '</ul>';
+      $('importReportBody').innerHTML = html;
+    }
+  }
+
+  $('pickFiles').addEventListener('click', function(){
+    S.import.files = sampleFiles();
+    S.import.report = null;
+    S.states.import = 'default';
+    syncStateButtons();
+    renderAll();
+  });
+  $('fileInput').addEventListener('change', function(){
+    var names = Array.prototype.map.call(this.files, function(f){ return {name:f.name, size:Math.round(f.size/1024) + ' KB', ok:/\.(json|md|markdown)$/i.test(f.name), reason:'不支持该类型；知识库仅允许 .json / .md / .markdown'}; });
+    if (names.length) { S.import.files = names; renderAll(); }
+  });
+  $('importBack').addEventListener('click', function(){ setView('list'); });
+  $('importCancel').addEventListener('click', function(){
+    setView('list');
+    setTimeout(function(){ S.import.files = []; S.import.report = null; S.import.structureError = false; }, 0);
+  });
+  $('importSubmit').addEventListener('click', function(){
+    if (this.disabled) return;
+    S.import.submitting = true;
+    S.states.import = 'loading';
+    syncStateButtons();
+    renderImport();
+    setTimeout(function(){
+      S.import.submitting = false;
+      S.import.report = sampleReport();
+      S.states.import = 'success';
+      syncStateButtons();
+      renderAll();
+      toast('导入完成');
+    }, 700);
+  });
+  $('importAgain').addEventListener('click', function(){
+    S.import.files = []; S.import.report = null; S.import.structureError = false;
+    S.states.import = 'default';
+    syncStateButtons(); renderAll();
+  });
+  $('viewKb').addEventListener('click', function(){ S.browse.version = 'v3'; setView('browse'); });
+
+  /* ================= 浏览 ================= */
+  function searchMatch(e, q){
+    if (!q) return true;
+    var s = q.trim().toLowerCase();
+    if (!s) return true;
+    if (e.code.toLowerCase().indexOf(s) === 0) return true;
+    var hay = [e.code, e.title, e.summary, e.body || '', e.typeLabel].join(' ').toLowerCase();
+    return hay.indexOf(s) >= 0;
+  }
+  function visibleEntries(){
+    return ENTRIES.filter(function(e){
+      return (S.browse.type === 'all' || e.type === S.browse.type) && searchMatch(e, S.browse.q);
+    });
+  }
+
+  function renderBrowse(){
+    var st = S.states.browse;
+    $('browseKb').value = S.browse.version;
+    $('browseSkeleton').hidden = st !== 'loading';
+    $('browseError').hidden = st !== 'error';
+    $('browseBanner').hidden = st !== 'success';
+    $('supersededBanner').hidden = S.browse.version !== 'v2';
+    $('browseTableWrap').hidden = st === 'loading' || st === 'error';
+    $('browseSub').textContent = '支付台业务知识库 ' + S.browse.version + (S.browse.version === 'v2' ? ' · 已只读' : ' · 生成于 2026-11-17 09:12');
+
+    var counts = {};
+    ENTRIES.forEach(function(e){ counts[e.type] = (counts[e.type] || 0) + 1; });
+    $('typeTabs').innerHTML = TYPE_LABELS.map(function(t){
+      var n = t.key === 'all' ? ENTRIES.length : (counts[t.key] || 0);
+      return '<button class="demo-tab ' + (S.browse.type === t.key ? 'active' : '') + '" data-type="' + t.key + '" ' +
+        (n === 0 ? 'disabled style="opacity:.45"' : '') + '>' + t.label + ' ' + n + '</button>';
+    }).join('');
+    $('typeTabs').querySelectorAll('[data-type]').forEach(function(b){
+      b.addEventListener('click', function(){
+        if (b.disabled) return;
+        S.browse.type = b.getAttribute('data-type');
+        S.states.browse = 'default';
+        syncStateButtons();
+        renderAll();
+      });
+    });
+
+    var rows = visibleEntries();
+    var showEmpty = st === 'empty' || rows.length === 0;
+    $('browseEmpty').hidden = !showEmpty;
+    $('browseTableWrap').hidden = showEmpty || st === 'loading' || st === 'error';
+    $('browseCount').textContent = '共 ' + rows.length + ' 条';
+
+    $('entryRows').innerHTML = rows.map(function(e){
+      var badges = '';
+      if (S.browse.version === 'v2') badges += '<span class="badge badge-muted">已被新版本取代</span> ';
+      if (e.conflict) badges += '<span class="badge badge-warning">版本冲突</span> ';
+      if (e.stale) badges += '<span class="badge badge-warning">可能过期</span> ';
+      if (e.bodyMissing) badges += '<span class="badge badge-muted">正文缺失</span> ';
+      if (!e.freshness) badges += '<span class="badge badge-muted">新鲜度未知</span> ';
+      return '<tr class="clickable" data-code="' + e.code + '">' +
+        '<td class="mono small">' + e.code + '</td>' +
+        '<td>' + esc(e.title) + '</td>' +
+        '<td class="small">' + esc(e.typeLabel) + '</td>' +
+        '<td class="small muted">支付台业务知识库 ' + S.browse.version + '</td>' +
+        '<td>' + badges + '</td></tr>';
+    }).join('');
+
+    $('entryRows').querySelectorAll('[data-code]').forEach(function(tr){
+      tr.addEventListener('click', function(){
+        S.detail.code = tr.getAttribute('data-code');
+        S.states.detail = 'default';
+        setView('detail');
+      });
+    });
+  }
+
+  $('browseKb').addEventListener('change', function(){
+    S.browse.version = this.value;
+    renderBrowse();
+  });
+  $('browseProject').addEventListener('change', function(){
+    if (this.value === '全部') { toast('已切换为全部项目', 'info'); }
+  });
+  $('kbSearch').addEventListener('input', function(){
+    S.browse.q = this.value;
+    S.states.browse = 'default';
+    syncStateButtons();
+    renderBrowse();
+  });
+  $('clearFilters').addEventListener('click', function(){
+    S.browse.q = ''; S.browse.type = 'all'; $('kbSearch').value = '';
+    S.states.browse = 'default'; syncStateButtons(); renderAll();
+  });
+  $('latestVersion').addEventListener('click', function(){
+    S.browse.version = 'v3'; $('browseKb').value = 'v3'; renderBrowse();
+  });
+  $('browseRetry').addEventListener('click', function(){
+    S.states.browse = 'default'; syncStateButtons(); renderAll();
+  });
+
+  /* ================= 详情 ================= */
+  function renderDetail(){
+    var st = S.states.detail;
+    var e = ENTRIES.filter(function(x){ return x.code === S.detail.code; })[0];
+    $('detailSkeleton').hidden = st !== 'loading';
+    $('detailError').hidden = st !== 'error';
+    $('detailBanner').hidden = st !== 'success';
+    var showEmpty = st === 'empty' || !e;
+    $('detailEmpty').hidden = !showEmpty;
+    $('detailContent').hidden = st === 'loading' || st === 'error' || showEmpty;
+    if (!e) return;
+    if (showEmpty){
+      $('detailEmptyTitle').textContent = e.code + ' ' + e.title + ' · 字段信息缺失';
+      return;
+    }
+
+    var badges = '<span class="badge badge-muted">' + esc(e.typeLabel) + '</span> ';
+    if (S.browse.version === 'v2') badges += '<span class="badge badge-muted">已被新版本取代</span> ';
+    if (e.stale) badges += '<span class="badge badge-warning">可能过期</span> ';
+    else if (e.freshness) badges += '<span class="badge badge-success">' + esc(e.freshness) + '</span> ';
+    else badges += '<span class="badge badge-muted">新鲜度未知</span> ';
+    if (e.conflict) badges += '<span class="badge badge-warning">版本冲突</span> ';
+
+    $('detailHead').innerHTML =
+      '<h2 class="h1" style="margin-bottom:8px"><span class="mono">' + esc(e.code) + '</span> ' + esc(e.title) + '</h2>' +
+      '<div class="row" style="margin-bottom:8px">' + badges + '</div>' +
+      '<p class="small muted" style="margin:0 0 4px">所属：支付台业务知识库 ' + S.browse.version + ' · 生成时间 2026-11-17 09:12</p>' +
+      '<p class="small muted" style="margin:0">来源：index.json + ' + (e.body ? 'glossary.md' : '（无匹配 .md）') + '</p>';
+
+    $('detailSummary').textContent = e.summary;
+    $('bodyHeading').textContent = e.body ? ('正文（来源 glossary.md）') : '摘要（正文缺失）';
+    if (e.body){
+      $('detailBody').textContent = e.body;
+      $('detailBody').style.color = '';
+    } else {
+      $('detailBody').textContent = '正文缺失：对应 .md 未上传或无法匹配。以下为 index.json 摘要：\n\n' + e.summary;
+      $('detailBody').style.color = 'var(--color-muted-foreground)';
+    }
+
+    var rows = [];
+    rows.push('<dt>字段</dt><dd>' + (Object.keys(e.fields || {}).length ? Object.keys(e.fields).map(function(k){ return esc(k) + '：' + esc(e.fields[k]); }).join('<br>') : '—') + '</dd>');
+    rows.push('<dt>表</dt><dd>' + ((e.tables || []).length ? e.tables.map(esc).join('、') : '—') + '</dd>');
+    rows.push('<dt>代码路径</dt><dd>' + ((e.codePaths || []).length ? e.codePaths.map(esc).join('<br>') : '—') + '</dd>');
+    rows.push('<dt>一跳邻居</dt><dd>' + ((e.neighbors || []).length ? e.neighbors.map(function(n){ return '<button class="link mono" data-neighbor="' + esc(n) + '">' + esc(n) + '</button>'; }).join('、') : '—') + '</dd>');
+    $('detailFields').innerHTML = rows.join('');
+
+    var aside = '';
+    if (e.conflict && e.conflictSources.length){
+      aside += '<div class="card">' +
+        '<div class="row" style="margin-bottom:8px"><span class="badge badge-warning">版本冲突</span></div>' +
+        '<p class="small" style="margin:0 0 8px">同编号摘要不同，冲突来源：</p>' +
+        '<ul style="margin:0 0 8px;padding-left:18px;font-size:var(--font-size-sm);color:var(--color-muted-foreground)">' +
+        e.conflictSources.map(function(s){ return '<li>' + esc(s.kb) + ' ' + esc(s.version) + '<br><span class="mono small">生成于 ' + esc(s.generated) + '</span></li>'; }).join('') +
+        '</ul><p class="small muted" style="margin:0">只提示，不阻止注入。</p></div>';
+    }
+    if (e.stale){
+      aside += '<div class="card"><div class="row" style="margin-bottom:8px"><span class="badge badge-warning">可能过期</span></div>' +
+        '<p class="small" style="margin:0">新鲜度 ' + esc(e.freshness) + '，距当前超过 30 天。只提示，不阻止注入。</p></div>';
+    }
+    if (!e.conflict && !e.stale){
+      aside += '<div class="card"><p class="small muted" style="margin:0">无新鲜度或版本冲突提示。字段缺失时显示「—」，不推测。</p></div>';
+    }
+    if (S.browse.version === 'v2'){
+      aside += '<div class="banner banner-info" style="margin:0">当前条目属于 v2，已被新版本取代。<button class="link" id="detailLatest">查看最新版本</button></div>';
+    }
+    $('detailAside').innerHTML = aside;
+
+    $('detailFields').querySelectorAll('[data-neighbor]').forEach(function(b){
+      b.addEventListener('click', function(){
+        var n = b.getAttribute('data-neighbor');
+        var target = ENTRIES.filter(function(x){ return x.code === n; })[0];
+        if (target){ S.detail.code = n; renderDetail(); }
+        else { toast('该项目下没有编号 ' + n, 'error'); }
+      });
+    });
+    var latest = $('detailLatest');
+    if (latest) latest.addEventListener('click', function(){ S.browse.version = 'v3'; renderDetail(); toast('已切换到最新版本'); });
+  }
+
+  $('detailBack').addEventListener('click', function(){ setView('browse'); });
+  $('detailErrorBack').addEventListener('click', function(){ setView('browse'); });
+
+  /* ================= 注入 ================= */
+  function injectedText(e){
+    return e.code + ' ' + e.title + '\n' + (e.body || e.summary) + '\n知识库：' + KB.name + ' ' + KB.version + ' · 生成于 ' + KB.generated;
+  }
+  function injectStats(){
+    var n = 0, chars = 0;
+    ENTRIES.forEach(function(e){
+      if (S.inject.checked[e.code] && !S.inject.invalid[e.code]){
+        n += 1;
+        chars += cp(injectedText(e));
+      }
+    });
+    var promptChars = cp(S.inject.prompt);
+    return {n:n, injected:chars, prompt:promptChars, total:chars + promptChars};
+  }
+
+  function renderInject(){
+    var st = S.states.inject;
+    $('injectEmpty').hidden = st !== 'empty';
+    $('injectPanel').hidden = st === 'empty';
+    $('promptInput').value = S.inject.prompt;
+    $('promptInput').disabled = S.inject.calling;
+
+    $('pickList').innerHTML = ENTRIES.map(function(e){
+      var invalid = !!S.inject.invalid[e.code];
+      var checked = !!S.inject.checked[e.code];
+      var badges = '';
+      if (invalid) badges += '<span class="badge badge-danger">不可用</span>';
+      if (e.stale) badges += '<span class="badge badge-warning">可能过期</span>';
+      if (e.bodyMissing) badges += '<span class="badge badge-muted">正文缺失</span>';
+      if (e.conflict) badges += '<span class="badge badge-warning">版本冲突</span>';
+      return '<label class="pick-row ' + (invalid ? 'disabled' : '') + '">' +
+        '<input type="checkbox" data-code="' + e.code + '" ' + (checked ? 'checked' : '') + ' ' + (invalid || S.inject.calling ? 'disabled' : '') + '>' +
+        '<span class="code">' + e.code + '</span>' +
+        '<span class="title">' + esc(e.title) + ' <span class="muted small">' + esc(e.typeLabel) + '</span></span>' +
+        badges + '</label>';
+    }).join('');
+
+    $('pickList').querySelectorAll('input[data-code]').forEach(function(cb){
+      cb.addEventListener('change', function(){
+        S.inject.checked[cb.getAttribute('data-code')] = cb.checked;
+        renderInject();
+      });
+    });
+
+    var stt = injectStats();
+    $('budgetLine').textContent = '已选 ' + stt.n + ' 条 · 注入 ' + fmt(stt.injected) + ' 字符 · 提示 ' + fmt(stt.prompt) + ' 字符';
+    $('totalLine').textContent = '合计 ' + fmt(stt.total) + ' / 200,000 字符';
+    $('totalLine').className = 'budget-line' + (stt.total > 200000 ? ' over' : (stt.total > 180000 ? ' warn' : ''));
+    $('promptCounter').textContent = '提示 ' + fmt(stt.prompt) + ' 字符';
+    $('promptCounter').className = 'counter' + (stt.total > 200000 ? ' over' : (stt.total > 180000 ? ' warn' : ''));
+
+    var fill = $('budgetFill');
+    var pct = Math.min(100, stt.total / 200000 * 100);
+    fill.style.width = pct + '%';
+    fill.className = 'budget-fill' + (stt.total > 200000 ? ' over' : (stt.total > 180000 ? ' warn' : ''));
+
+    var over = stt.total > 200000;
+    $('overLimit').hidden = !over;
+    if (over){
+      $('overLimit').textContent = '超出上限：提示 ' + fmt(stt.prompt) + ' 字符 + 注入 ' + fmt(stt.injected) +
+        ' 字符 = 合计 ' + fmt(stt.total) + ' / 200,000 字符，超出 ' + fmt(stt.total - 200000) +
+        ' 字符。不会截断，请取消勾选或缩短提示。';
+    }
+
+    $('injectNote').hidden = !S.inject.note;
+    $('injectNote').textContent = S.inject.note || '';
+
+    var callBtn = $('callBtn');
+    callBtn.disabled = S.inject.calling || !cp(S.inject.prompt) || over;
+    callBtn.textContent = S.inject.calling ? '调用中… 最长 120s' : '发起调用';
+
+    $('callError').hidden = !(st === 'error' || S.inject.callError);
+    $('callResult').hidden = !(st === 'success' || S.inject.callResult);
+    if (S.inject.callResult) $('callResult').textContent = S.inject.callResult;
+
+    renderTimeline();
+  }
+
+  function renderTimeline(){
+    var items = [
+      {time:'10:12', title:'调用成功 · 注入知识库', body:'风控规则知识库 v1 · BR-003、DE-007 · 980 字符', deleted:true}
+    ];
+    if (S.inject.lastEvent) items.push(S.inject.lastEvent);
+    $('timeline').innerHTML = items.map(function(it){
+      return '<div class="event"><div class="event-time">' + esc(it.time) + '</div><div>' +
+        '<div class="event-title">' + esc(it.title) + '</div>' +
+        '<div class="event-body">' + esc(it.body) + (it.deleted ? ' <span class="badge badge-muted">知识库已删除</span>' : '') + '</div>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  function doCall(removed){
+    var stt = injectStats();
+    var codes = ENTRIES.filter(function(e){ return S.inject.checked[e.code] && !S.inject.invalid[e.code]; }).map(function(e){ return e.code; });
+    S.inject.calling = true;
+    S.inject.callResult = null;
+    S.inject.callError = false;
+    renderInject();
+    setTimeout(function(){
+      S.inject.calling = false;
+      var now = new Date();
+      var hh = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
+      S.inject.lastEvent = {
+        time:hh,
+        title:'调用成功 · 注入知识库',
+        body:KB.name + ' ' + KB.version + ' · ' + (codes.length ? codes.join('、') : '未注入条目') + ' · ' + fmt(stt.injected) + ' 字符' +
+          (removed && removed.length ? ' · 已剔除 ' + removed.length + ' 个失效编号' : '')
+      };
+      S.inject.callResult = '调用完成 · 已记录知识库 ' + KB.name + ' ' + KB.version + ' · ' +
+        (codes.length ? codes.join('、') : '未注入条目') + ' · ' + fmt(stt.injected) + ' 字符（不记录正文）';
+      S.inject.note = '';
+      S.states.inject = 'success';
+      syncStateButtons();
+      renderAll();
+      toast('调用完成，注入记录已写入时间线');
+    }, 900);
+  }
+
+  $('promptInput').addEventListener('input', function(){
+    S.inject.prompt = this.value;
+    renderInject();
+  });
+  $('fillOver').addEventListener('click', function(){
+    S.inject.prompt = new Array(100001).join('支付') + '单';
+    S.inject.callResult = null;
+    S.states.inject = 'default';
+    syncStateButtons();
+    renderAll();
+  });
+  $('clearPrompt').addEventListener('click', function(){
+    S.inject.prompt = '';
+    renderInject();
+  });
+  $('simulateVersion').addEventListener('click', function(){
+    S.inject.invalid['ENT-002'] = true;
+    S.inject.checked['ENT-002'] = true;
+    S.inject.note = '演示：支付台业务知识库已导入 v4，ENT-002 已被新版本取代；发起调用前需要确认。';
+    renderInject();
+    toast('已模拟新版本导入：ENT-002 失效', 'info');
+  });
+  $('injectGoImport').addEventListener('click', function(){ setView('import'); });
+  $('callBtn').addEventListener('click', function(){
+    if (this.disabled) return;
+    var pending = Object.keys(S.inject.checked).filter(function(c){
+      return S.inject.checked[c] && S.inject.invalid[c];
+    });
+    if (pending.length){ openInvalid(pending); return; }
+    doCall([]);
+  });
+
+  /* ================= 对话框 ================= */
+  var lastFocus = null;
+  function openDialog(name){
+    lastFocus = document.activeElement;
+    $('overlay').hidden = false;
+    $('deleteDialog').hidden = name !== 'delete';
+    $('invalidDialog').hidden = name !== 'invalid';
+    S.dialog.open = name;
+    var d = name === 'delete' ? $('deleteDialog') : $('invalidDialog');
+    var first = d.querySelector('button:not(:disabled)');
+    if (first) first.focus();
+  }
+  function closeDialog(){
+    $('overlay').hidden = true;
+    $('deleteDialog').hidden = true;
+    $('invalidDialog').hidden = true;
+    S.dialog.open = null;
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+    lastFocus = null;
+  }
+
+  function openDelete(kb){
+    if (!kb) return;
+    S.dialog.kb = kb;
+    $('deleteKbName').textContent = kb.name;
+    $('deleteVersions').textContent = kb.old ? 'v' + kb.version.replace('v','') + '、v2' : kb.version;
+    $('deleteError').hidden = true;
+    $('deleteConfirm').disabled = false;
+    $('deleteConfirm').textContent = '删除';
+    openDialog('delete');
+  }
+
+  $('deleteCancel').addEventListener('click', closeDialog);
+  $('deleteFailDemo').addEventListener('click', function(){
+    $('deleteError').hidden = false;
+    $('deleteConfirm').disabled = false;
+    $('deleteConfirm').textContent = '重试删除';
+  });
+  $('deleteConfirm').addEventListener('click', function(){
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = '删除中…';
+    $('deleteError').hidden = true;
+    setTimeout(function(){
+      var kb = S.dialog.kb;
+      var idx = KB_ROWS.findIndex(function(k){ return k.id === kb.id; });
+      if (idx >= 0) KB_ROWS.splice(idx, 1);
+      closeDialog();
+      renderList();
+      toast('知识库已删除');
+    }, 600);
+  });
+
+  function openInvalid(codes){
+    S.dialog.pendingInvalid = codes;
+    $('invalidList').innerHTML = codes.map(function(code){
+      var e = ENTRIES.filter(function(x){ return x.code === code; })[0];
+      var reason = '已被新版本取代';
+      return '<li><span class="mono">' + esc(code) + '</span> ' + esc(e ? e.title : '') + '（' + reason + '）</li>';
+    }).join('');
+    var stats = injectStats();
+    var validCount = Object.keys(S.inject.checked).filter(function(c){
+      return S.inject.checked[c] && !S.inject.invalid[c];
+    }).length;
+    $('invalidValidCount').textContent = validCount;
+    $('invalidConfirm').textContent = validCount ? '继续调用（' + validCount + ' 条）' : '仅用提示继续';
+    $('invalidConfirm').disabled = false;
+    openDialog('invalid');
+  }
+
+  $('invalidCancel').addEventListener('click', function(){
+    var pending = S.dialog.pendingInvalid.slice();
+    pending.forEach(function(c){ S.inject.checked[c] = false; });
+    S.inject.note = '本次未发起：已取消，' + pending.length + ' 条失效条目已移除。提示与其余勾选已保留。';
+    closeDialog();
+    S.states.inject = 'default';
+    syncStateButtons();
+    renderInject();
+  });
+  $('invalidConfirm').addEventListener('click', function(){
+    var pending = S.dialog.pendingInvalid.slice();
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = '调用中…';
+    pending.forEach(function(c){ S.inject.checked[c] = false; });
+    closeDialog();
+    doCall(pending);
+  });
+
+  document.addEventListener('keydown', function(ev){
+    if (ev.key === 'Escape' && S.dialog.open){
+      if (S.dialog.open === 'invalid'){ $('invalidCancel').click(); }
+      else { closeDialog(); }
+    }
+  });
+
+  /* ================= 其他交互 ================= */
+  $('menuBtn').addEventListener('click', function(){ $('sidebar').classList.toggle('open'); });
+  document.querySelectorAll('.nav-item').forEach(function(b){
+    b.addEventListener('click', function(){
+      if (b.id === 'navKb'){ setView('list'); return; }
+      toast('「' + b.getAttribute('data-nav') + '」属于 workbench-core，本原型只演示知识库。', 'info');
+    });
+  });
+  $('userBtn').addEventListener('click', function(){
+    var open = this.getAttribute('aria-expanded') === 'true';
+    this.setAttribute('aria-expanded', open ? 'false' : 'true');
+    toast(open ? '已关闭用户菜单' : '单用户 · 口令登录 · 本原型不演示登录流程', 'info');
+  });
+
+  /* ================= 渲染入口 ================= */
+  function renderAll(){
+    renderList();
+    renderImport();
+    renderBrowse();
+    renderDetail();
+    renderInject();
+  }
+
+  applyTheme();
+  setView('list');
+})();
+</script>
+</body>
+</html>

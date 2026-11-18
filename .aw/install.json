@@ -1,0 +1,10 @@
+{
+  "version": "0.7.0",
+  "cli": [
+    "claude",
+    "codex"
+  ],
+  "packs": [],
+  "vendor_claude": true,
+  "ci": null
+}

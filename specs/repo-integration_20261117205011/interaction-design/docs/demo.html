@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>仓库集成 · 交互原型（增量）</title>
+<style>
+  /* ===== Design Tokens：与 workbench-core 逐字一致（未改） ===== */
+  :root{
+    --color-primary:#1E293B;
+    --color-on-primary:#FFFFFF;
+    --color-primary-hover:#0F172A;
+    --color-secondary:#475569;
+    --color-on-secondary:#FFFFFF;
+    --color-accent:#16A34A;
+    --color-on-accent:#FFFFFF;
+    --color-background:#F8FAFC;
+    --color-foreground:#0F172A;
+    --color-card:#FFFFFF;
+    --color-card-foreground:#0F172A;
+    --color-muted:#F1F5F9;
+    --color-muted-foreground:#475569;
+    --color-border:#CBD5E1;
+    --color-input:#FFFFFF;
+    --color-destructive:#DC2626;
+    --color-on-destructive:#FFFFFF;
+    --color-success:#16A34A;
+    --color-warning:#B45309;
+    --color-info:#0284C7;
+    --color-ring:#1E293B;
+    --font-family-base:"IBM Plex Sans","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --font-family-heading:"JetBrains Mono","SFMono-Regular",Menlo,monospace;
+    --font-family-mono:"JetBrains Mono","SFMono-Regular",Menlo,monospace;
+    --font-size-xs:12px;
+    --font-size-sm:13px;
+    --font-size-base:14px;
+    --font-size-md:16px;
+    --font-size-lg:18px;
+    --font-size-xl:24px;
+    --font-size-2xl:32px;
+    --font-weight-normal:400;
+    --font-weight-medium:500;
+    --font-weight-bold:600;
+    --line-height-tight:1.25;
+    --line-height-base:1.5;
+    --line-height-relaxed:1.7;
+    --spacing-1:4px;
+    --spacing-2:8px;
+    --spacing-3:12px;
+    --spacing-4:16px;
+    --spacing-6:24px;
+    --spacing-8:32px;
+    --spacing-12:48px;
+    --spacing-16:64px;
+    --radius-sm:4px;
+    --radius-md:8px;
+    --radius-lg:12px;
+    --radius-full:9999px;
+    --shadow-sm:0 1px 2px rgba(15,23,42,0.08);
+    --shadow-md:0 4px 6px rgba(15,23,42,0.12);
+    --shadow-lg:0 10px 15px rgba(15,23,42,0.18);
+    --duration-fast:120ms;
+    --duration-base:180ms;
+    --duration-slow:240ms;
+    --easing-standard:cubic-bezier(0.2,0,0,1);
+    --sidebar-width:248px;
+    --topbar-height:64px;
+    --content-max-width:1280px;
+
+    /* ===== repo-integration 新增 token（仅 3 条） ===== */
+    --spacing-5:20px;
+    --color-overlay:rgba(15,23,42,0.45);
+    --repo-drawer-width:480px;
+  }
+  html[data-theme="dark"]{
+    --color-primary:#EDEDED;
+    --color-on-primary:#0A0A0B;
+    --color-primary-hover:#D4D4D8;
+    --color-secondary:#26262B;
+    --color-on-secondary:#EDEDED;
+    --color-accent:#22C55E;
+    --color-on-accent:#0A0A0B;
+    --color-background:#0A0A0B;
+    --color-foreground:#EDEDED;
+    --color-card:#141416;
+    --color-card-foreground:#EDEDED;
+    --color-muted:#1C1C1F;
+    --color-muted-foreground:#A1A1AA;
+    --color-border:#2A2A2E;
+    --color-input:#0A0A0B;
+    --color-destructive:#EF4444;
+    --color-on-destructive:#0A0A0B;
+    --color-success:#22C55E;
+    --color-warning:#F59E0B;
+    --color-info:#38BDF8;
+    --color-ring:#22C55E;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.6);
+    --shadow-md:0 4px 10px rgba(0,0,0,.55);
+    --shadow-lg:0 16px 32px rgba(0,0,0,.6);
+    --color-overlay:rgba(0,0,0,0.65);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:var(--font-family-base);
+    font-size:var(--font-size-base);
+    line-height:var(--line-height-base);
+    color:var(--color-foreground);
+    background:var(--color-background);
+    -webkit-font-smoothing:antialiased;
+  }
+  button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+  a{color:var(--color-accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  :focus-visible{outline:2px solid var(--color-ring);outline-offset:2px}
+  .app{display:grid;grid-template-columns:var(--sidebar-width) 1fr;min-height:100vh}
+
+  /* ===== Sidebar ===== */
+  .sidebar{
+    background:var(--color-card);border-right:1px solid var(--color-border);
+    padding:var(--spacing-4);display:flex;flex-direction:column;gap:var(--spacing-6);
+    position:sticky;top:0;height:100vh;overflow:auto;
+  }
+  .brand{display:flex;align-items:center;gap:var(--spacing-2);font-family:var(--font-family-heading);font-weight:var(--font-weight-bold);font-size:var(--font-size-md)}
+  .brand-mark{width:24px;height:24px;border-radius:var(--radius-sm);background:var(--color-accent);color:var(--color-on-accent);display:grid;place-items:center;font-size:11px;font-weight:700}
+  .nav-group{display:flex;flex-direction:column;gap:2px}
+  .nav-title{font-size:var(--font-size-xs);letter-spacing:.08em;text-transform:uppercase;color:var(--color-muted-foreground);padding:0 var(--spacing-2);margin-bottom:var(--spacing-1)}
+  .nav-item{
+    display:flex;align-items:center;justify-content:space-between;gap:var(--spacing-2);
+    padding:var(--spacing-2) var(--spacing-3);border-radius:var(--radius-sm);
+    background:transparent;border:1px solid transparent;cursor:pointer;text-align:left;
+    color:var(--color-foreground);transition:background var(--duration-fast) var(--easing-standard);
+  }
+  .nav-item:hover{background:var(--color-muted)}
+  .nav-item.active{background:var(--color-muted);border-color:var(--color-border);font-weight:var(--font-weight-medium)}
+  .nav-item[aria-disabled="true"]{color:var(--color-muted-foreground);cursor:default}
+  .nav-item[aria-disabled="true"]:hover{background:transparent}
+  .nav-tag{font-size:10px;color:var(--color-muted-foreground);border:1px solid var(--color-border);border-radius:var(--radius-full);padding:0 6px}
+
+  /* ===== Main ===== */
+  .main{min-width:0;display:flex;flex-direction:column}
+  .topbar{
+    height:var(--topbar-height);display:flex;align-items:center;justify-content:space-between;gap:var(--spacing-3);
+    padding:0 var(--spacing-6);border-bottom:1px solid var(--color-border);
+    background:var(--color-background);position:sticky;top:0;z-index:20;
+  }
+  .topbar-left{display:flex;align-items:center;gap:var(--spacing-3);min-width:0}
+  .menu-btn{display:none}
+  .page-title{font-family:var(--font-family-heading);font-size:var(--font-size-md);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .page-sub{font-size:var(--font-size-xs);color:var(--color-muted-foreground);margin:0}
+  .topbar-actions{display:flex;align-items:center;gap:var(--spacing-2);flex-wrap:wrap;justify-content:flex-end}
+  .state-switch{display:flex;border:1px solid var(--color-border);border-radius:var(--radius-full);overflow:hidden;background:var(--color-card)}
+  .state-switch button{
+    border:0;background:transparent;padding:6px 10px;cursor:pointer;font-size:var(--font-size-xs);
+    color:var(--color-muted-foreground);transition:background var(--duration-fast) var(--easing-standard);
+  }
+  .state-switch button:hover{background:var(--color-muted)}
+  .state-switch button.active{background:var(--color-primary);color:var(--color-on-primary)}
+  .icon-btn{
+    border:1px solid var(--color-border);background:var(--color-card);border-radius:var(--radius-sm);
+    padding:6px 10px;cursor:pointer;font-size:var(--font-size-xs)
+  }
+  .icon-btn:hover{background:var(--color-muted)}
+  .content{padding:var(--spacing-6);max-width:var(--content-max-width);width:100%;margin:0 auto}
+
+  /* ===== Generic ===== */
+  .h1{font-family:var(--font-family-heading);font-size:var(--font-size-2xl);line-height:var(--line-height-tight);margin:0 0 var(--spacing-2)}
+  .h2{font-size:var(--font-size-lg);margin:0 0 var(--spacing-1)}
+  .h3{font-size:var(--font-size-md);margin:0}
+  .muted{color:var(--color-muted-foreground)}
+  .small{font-size:var(--font-size-xs)}
+  .mono{font-family:var(--font-family-mono)}
+  .row{display:flex;align-items:center;gap:var(--spacing-2);flex-wrap:wrap}
+  .spread{display:flex;align-items:center;justify-content:space-between;gap:var(--spacing-3);flex-wrap:wrap}
+  .stack{display:flex;flex-direction:column;gap:var(--spacing-4)}
+  .card{background:var(--color-card);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--spacing-4)}
+  .section{margin-top:var(--spacing-6)}
+  .section-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--spacing-3);margin-bottom:var(--spacing-3)}
+  .grid{display:grid;gap:var(--spacing-3)}
+
+  .btn{
+    border:1px solid var(--color-border);background:var(--color-card);color:var(--color-foreground);
+    padding:8px 14px;border-radius:var(--radius-sm);cursor:pointer;min-height:36px;
+    transition:background var(--duration-fast) var(--easing-standard);
+  }
+  .btn:hover{background:var(--color-muted)}
+  .btn:disabled,.btn[aria-disabled="true"]{opacity:.5;cursor:not-allowed}
+  .btn-primary{background:var(--color-primary);border-color:var(--color-primary);color:var(--color-on-primary)}
+  .btn-primary:hover{background:var(--color-primary-hover)}
+  .btn-danger{background:var(--color-destructive);border-color:var(--color-destructive);color:var(--color-on-destructive)}
+  .btn-sm{padding:4px 10px;min-height:28px;font-size:var(--font-size-xs)}
+  .link{border:0;background:none;color:var(--color-accent);cursor:pointer;padding:0;font-size:inherit}
+  .link:hover{text-decoration:underline}
+  .link:disabled{opacity:.5;cursor:not-allowed;text-decoration:none}
+
+  .badge{display:inline-flex;align-items:center;gap:4px;border-radius:var(--radius-full);padding:1px 10px;font-size:var(--font-size-xs);border:1px solid transparent;white-space:nowrap}
+  .badge-info{color:var(--color-info);border-color:var(--color-info);background:color-mix(in srgb,var(--color-info) 12%,transparent)}
+  .badge-success{color:var(--color-success);border-color:var(--color-success);background:color-mix(in srgb,var(--color-success) 12%,transparent)}
+  .badge-danger{color:var(--color-destructive);border-color:var(--color-destructive);background:color-mix(in srgb,var(--color-destructive) 12%,transparent)}
+  .badge-warning{color:var(--color-warning);border-color:var(--color-warning);background:color-mix(in srgb,var(--color-warning) 12%,transparent)}
+  .badge-muted{color:var(--color-muted-foreground);border-color:var(--color-border)}
+
+  .banner{display:flex;gap:var(--spacing-2);align-items:flex-start;border-radius:var(--radius-md);padding:var(--spacing-3);border:1px solid;margin-bottom:var(--spacing-4);font-size:var(--font-size-sm)}
+  .banner-success{color:var(--color-success);border-color:color-mix(in srgb,var(--color-success) 40%,transparent);background:color-mix(in srgb,var(--color-success) 8%,transparent)}
+  .banner-error{color:var(--color-destructive);border-color:color-mix(in srgb,var(--color-destructive) 40%,transparent);background:color-mix(in srgb,var(--color-destructive) 8%,transparent)}
+  .banner-info{color:var(--color-info);border-color:color-mix(in srgb,var(--color-info) 40%,transparent);background:color-mix(in srgb,var(--color-info) 8%,transparent)}
+  .banner-warning{color:var(--color-warning);border-color:color-mix(in srgb,var(--color-warning) 40%,transparent);background:color-mix(in srgb,var(--color-warning) 8%,transparent)}
+  .banner .banner-body{flex:1;min-width:0}
+  .banner .banner-actions{display:flex;gap:var(--spacing-2);flex-wrap:wrap}
+
+  table{width:100%;border-collapse:collapse;font-size:var(--font-size-sm)}
+  th{text-align:left;font-weight:var(--font-weight-medium);color:var(--color-muted-foreground);background:var(--color-muted);padding:var(--spacing-2) var(--spacing-3);border-bottom:1px solid var(--color-border);white-space:nowrap}
+  td{padding:var(--spacing-3);border-bottom:1px solid var(--color-border);vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  tr.clickable{cursor:pointer}
+  tr.clickable:hover td{background:color-mix(in srgb,var(--color-muted) 60%,transparent)}
+  .table-wrap{background:var(--color-card);border:1px solid var(--color-border);border-radius:var(--radius-md);overflow:auto}
+  .empty-cell{text-align:center;padding:var(--spacing-8) var(--spacing-4);color:var(--color-muted-foreground)}
+  .empty-cell .h2{margin-bottom:var(--spacing-1)}
+
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:var(--spacing-3)}
+  .field label{font-size:var(--font-size-sm);font-weight:var(--font-weight-medium)}
+  .field .hint{font-size:var(--font-size-xs);color:var(--color-muted-foreground)}
+  .field .err{font-size:var(--font-size-xs);color:var(--color-destructive)}
+  input[type=text],input[type=url],input[type=password],input[type=search],select,textarea{
+    background:var(--color-input);border:1px solid var(--color-border);border-radius:var(--radius-sm);
+    padding:8px 10px;min-height:36px;width:100%;transition:border-color var(--duration-fast) var(--easing-standard);
+  }
+  input:focus,select:focus,textarea:focus{border-color:var(--color-ring);outline:2px solid color-mix(in srgb,var(--color-ring) 25%,transparent);outline-offset:0}
+  input:disabled,select:disabled,textarea:disabled{opacity:.55;cursor:not-allowed}
+  textarea{resize:vertical;line-height:var(--line-height-relaxed);font-family:var(--font-family-mono);font-size:var(--font-size-sm)}
+  .field.invalid input,.field.invalid select,.field.invalid textarea{border-color:var(--color-destructive)}
+  .form-foot{display:flex;justify-content:flex-end;gap:var(--spacing-2);margin-top:var(--spacing-4)}
+  .checkline{display:flex;align-items:center;gap:var(--spacing-2);font-size:var(--font-size-sm);border:1px dashed var(--color-border);border-radius:var(--radius-md);padding:var(--spacing-2) var(--spacing-3)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--color-success);display:inline-block}
+  .dot.warn{background:var(--color-warning)}
+  .dot.muted{background:var(--color-muted-foreground)}
+
+  /* ===== Repo integration（本 spec 增量） ===== */
+  .split{display:grid;grid-template-columns:360px minmax(0,1fr);gap:var(--spacing-4);align-items:start}
+  .panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--spacing-3);flex-wrap:wrap;margin-bottom:var(--spacing-3)}
+  .panel-notes{display:flex;flex-direction:column;gap:var(--spacing-1);margin-bottom:var(--spacing-3)}
+  .binding{border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--spacing-3) var(--spacing-4);display:flex;justify-content:space-between;gap:var(--spacing-3);flex-wrap:wrap;background:var(--color-card)}
+  .binding + .binding{margin-top:var(--spacing-2)}
+  .binding.revoked{background:var(--color-muted);opacity:.78}
+  .binding-main{min-width:0;flex:1}
+  .binding-repo{font-family:var(--font-family-mono);font-weight:var(--font-weight-bold)}
+  .binding-meta{font-size:var(--font-size-xs);color:var(--color-muted-foreground);margin-top:4px;display:flex;gap:var(--spacing-2);flex-wrap:wrap;align-items:center}
+  .binding-actions{display:flex;gap:var(--spacing-2);flex-wrap:wrap;align-items:flex-start}
+  .binding-actions .btn{white-space:nowrap}
+  .form-card{border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--spacing-4);margin-top:var(--spacing-4);background:var(--color-card);box-shadow:var(--shadow-sm)}
+  .segmented{display:inline-flex;border:1px solid var(--color-border);border-radius:var(--radius-full);overflow:hidden;background:var(--color-card)}
+  .segmented button{border:0;background:transparent;padding:6px 12px;cursor:pointer;font-size:var(--font-size-sm);color:var(--color-muted-foreground)}
+  .segmented button.active{background:var(--color-primary);color:var(--color-on-primary)}
+  .test-strip{border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--spacing-3);font-size:var(--font-size-sm);display:flex;gap:var(--spacing-2);align-items:flex-start;flex-wrap:wrap;margin-top:var(--spacing-2)}
+  .test-strip.ok{border-color:color-mix(in srgb,var(--color-success) 40%,transparent);background:color-mix(in srgb,var(--color-success) 8%,transparent)}
+  .test-strip.bad{border-color:color-mix(in srgb,var(--color-destructive) 40%,transparent);background:color-mix(in srgb,var(--color-destructive) 8%,transparent)}
+  .test-strip.warn{border-color:color-mix(in srgb,var(--color-warning) 40%,transparent);background:color-mix(in srgb,var(--color-warning) 8%,transparent)}
+  .test-strip.stale{border-style:dashed;background:transparent;color:var(--color-muted-foreground)}
+  .test-strip .test-detail{flex:1;min-width:0}
+  .sync-records{margin-top:var(--spacing-2);border:1px solid var(--color-border);border-radius:var(--radius-md);overflow:hidden;width:100%;background:var(--color-card)}
+  .browse-grid{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:var(--spacing-4);align-items:start}
+  .selectors{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:var(--spacing-3);align-items:end;margin-bottom:var(--spacing-4)}
+  .tree{display:flex;flex-direction:column;gap:1px}
+  .tree-row{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:var(--radius-sm);font-size:var(--font-size-sm);cursor:pointer;border:0;background:none;width:100%;text-align:left;color:inherit}
+  .tree-row:hover{background:var(--color-muted)}
+  .tree-row[aria-disabled="true"]{opacity:.45;cursor:not-allowed}
+  .tree-row[aria-disabled="true"]:hover{background:transparent}
+  .tree-caret{width:14px;display:inline-block;color:var(--color-muted-foreground)}
+  .tree-icon{width:16px;text-align:center;color:var(--color-muted-foreground);font-size:11px}
+  .tree-name{font-family:var(--font-family-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tree-size{margin-left:auto;color:var(--color-muted-foreground);font-size:var(--font-size-xs);white-space:nowrap}
+  .tree-note{margin:var(--spacing-1) 0 var(--spacing-2) var(--spacing-6);font-size:var(--font-size-xs);color:var(--color-warning);display:flex;gap:var(--spacing-2);align-items:center;flex-wrap:wrap}
+  .tree-more{margin:2px 0 var(--spacing-2) var(--spacing-6)}
+  .commit-row{display:grid;grid-template-columns:76px minmax(0,1fr);gap:var(--spacing-3);padding:var(--spacing-3);border-bottom:1px solid var(--color-border);align-items:start}
+  .commit-row:last-child{border-bottom:0}
+  .commit-sha{font-family:var(--font-family-mono);font-size:var(--font-size-xs);color:var(--color-info);border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:1px 6px;text-align:center}
+  .commit-title{font-size:var(--font-size-sm);font-weight:var(--font-weight-medium);overflow-wrap:anywhere}
+  .commit-meta{font-size:var(--font-size-xs);color:var(--color-muted-foreground);margin-top:2px}
+  .pager{display:flex;justify-content:space-between;align-items:center;gap:var(--spacing-2);margin-top:var(--spacing-3);font-size:var(--font-size-xs);color:var(--color-muted-foreground)}
+  .baseline{display:flex;gap:var(--spacing-2);align-items:center;flex-wrap:wrap;font-size:var(--font-size-xs);color:var(--color-muted-foreground);margin-top:var(--spacing-1)}
+  .drawer-overlay{position:fixed;inset:0;background:var(--color-overlay);z-index:90;display:flex;justify-content:flex-end}
+  .drawer{width:min(var(--repo-drawer-width),100%);height:100%;background:var(--color-card);border-left:1px solid var(--color-border);box-shadow:var(--shadow-lg);display:flex;flex-direction:column}
+  .drawer-head{padding:var(--spacing-4);border-bottom:1px solid var(--color-border);display:flex;align-items:flex-start;justify-content:space-between;gap:var(--spacing-2)}
+  .drawer-body{padding:var(--spacing-4);overflow:auto;flex:1}
+  .drawer-foot{padding:var(--spacing-3) var(--spacing-4);border-top:1px solid var(--color-border);font-size:var(--font-size-xs);color:var(--color-muted-foreground)}
+  .code{font-family:var(--font-family-mono);font-size:var(--font-size-sm);line-height:var(--line-height-relaxed);white-space:pre-wrap;background:var(--color-muted);border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:var(--spacing-3);margin:0;overflow:auto}
+  .readonly-note{border:1px dashed var(--color-border);border-radius:var(--radius-md);padding:var(--spacing-3);font-size:var(--font-size-sm);color:var(--color-muted-foreground)}
+
+  /* ===== Modal / toast / skeleton ===== */
+  .overlay{position:fixed;inset:0;background:var(--color-overlay);display:grid;place-items:center;z-index:100;padding:var(--spacing-4)}
+  .modal{background:var(--color-card);border:1px solid var(--color-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);max-width:520px;width:100%;padding:var(--spacing-6)}
+  .modal h3{margin:0 0 var(--spacing-2);font-size:var(--font-size-lg)}
+  .modal ul{margin:var(--spacing-2) 0;padding-left:18px;font-size:var(--font-size-sm);color:var(--color-muted-foreground);line-height:var(--line-height-relaxed)}
+  .modal-foot{display:flex;justify-content:flex-end;gap:var(--spacing-2);margin-top:var(--spacing-4)}
+  .toast{position:fixed;right:var(--spacing-6);bottom:var(--spacing-6);background:var(--color-card);border:1px solid var(--color-border);border-left:4px solid var(--color-success);border-radius:var(--radius-md);padding:var(--spacing-3) var(--spacing-4);box-shadow:var(--shadow-lg);z-index:200;font-size:var(--font-size-sm);max-width:400px}
+  .toast.error{border-left-color:var(--color-destructive)}
+  .toast.info{border-left-color:var(--color-info)}
+  .skeleton{background:var(--color-muted);border-radius:var(--radius-sm);height:14px;margin-bottom:var(--spacing-2);animation:pulse 1.4s ease-in-out infinite}
+  .skeleton.card{height:96px}
+  .skeleton.row{height:36px;margin-bottom:1px}
+  .skeleton.title{height:28px;width:40%}
+  @keyframes pulse{0%,100%{opacity:.55}50%{opacity:.9}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  /* ===== Responsive ===== */
+  @media (max-width:1180px){
+    .split{grid-template-columns:1fr}
+    .browse-grid{grid-template-columns:1fr}
+  }
+  @media (max-width:768px){
+    .app{grid-template-columns:1fr}
+    .sidebar{position:fixed;left:0;top:0;bottom:0;width:280px;z-index:60;transform:translateX(-100%);transition:transform var(--duration-base) var(--easing-standard)}
+    .sidebar.open{transform:translateX(0)}
+    .menu-btn{display:inline-flex}
+    .content{padding:var(--spacing-4)}
+    .selectors{grid-template-columns:1fr}
+    .topbar{padding:0 var(--spacing-4)}
+    .state-switch{display:none}
+    .page-sub{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><span class="brand-mark">AW</span><span>AI Test Workbench</span></div>
+    <div class="nav-group">
+      <div class="nav-title">工作台</div>
+      <button class="nav-item" aria-disabled="true" title="workbench-core 页面，本 spec 不重做">首页 <span class="nav-tag">core</span></button>
+      <button class="nav-item" aria-disabled="true" title="workbench-core 页面，本 spec 不重做">分析会话 <span class="nav-tag">core</span></button>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">入口</div>
+      <button class="nav-item" aria-disabled="true" title="业务域入口，本 spec 不重做">用例库 <span class="nav-tag">core</span></button>
+      <button class="nav-item" aria-disabled="true" title="业务域入口，本 spec 不重做">分析 bug <span class="nav-tag">core</span></button>
+      <button class="nav-item" aria-disabled="true" title="业务域入口，本 spec 不重做">排查日志 <span class="nav-tag">core</span></button>
+      <button class="nav-item" aria-disabled="true" title="业务域入口，本 spec 不重做">分析 SQL <span class="nav-tag">core</span></button>
+      <button class="nav-item" aria-disabled="true" title="业务域入口，本 spec 不重做">生成回归清单 <span class="nav-tag">core</span></button>
+      <button class="nav-item" aria-disabled="true" title="业务域入口，本 spec 不重做">生成测试报告 <span class="nav-tag">core</span></button>
+    </div>
+    <div class="nav-group">
+      <div class="nav-title">基座管理</div>
+      <button class="nav-item" data-nav="projects" data-testid="nav-projects">项目上下文</button>
+      <button class="nav-item" data-nav="browse" data-testid="nav-browse">仓库浏览</button>
+      <button class="nav-item" aria-disabled="true" title="workbench-core 页面，本 spec 不重做">AI 提供商与模型 <span class="nav-tag">core</span></button>
+      <button class="nav-item" aria-disabled="true" title="workbench-core 页面，本 spec 不重做">调用记录 <span class="nav-tag">core</span></button>
+    </div>
+    <div class="small muted" style="margin-top:auto">仓库集成交互原型（增量）<br>侧边栏与 token 沿用 workbench-core</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="icon-btn menu-btn" data-action="toggle-nav" aria-label="打开导航">菜单</button>
+        <div>
+          <h1 class="page-title" id="pageTitle">项目上下文</h1>
+          <p class="page-sub" id="pageSub">仓库绑定 · 测试连接 · 同步</p>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <div class="state-switch" id="stateSwitch" role="group" aria-label="UI 状态切换"></div>
+        <button class="icon-btn" data-action="toggle-theme" id="themeBtn" data-testid="theme-btn" aria-label="切换主题">浅色</button>
+        <button class="icon-btn" id="userBtn" aria-label="当前用户">管理员 ▾</button>
+      </div>
+    </header>
+    <main class="content" id="view"></main>
+  </div>
+</div>
+<div id="toastRoot"></div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ================= 数据 ================= */
+  const NOW = '2026-11-18 10:52';
+
+  const state = {
+    page:'projects', theme:'dark', ui:'default', navOpen:false, notice:null, toast:null,
+    project:'p1',
+    form:null,          // {mode:'create'|'token', bindingId, provider, repo, apiBase, token, errors, test, stale}
+    syncing:null,
+    recordsOpen:{},
+    expanded:{'':true},
+    treeAdded:{},
+    commitPage:1,
+    drawer:null,
+    dialog:null,
+    browseBinding:'b1',
+    repo:'pay/checkout',
+    branch:'main',
+    repoQuery:'',
+    branchQuery:'',
+    projectDraft:{
+      p1:{name:'支付台', remark:'git@git.example.com:pay/checkout.git（历史备注）', stack:'Java 17, MySQL 8, Redis', source:'支付台 4.2 需求评审稿', notes:'核心链路：下单、支付回调'},
+      p2:{name:'风控台', remark:'', stack:'Go 1.22, PostgreSQL', source:'风控规则 2.0 需求', notes:'规则命中与名单管理'}
+    }
+  };
+
+  let bindings = [
+    {
+      id:'b1', provider:'github', providerLabel:'GitHub', repo:'pay/checkout', apiBase:'https://api.github.com',
+      defaultBranch:'main', status:'已连接', tokenMasked:'ghp_****4f2a', expiresAt:'2027-03-01',
+      lastTest:{at:'2026-11-18 09:38', kind:'成功', detail:'默认分支 main'},
+      lastSync:{at:'2026-11-18 09:40', duration:'6.2s', status:'成功'},
+      synced:true, repoCount:1, branchCount:18, commitCount:100,
+      baseline:{ref:'main', sha:'a1b2c3d', at:'2026-11-18 09:40'},
+      records:[
+        {at:'11-18 09:40', duration:'6.2s', status:'成功', note:'仓库 1 · 分支 18 · 提交 100'},
+        {at:'11-17 20:15', duration:'5.8s', status:'成功', note:'仓库 1 · 分支 17 · 提交 100'},
+        {at:'11-17 18:40', duration:'4.1s', status:'供应商限流', note:'可重试 18:42（未自动重试）'}
+      ]
+    },
+    {
+      id:'b2', provider:'yunxiao', providerLabel:'云效 Codeup', repo:'pay-group/pay-api', apiBase:'https://openapi-rdc.aliyuncs.com',
+      defaultBranch:'master', status:'令牌失效', tokenMasked:'****9c31', expiresAt:'2026-11-22',
+      lastTest:{at:'2026-11-18 08:10', kind:'鉴权失败', detail:'令牌已过期或被撤销'},
+      lastSync:{at:'2026-11-17 18:22', duration:'9.8s', status:'成功'},
+      synced:true, repoCount:1, branchCount:6, commitCount:100,
+      baseline:{ref:'master', sha:'7f31c90', at:'2026-11-17 18:22'},
+      records:[
+        {at:'11-18 08:12', duration:'—', status:'鉴权失败', note:'保留上次成功基线与时间'},
+        {at:'11-17 18:22', duration:'9.8s', status:'成功', note:'仓库 1 · 分支 6 · 提交 100'}
+      ]
+    },
+    {
+      id:'b3', provider:'github', providerLabel:'GitHub', repo:'pay/docs', apiBase:'https://api.github.com',
+      defaultBranch:'main', status:'已解绑', tokenMasked:'—', expiresAt:null,
+      lastTest:{at:'2026-11-15 11:00', kind:'成功', detail:'默认分支 main'},
+      lastSync:{at:'2026-11-15 11:02', duration:'3.4s', status:'成功'},
+      synced:true, repoCount:1, branchCount:3, commitCount:42,
+      baseline:{ref:'main', sha:'c9d0e11', at:'2026-11-15 11:02'},
+      revoked:true, records:[{at:'11-15 11:02', duration:'3.4s', status:'成功', note:'解绑后快照只读'}]
+    }
+  ];
+
+  const COMMITS = [
+    {sha:'a1b2c3d', title:'fix(pay): 回调签名校验顺序调整', author:'lin.t', time:'11-18 09:21'},
+    {sha:'e4f5a6b', title:'feat(order): 支持部分退款', author:'wang.y', time:'11-18 08:47'},
+    {sha:'0c1d2e3', title:'test: 补充回调重试用例', author:'lin.t', time:'11-17 19:02'},
+    {sha:'9f8e7d6', title:'chore: 升级 http 客户端', author:'chen.q', time:'11-17 16:35'},
+    {sha:'5a4b3c2', title:'fix: 修复空购物车下单', author:'wang.y', time:'11-17 11:10'},
+    {sha:'1d0e9f8', title:'docs: 补充支付时序说明', author:'zhao.m', time:'11-16 18:44'},
+    {sha:'7a6b5c4', title:'refactor: 抽出签名工具', author:'lin.t', time:'11-16 15:20'},
+    {sha:'3e2d1c0', title:'feat: 新增对账单导出', author:'chen.q', time:'11-16 10:03'},
+    {sha:'8b9a0f1', title:'fix: 超时重试幂等键', author:'zhao.m', time:'11-15 17:41'},
+    {sha:'6c5d4e3', title:'test: 增加渠道 mock', author:'wang.y', time:'11-15 14:18'},
+    {sha:'2f1e0d9', title:'chore: 调整日志级别', author:'lin.t', time:'11-15 10:02'},
+    {sha:'4a3b2c1', title:'docs: 更新 README 启动说明', author:'zhao.m', time:'11-14 16:30'}
+  ];
+
+  const TREE = {
+    '': [
+      {name:'src', type:'dir'}, {name:'tests', type:'dir'}, {name:'assets', type:'dir'},
+      {name:'README.md', type:'file', size:'4.2 KB'}, {name:'package.json', type:'file', size:'1.1 KB'}
+    ],
+    'src': [
+      {name:'main.py', type:'file', size:'8.6 KB'}, {name:'api', type:'dir'},
+      {name:'repo', type:'dir'}, {name:'config.yaml', type:'file', size:'620 B'}
+    ],
+    'src/api': [
+      {name:'client.py', type:'file', size:'12.1 KB'}, {name:'handlers.py', type:'file', size:'9.3 KB'}
+    ],
+    'src/repo': [
+      {name:'adapter.py', type:'file', size:'18.4 KB'}, {name:'sync.py', type:'file', size:'7.7 KB'}
+    ],
+    'tests': [{name:'test_sync.py', type:'file', size:'6.4 KB'}],
+    'assets': [{name:'logo.png', type:'file', size:'48.2 KB'}, {name:'huge.log', type:'file', size:'3.4 MiB'}]
+  };
+
+  const FILE_CONTENT = {
+    'README.md': '# pay/checkout\n\n支付台下单与回调服务。\n\n## 启动\n\n1. 配置 .env\n2. mvn spring-boot:run\n\n## 目录\n\n- src/api：对外接口\n- src/repo：仓储与同步\n',
+    'src/main.py': 'from api.client import CodeupClient\n\n\ndef main():\n    client = CodeupClient()\n    repo = client.get_repository("pay/checkout")\n    print(repo["default_branch"])\n\n\nif __name__ == "__main__":\n    main()\n',
+    'package.json': '{\n  "name": "pay-checkout",\n  "version": "4.2.0",\n  "private": true\n}\n'
+  };
+
+  const PAGE_META = {
+    projects:{title:'项目上下文', sub:'仓库绑定 · 测试连接 · 同步'},
+    browse:{title:'仓库浏览', sub:'提交与目录树实时读取 · 文件按需预览'}
+  };
+
+  const UI_STATES = [
+    {id:'default', label:'默认'},
+    {id:'loading', label:'加载'},
+    {id:'success', label:'成功'},
+    {id:'error', label:'错误'},
+    {id:'empty', label:'空态'}
+  ];
+
+  const $ = (s, r) => (r || document).querySelector(s);
+  function esc(v){
+    return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function badge(text){
+    if(text === '已连接' || text === '成功') return '<span class="badge badge-success">' + esc(text) + '</span>';
+    if(text === '令牌失效' || text === '鉴权失败') return '<span class="badge badge-danger">' + esc(text) + '</span>';
+    if(text === '同步进行中') return '<span class="badge badge-info">' + esc(text) + '</span>';
+    if(text === '权限不足') return '<span class="badge badge-warning">' + esc(text) + '</span>';
+    if(text === '即将过期' || text === '供应商限流' || text === '网络失败') return '<span class="badge badge-warning">' + esc(text) + '</span>';
+    if(text === '未验证') return '<span class="badge badge-muted">' + esc(text) + '</span>';
+    return '<span class="badge badge-muted">' + esc(text) + '</span>';
+  }
+  function providerBadge(b){
+    return '<span class="badge ' + (b.provider === 'github' ? 'badge-info' : 'badge-muted') + '">' + esc(b.providerLabel) + '</span>';
+  }
+  function banner(kind, text, actions, testid){
+    return '<div class="banner banner-' + kind + '" role="status"' + (testid ? ' data-testid="' + testid + '"' : '') + '>' +
+      '<div class="banner-body">' + text + '</div>' +
+      (actions ? '<div class="banner-actions">' + actions + '</div>' : '') + '</div>';
+  }
+  function emptyState(title, desc, cta){
+    return '<div class="empty-cell" data-testid="empty-state"><div class="h2">' + esc(title) + '</div><div class="muted small" style="margin-bottom:12px">' + esc(desc) + '</div>' + (cta || '') + '</div>';
+  }
+  function errorState(title, desc){
+    return '<div class="empty-cell" data-testid="error-state"><div class="h2">' + esc(title) + '</div><div class="muted small" style="margin-bottom:12px">' + esc(desc) + '</div><button class="btn" data-action="retry">重试</button></div>';
+  }
+  function skeleton(n){
+    let out = '<div class="skeleton title"></div>';
+    for(let i = 0; i < (n || 4); i++) out += '<div class="skeleton card" style="height:76px"></div>';
+    return out;
+  }
+  function binding(id){ return bindings.find(b => b.id === id); }
+  function daysLeft(date){
+    if(!date) return null;
+    const t = new Date(date + 'T00:00:00').getTime();
+    const n = new Date(NOW.slice(0,10) + 'T00:00:00').getTime();
+    return Math.round((t - n) / 86400000);
+  }
+  function expiryHint(b){
+    if(!b.expiresAt) return '';
+    const d = daysLeft(b.expiresAt);
+    if(d == null) return '';
+    if(d < 0) return '<span class="badge badge-danger">已过期</span>';
+    if(d < 7) return '<span class="badge badge-warning">即将过期 · ' + d + ' 天</span>';
+    return '<span class="muted">过期 ' + esc(b.expiresAt) + '</span>';
+  }
+
+  /* ================= 项目上下文页 ================= */
+  function renderProjects(){
+    const p = state.projectDraft[state.project];
+    let html = '';
+    if(state.ui === 'success') html += banner('success', '同步完成 · 6.4s · 基线已更新（仓库 1 · 分支 18 · 提交 100）');
+    if(bindings.some(b => b.status === '令牌失效')){
+      html += banner('error',
+        '<strong>令牌失效或权限不足，请重新填写。</strong> <span class="small">同一绑定只提示一次，不重复弹错；仍可查看上次同步基线。</span>',
+        '<button class="btn btn-sm" data-action="update-token" data-id="b2">重新填写令牌</button><button class="btn btn-sm" data-action="browse" data-id="b2">查看基线快照</button>',
+        'banner-token-invalid');
+    }
+    html += '<div class="page-head spread" style="margin-bottom:var(--spacing-4)">' +
+      '<div><div class="h1">项目上下文</div><div class="muted small">项目资料沿用 workbench-core；仓库信息以「仓库绑定」为准。</div></div>' +
+      '<div class="row"><label class="small muted" for="projectSelect">当前项目</label><select id="projectSelect" data-field="project" style="width:180px">' +
+      '<option value="p1"' + (state.project === 'p1' ? ' selected' : '') + '>支付台</option>' +
+      '<option value="p2"' + (state.project === 'p2' ? ' selected' : '') + '>风控台</option></select></div></div>';
+
+    html += '<div class="split">';
+    /* 左：core 项目资料（只读展示 + 仓库地址降级） */
+    html += '<section class="card">' +
+      '<div class="spread" style="margin-bottom:var(--spacing-3)"><div class="h2">项目资料</div><span class="small muted">最后更新 2026-11-17 10:20</span></div>' +
+      '<div class="field"><label>项目名</label><input type="text" value="' + esc(p.name) + '" disabled></div>' +
+      '<div class="field"><label>仓库地址（自由备注）</label><input type="text" value="' + esc(p.remark) + '" data-field="remark"><span class="hint">人工备注，实际拉取以右侧「仓库绑定」为准（AMB-030）</span></div>' +
+      '<div class="field"><label>技术栈</label><input type="text" value="' + esc(p.stack) + '" disabled></div>' +
+      '<div class="field"><label>需求来源</label><textarea rows="2" disabled>' + esc(p.source) + '</textarea></div>' +
+      '<div class="field"><label>备注</label><textarea rows="2" disabled>' + esc(p.notes) + '</textarea></div>' +
+      '<button class="btn btn-sm" data-action="save-remark">保存备注</button>' +
+      '<div class="readonly-note" style="margin-top:var(--spacing-3)">除「仓库地址（自由备注）」外，其余项目资料为 workbench-core 字段，本 spec 不改交互。</div>' +
+      '</section>';
+
+    /* 右：仓库绑定 */
+    html += '<section class="card" data-testid="repo-panel">' +
+      '<div class="panel-head"><div><div class="h2">仓库绑定</div>' +
+      '<div class="small muted">只读取元数据与按需文件内容，不克隆仓库、不建立代码索引。</div></div>' +
+      '<div class="row">' + (state.form ? '' : '<button class="btn btn-primary" data-action="add-binding" data-testid="add-binding">+ 添加绑定</button>') + '</div></div>' +
+      '<div class="panel-notes small muted">' +
+      '<div>令牌只显示掩码；保存前可先用表单当前值测试，不落库、改字段即失效。</div>' +
+      '<div>绑定数量不设硬上限，<strong>建议不超过 5 个</strong>（控制同步耗时与限流风险）。</div>' +
+      '</div>';
+
+    if(state.ui === 'loading'){
+      html += skeleton(3);
+    } else if(state.ui === 'empty'){
+      html += emptyState('还没有绑定仓库', '绑定后可测试连接并同步分支与提交；未同步时浏览为空态。', '<button class="btn btn-primary" data-action="add-binding">+ 添加绑定</button>');
+    } else if(state.ui === 'error'){
+      html += errorState('绑定列表加载失败', '网络异常或服务不可用，已绑定数据未受影响。');
+    } else if(state.ui === 'success'){
+      html += bindingListHtml();
+    } else {
+      html += bindingListHtml();
+    }
+
+    if(state.form) html += formHtml();
+    html += '</section></div>';
+    return html;
+  }
+
+  function bindingListHtml(){
+    if(!bindings.length){
+      return emptyState('还没有绑定仓库', '绑定后可测试连接并同步分支与提交。', '<button class="btn btn-primary" data-action="add-binding">+ 添加绑定</button>');
+    }
+    return bindings.map(b => bindingRowHtml(b)).join('');
+  }
+
+  function bindingRowHtml(b){
+    const syncing = state.syncing === b.id;
+    const revoked = b.status === '已解绑';
+    const invalid = b.status === '令牌失效';
+    return '<div class="binding' + (revoked ? ' revoked' : '') + '" data-testid="binding-row" data-id="' + b.id + '">' +
+      '<div class="binding-main">' +
+        '<div class="row">' + providerBadge(b) + '<span class="binding-repo">' + esc(b.repo) + '</span>' +
+        '<span data-testid="binding-status">' + badge(b.status) + '</span>' + expiryHint(b) +
+        (syncing ? badge('同步进行中') : '') + '</div>' +
+        '<div class="binding-meta"><span>默认分支 <span class="mono">' + esc(b.defaultBranch) + '</span></span>' +
+        '<span>令牌 <span class="mono" data-testid="binding-mask">' + esc(b.tokenMasked) + '</span></span>' +
+        (b.apiBase ? '<span class="mono">' + esc(b.apiBase) + '</span>' : '') + '</div>' +
+        '<div class="binding-meta"><span>上次测试 ' + esc(b.lastTest.at) + ' · ' + esc(b.lastTest.kind) + '</span>' +
+        '<span>上次同步 ' + (b.lastSync ? esc(b.lastSync.at) + ' · 耗时 ' + esc(b.lastSync.duration) + ' · ' + esc(b.lastSync.status) : '从未同步') + '</span></div>' +
+        (b.synced ? '<div class="baseline">基线 <span class="mono">' + esc(b.baseline.ref) + ' @ ' + esc(b.baseline.sha) + '</span> · ' + esc(b.baseline.at) + ' · 仅作对照与失效时的 last-known</div>' : '') +
+        (revoked ? '<div class="binding-meta"><span>已解绑：快照只读可查，目录树与文件读取不可用；历史会话与调用记录未修改。</span></div>' : '') +
+        (invalid ? '<div class="binding-meta"><span style="color:var(--color-destructive)">令牌失效：可查看上次同步基线，重新填写并测试成功即恢复「已连接」。</span></div>' : '') +
+      '</div>' +
+      '<div class="binding-actions">' +
+        (revoked
+          ? '<button class="btn btn-sm" data-action="browse" data-id="' + b.id + '">查看快照</button><button class="btn btn-sm" data-action="rebind" data-id="' + b.id + '">重新绑定</button>'
+          : '<button class="btn btn-sm" data-action="test-saved" data-id="' + b.id + '">测试连接</button>' +
+            '<button class="btn btn-sm' + (syncing ? '' : ' btn-primary') + '" data-action="sync" data-id="' + b.id + '" data-testid="binding-sync"' + (syncing ? ' disabled' : '') + '>' + (syncing ? '同步中…' : '同步') + '</button>' +
+            '<button class="btn btn-sm" data-action="browse" data-id="' + b.id + '">浏览</button>' +
+            '<button class="btn btn-sm" data-action="update-token" data-id="' + b.id + '">更新令牌</button>' +
+            '<button class="btn btn-sm" data-action="ask-unbind" data-id="' + b.id + '">解绑</button>') +
+        '<button class="link small" data-action="toggle-records" data-id="' + b.id + '" aria-expanded="' + (state.recordsOpen[b.id] ? 'true' : 'false') + '">' + (state.recordsOpen[b.id] ? '收起同步记录' : '查看同步记录') + '</button>' +
+      '</div>' +
+      (state.recordsOpen[b.id] ? recordsHtml(b) : '') +
+    '</div>';
+  }
+
+  function recordsHtml(b){
+    return '<div class="sync-records" data-testid="sync-records"><table><thead><tr><th>开始时间</th><th>耗时</th><th>结果</th><th>说明</th></tr></thead><tbody>' +
+      b.records.map(r => '<tr><td class="mono">' + esc(r.at) + '</td><td>' + esc(r.duration) + '</td><td>' + badge(r.status) + '</td><td class="small muted">' + esc(r.note) + '</td></tr>').join('') +
+      '</tbody></table></div>';
+  }
+
+  function formHtml(){
+    const f = state.form;
+    const editing = f.mode === 'token';
+    const t = f.test;
+    let strip = '';
+    if(t && t.testing){
+      strip = '<div class="test-strip" data-testid="test-result"><span class="badge badge-info">测试中</span><span class="test-detail">正在发起一次只读请求，10s 内返回…</span></div>';
+    } else if(t && t.stale){
+      strip = '<div class="test-strip stale" data-testid="test-result"><span class="badge badge-muted">结果已失效</span><span class="test-detail">表单字段已修改，请重新测试；上一次结果仅作参考（' + esc(t.at) + ' · ' + esc(t.kind) + '）。</span></div>';
+    } else if(t && t.kind){
+      const cls = t.kind === '成功' ? 'ok' : (t.kind === '权限不足' ? 'warn' : 'bad');
+      const next = t.kind === '成功' ? '保存后状态为「已连接」。' : (t.kind === '鉴权失败' ? '请重新填写令牌；保存前测试不落库。' : (t.kind === '权限不足' ? '请授予目标仓库 Contents / Metadata 只读权限（GitHub）或代码库读取权限（云效）。' : '请检查域名、DNS 与网络连通性后重试；未写同步记录。'));
+      strip = '<div class="test-strip ' + cls + '" data-testid="test-result">' + badge(t.kind) +
+        '<span class="test-detail"><strong>' + esc(t.kind) + '</strong> · ' + esc(t.at) + '<br>' + esc(t.detail) + '<br><span class="small muted">' + esc(next) + '</span></span></div>';
+    }
+    const apiHint = f.provider === 'yunxiao'
+      ? '云效默认 https://openapi-rdc.aliyuncs.com，可填地域域名'
+      : 'GitHub 固定 https://api.github.com（只读）';
+    return '<div class="form-card" data-testid="binding-form">' +
+      '<div class="spread" style="margin-bottom:var(--spacing-3)"><div><div class="h3">' + (editing ? '更新访问令牌' : '添加仓库绑定') + '</div>' +
+      '<div class="small muted">' + (editing ? '只替换加密令牌与掩码；bindingId、已同步元数据与历史记录不变。' : '先测试再保存；保存前测试不落库。') + '</div></div>' +
+      '<button class="icon-btn" data-action="cancel-form" aria-label="关闭表单">关闭</button></div>' +
+      (editing ? '<div class="checkline" style="margin-bottom:var(--spacing-3)">' + providerBadge({provider:f.provider, providerLabel:f.providerLabel}) + '<span class="mono">' + esc(f.repo) + '</span><span class="muted small">当前令牌 ' + esc(f.masked) + '</span></div>' :
+      '<div class="field' + (f.errors.provider ? ' invalid' : '') + '"><label>提供商</label><div class="segmented" role="group" aria-label="提供商">' +
+        '<button type="button" data-action="set-provider" data-provider="yunxiao" data-testid="provider-yunxiao" class="' + (f.provider === 'yunxiao' ? 'active' : '') + '">云效 Codeup</button>' +
+        '<button type="button" data-action="set-provider" data-provider="github" data-testid="provider-github" class="' + (f.provider === 'github' ? 'active' : '') + '">GitHub</button></div>' +
+        (f.errors.provider ? '<span class="err">' + esc(f.errors.provider) + '</span>' : '') + '</div>') +
+      '<div class="field' + (f.errors.repo ? ' invalid' : '') + '"><label for="formRepo">仓库标识</label>' +
+        '<input type="text" id="formRepo" data-field="form.repo" data-testid="form-repo" value="' + esc(editing ? f.repo : f.repo) + '"' + (editing ? ' disabled' : '') + ' placeholder="' + (f.provider === 'yunxiao' ? '如 pay-group/pay-api 或 组织 ID + 代码库 ID' : '如 owner/repo') + '">' +
+        (f.errors.repo ? '<span class="err">' + esc(f.errors.repo) + '</span>' : '<span class="hint">' + (f.provider === 'yunxiao' ? '云效：组织 ID + 代码库 ID 或 group/repo 全路径' : 'GitHub：owner/repo') + '</span>') + '</div>' +
+      '<div class="field' + (f.errors.apiBase ? ' invalid' : '') + '"><label for="formApi">API 域名（可选）</label>' +
+        '<input type="url" id="formApi" data-field="form.apiBase" value="' + esc(f.apiBase) + '"' + (f.provider === 'github' || editing ? ' disabled' : '') + '>' +
+        (f.errors.apiBase ? '<span class="err">' + esc(f.errors.apiBase) + '</span>' : '<span class="hint">' + esc(apiHint) + '；必须是 https://</span>') + '</div>' +
+      '<div class="field' + (f.errors.token ? ' invalid' : '') + '"><label for="formToken">访问令牌</label>' +
+        '<input type="password" id="formToken" data-field="form.token" data-testid="form-token" value="" placeholder="' + (editing ? '留空表示不修改（当前 ' + esc(f.masked) + '）' : '粘贴 PAT / 个人访问令牌') + '" autocomplete="off">' +
+        (f.errors.token ? '<span class="err">' + esc(f.errors.token) + '</span>' : '<span class="hint">保存后只显示掩码（如 ghp_****abcd），任何接口不返回完整令牌；编辑时留空表示不修改。</span>') + '</div>' +
+      '<div class="banner banner-info small" style="margin-bottom:var(--spacing-2)"><div class="banner-body"><strong>建议只读最小权限：</strong>GitHub fine-grained PAT 仅授予目标仓库 Contents: read + Metadata: read；云效令牌仅授予代码库读取。系统不发起任何写操作，也不克隆仓库、不建立代码索引。</div></div>' +
+      '<div class="row"><button class="btn" data-action="test-connection" data-testid="test-connection"' + ((f.test && f.test.testing) ? ' disabled' : '') + '>测试连接</button>' +
+      '<span class="small muted">一次只读请求 · 10s 超时 · 不落库</span></div>' +
+      strip +
+      '<div class="form-foot"><button class="btn" data-action="cancel-form">取消</button><button class="btn btn-primary" data-action="save-binding" data-testid="save-binding">' + (editing ? '保存令牌' : '保存') + '</button></div>' +
+      '<div class="small muted" style="margin-top:var(--spacing-2)">演示提示：令牌含 <span class="mono">bad</span> → 鉴权失败；仓库标识含 <span class="mono">no-perm</span> → 权限不足；API 域名含 <span class="mono">unreachable</span> → 网络失败；否则成功。</div>' +
+      '</div>';
+  }
+
+  /* ================= 仓库浏览页 ================= */
+  function renderBrowse(){
+    const b = binding(state.browseBinding) || bindings[0];
+    const revoked = b.revoked;
+    let html = '';
+    html += '<div class="row small" style="margin-bottom:var(--spacing-2)"><button class="link" data-action="back-projects">← 返回项目上下文</button><span class="muted">/ 支付台 /</span><span class="mono">' + esc(b.repo) + '</span></div>';
+    html += '<div class="spread" style="margin-bottom:var(--spacing-3)"><div><div class="h1" style="font-size:var(--font-size-xl);margin-bottom:0">' + esc(b.repo) + '</div>' +
+      '<div class="row" style="margin-top:4px">' + providerBadge(b) + badge(b.status) + '<span class="small muted">默认分支 <span class="mono">' + esc(b.defaultBranch) + '</span> · 列表实时读取</span></div>' +
+      (b.synced ? '<div class="baseline">上次同步基线 <span class="mono">' + esc(b.baseline.ref) + ' @ ' + esc(b.baseline.sha) + '</span> · ' + esc(b.baseline.at) + ' · 仅作对照</div>' : '<div class="baseline">从未同步</div>') +
+      '</div><div class="row">' +
+      (revoked ? '' : '<button class="btn btn-sm" data-action="sync" data-id="' + b.id + '">同步</button><button class="btn btn-sm" data-action="update-token" data-id="' + b.id + '">更新令牌</button>') +
+      (revoked ? '' : '<button class="btn btn-sm" data-action="ask-unbind" data-id="' + b.id + '">解绑</button>') + '</div></div>';
+
+    if(state.ui === 'success') html += banner('success', '列表已刷新 · 提交与目录树为供应商实时结果');
+    if(revoked) html += banner('warning', '<strong>已解绑，目录树与文件读取不可用。</strong> <span class="small">仓库 / 分支 / 提交快照只读可查；历史会话、制品与调用记录未修改。重新绑定会生成新 bindingId。</span>');
+    else if(b.status === '令牌失效') html += banner('error', '<strong>令牌失效或权限不足，请重新填写。</strong> <span class="small">当前展示上次同步基线（' + esc(b.baseline.at) + '）；实时浏览需恢复连接。</span>', '<button class="btn btn-sm" data-action="update-token" data-id="' + b.id + '">重新填写令牌</button>');
+    if(b.status === '令牌失效') html += banner('info', '分支与提交列表为上次同步基线快照，时间标记见上方；恢复连接后自动改为实时读取。');
+
+    if(state.ui === 'loading'){
+      html += '<div class="card">' + skeleton(3) + '</div>';
+      return html;
+    }
+    if(state.ui === 'empty' || !b.synced){
+      html += '<div class="card">' + emptyState('还没有可浏览的元数据', '先执行一次同步，刷新仓库、分支与提交基线后再浏览；未同步不返回错误页。', '<button class="btn btn-primary" data-action="go-sync" data-id="' + b.id + '">去同步</button>') + '</div>';
+      return html;
+    }
+    if(state.ui === 'error'){
+      html += '<div class="card">' + errorState('实时列表加载失败', '供应商不可达或返回异常；已展示上次同步基线，未改动已保存数据。') + '</div>';
+      return html;
+    }
+
+    /* 选择器 */
+    html += '<div class="card selectors">' +
+      '<div class="field" style="margin:0"><label for="repoSelect">仓库（实时）</label><select id="repoSelect" data-testid="repo-select" data-field="repo"' + (revoked ? ' disabled' : '') + '>' +
+      '<option value="pay/checkout"' + (state.repo === 'pay/checkout' ? ' selected' : '') + '>pay/checkout（默认）</option>' +
+      '<option value="pay/docs"' + (state.repo === 'pay/docs' ? ' selected' : '') + '>pay/docs</option>' +
+      '<option value="pay-group/pay-api"' + (state.repo === 'pay-group/pay-api' ? ' selected' : '') + '>pay-group/pay-api</option>' +
+      '</select><span class="hint">按名称 / 关键词检索；默认绑定仓库</span></div>' +
+      '<div class="field" style="margin:0"><label for="branchSelect">分支（实时，分页）</label><select id="branchSelect" data-testid="branch-select" data-field="branch"' + (revoked ? ' disabled' : '') + '>' +
+      '<option value="main"' + (state.branch === 'main' ? ' selected' : '') + '>main（默认）</option><option value="release/4.2">release/4.2</option><option value="feature/refund">feature/refund</option></select>' +
+      '<span class="hint">默认选中默认分支；切换后提交与目录树同步切换</span></div>' +
+      '<div class="row"><button class="btn" data-action="refresh" ' + (revoked ? 'disabled' : '') + '>刷新</button></div>' +
+      '</div>';
+
+    html += '<div class="browse-grid">';
+    /* 目录树 */
+    html += '<section class="card" data-testid="tree-panel"><div class="panel-head"><div class="h2">目录树</div><span class="small muted">逐级实时读取</span></div>' +
+      '<div class="tree">' + treeHtml('', 0, revoked) + '</div>' +
+      (revoked ? '<div class="readonly-note" style="margin-top:var(--spacing-3)">已解绑：目录树入口置灰，不发起任何供应商请求。</div>' : '') +
+      '<div class="small muted" style="margin-top:var(--spacing-3)">演示：<button class="link small" data-action="invalid-path" ' + (revoked ? 'disabled' : '') + '>尝试读取 ../etc/passwd</button> · 路径在请求前校验</div>' +
+      '</section>';
+    /* 提交 */
+    html += '<section class="card" data-testid="commit-panel"><div class="panel-head"><div class="h2">提交</div><span class="small muted">按时间倒序 · 实时分页</span></div>' +
+      commitsHtml() + '</section>';
+    html += '</div>';
+    return html;
+  }
+
+  function treeHtml(path, depth, revoked){
+    const nodes = TREE[path] || [];
+    let out = '';
+    nodes.forEach(node => {
+      const childPath = path ? path + '/' + node.name : node.name;
+      const isDir = node.type === 'dir';
+      const expanded = !!state.expanded[childPath];
+      if(isDir){
+        out += '<button class="tree-row" data-action="toggle-dir" data-path="' + esc(childPath) + '" data-testid="tree-row"' + (revoked ? ' aria-disabled="true"' : '') + ' style="padding-left:' + (8 + depth * 20) + 'px">' +
+          '<span class="tree-caret">' + (expanded ? '▾' : '▸') + '</span><span class="tree-icon">DIR</span><span class="tree-name">' + esc(node.name) + '/</span><span class="tree-size">目录</span></button>';
+        if(expanded){
+          out += treeHtml(childPath, depth + 1, revoked);
+          if(childPath === 'tests'){
+            out += '<div class="tree-note" data-testid="tree-truncated">' + badge('目录树不完整') + '<span>目录树不完整，请逐级浏览（供应商分页仅返回部分条目）</span></div>';
+          }
+          if(childPath === 'src/api' && !state.treeAdded['src/api']){
+            out += '<div class="tree-more"><button class="link small" data-action="tree-more" data-path="src/api" data-testid="tree-more"' + (revoked ? 'disabled' : '') + '>还有更多（12 条未加载）· 加载下一页</button></div>';
+          }
+          if(childPath === 'src/api' && state.treeAdded['src/api']){
+            out += '<div class="tree-more small muted">已加载全部 14 条</div>';
+          }
+        }
+      } else {
+        out += '<button class="tree-row" data-action="open-file" data-path="' + esc(childPath) + '" data-size="' + esc(node.size) + '" data-testid="tree-row"' + (revoked ? ' aria-disabled="true"' : '') + ' style="padding-left:' + (8 + depth * 20) + 'px">' +
+          '<span class="tree-caret"></span><span class="tree-icon">FILE</span><span class="tree-name">' + esc(node.name) + '</span><span class="tree-size">' + esc(node.size) + '</span></button>';
+      }
+    });
+    return out;
+  }
+
+  function commitsHtml(){
+    const per = 6;
+    const start = (state.commitPage - 1) * per;
+    const list = COMMITS.slice(start, start + per);
+    if(!list.length) return emptyState('没有提交', '当前分支暂无提交；可切换分支或刷新。');
+    const total = Math.ceil(COMMITS.length / per);
+    return '<div>' + list.map(c => '<div class="commit-row" data-testid="commit-row">' +
+      '<span class="commit-sha">' + esc(c.sha) + '</span>' +
+      '<div><div class="commit-title">' + esc(c.title) + '</div><div class="commit-meta">' + esc(c.author) + ' · ' + esc(c.time) + '</div></div>' +
+      '</div>').join('') + '</div>' +
+      '<div class="pager"><span>第 ' + state.commitPage + ' / ' + total + ' 页 · 每页 6 条</span><span class="row">' +
+      '<button class="btn btn-sm" data-action="prev-commits"' + (state.commitPage === 1 ? ' disabled' : '') + '>上一页</button>' +
+      '<button class="btn btn-sm" data-action="next-commits"' + (state.commitPage === total ? ' disabled' : '') + '>下一页</button></span></div>';
+  }
+
+  /* ================= 文件查看抽屉 ================= */
+  function drawerHtml(){
+    const d = state.drawer;
+    if(!d) return '';
+    let body = '';
+    if(d.loading){
+      body = '<div class="skeleton title"></div><div class="skeleton row"></div><div class="skeleton row"></div><div class="skeleton row"></div><div class="skeleton" style="height:180px"></div>';
+    } else if(d.kind === 'ok'){
+      body = '<pre class="code" data-testid="file-content">' + esc(d.content) + '</pre>';
+    } else {
+      body = '<div class="banner banner-error" data-testid="file-error"><div class="banner-body"><strong>' + esc(d.title) + '</strong><br>' + esc(d.detail) + '</div></div>' +
+        '<div class="readonly-note">' + (d.recorded ? '本次拒绝已记录读取状态（不保存正文）。' : '未产生读取记录（请求前已拒绝）。') + '</div>';
+    }
+    return '<div class="drawer-overlay" data-testid="file-drawer"><aside class="drawer" role="dialog" aria-modal="true" aria-label="文件查看">' +
+      '<div class="drawer-head"><div style="min-width:0"><div class="h3 mono" style="overflow-wrap:anywhere">' + esc(d.path) + '</div>' +
+      '<div class="small muted">ref <span class="mono">' + esc(state.branch) + '</span>' + (d.size ? ' · ' + esc(d.size) : '') + (d.at ? ' · 读取于 ' + esc(d.at) : '') + '</div></div>' +
+      '<button class="icon-btn" data-action="close-drawer" aria-label="关闭文件查看">关闭</button></div>' +
+      '<div class="drawer-body">' + body + '</div>' +
+      '<div class="drawer-foot">内容不写入会话制品与 AiCallRecord；若引用进分析，按 200,000 字符上限计入。</div>' +
+      '</aside></div>';
+  }
+
+  /* ================= 解绑确认 ================= */
+  function dialogHtml(){
+    if(!state.dialog) return '';
+    const b = binding(state.dialog.id);
+    return '<div class="overlay"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="unbindTitle" data-testid="unbind-dialog">' +
+      '<h3 id="unbindTitle">撤销仓库绑定？</h3>' +
+      '<div class="small muted">将撤销 <span class="mono">' + esc(b.repo) + '</span> 的绑定与令牌。撤销后：</div>' +
+      '<ul>' +
+      '<li>加密令牌被删除，此后不再发起任何供应商请求；</li>' +
+      '<li>仓库 / 分支 / 提交快照保留并标「已解绑」，只读可查；</li>' +
+      '<li>目录树与文件读取入口置灰、不可用；</li>' +
+      '<li>历史会话、制品与调用记录不变；</li>' +
+      '<li>重新绑定同一仓库会生成新的 bindingId 与新令牌。</li>' +
+      '</ul>' +
+      '<div class="modal-foot"><button class="btn" data-action="cancel-unbind">取消</button><button class="btn btn-danger" data-action="confirm-unbind" data-testid="confirm-unbind">确认解绑</button></div>' +
+      '</div></div>';
+  }
+
+  function actionLabel(){ return '切换主题'; }
+
+  /* ================= 渲染 ================= */
+  function render(){
+    const meta = PAGE_META[state.page] || PAGE_META.projects;
+    $('#pageTitle').textContent = meta.title;
+    $('#pageSub').textContent = meta.sub;
+    $('#themeBtn').textContent = state.theme === 'dark' ? '浅色' : '深色';
+    $('#themeBtn').title = actionLabel();
+    $('#stateSwitch').innerHTML = UI_STATES.map(x => '<button data-ui="' + x.id + '" class="' + (state.ui === x.id ? 'active' : '') + '">' + x.label + '</button>').join('');
+    document.querySelectorAll('.nav-item[data-nav]').forEach(el => el.classList.toggle('active', el.dataset.nav === state.page));
+    let html = '';
+    if(state.notice) html += state.notice;
+    html += state.page === 'browse' ? renderBrowse() : renderProjects();
+    const view = $('#view');
+    view.innerHTML = html + drawerHtml() + dialogHtml();
+    $('#sidebar').classList.toggle('open', state.navOpen);
+    $('#toastRoot').innerHTML = state.toast ? '<div class="toast ' + (state.toast.kind || '') + '" role="status" data-testid="toast">' + esc(state.toast.text) + '</div>' : '';
+  }
+
+  function toast(text, kind){
+    state.toast = {text:text, kind:kind || ''};
+    render();
+    setTimeout(() => { if(state.toast && state.toast.text === text){ state.toast = null; render(); } }, 2800);
+  }
+
+  /* ================= 动作 ================= */
+  function openCreate(){
+    state.form = {mode:'create', provider:'yunxiao', repo:'', apiBase:'https://openapi-rdc.aliyuncs.com', token:'', errors:{}, test:null, masked:''};
+    render();
+  }
+  function openToken(id){
+    const b = binding(id);
+    state.form = {mode:'token', bindingId:id, provider:b.provider, providerLabel:b.providerLabel, repo:b.repo, apiBase:b.apiBase, token:'', errors:{}, test:null, masked:b.tokenMasked};
+    render();
+  }
+  function testConnection(){
+    const f = state.form;
+    if(!f) return;
+    f.test = {testing:true, at:NOW, kind:'', detail:''};
+    f.stale = false;
+    render();
+    setTimeout(() => {
+      const token = (f.token || '').toLowerCase();
+      const repo = (f.repo || '').toLowerCase();
+      const api = (f.apiBase || '').toLowerCase();
+      let kind = '成功', detail = '默认分支 main，最近提交 11-18 09:21';
+      if(token.indexOf('bad') >= 0){ kind = '鉴权失败'; detail = '401：令牌已过期或被撤销，请重新填写'; }
+      else if(repo.indexOf('no-perm') >= 0){ kind = '权限不足'; detail = '403：令牌有效但无权访问该仓库，请检查只读权限范围'; }
+      else if(api.indexOf('unreachable') >= 0){ kind = '网络失败'; detail = '域名不可达 / DNS 失败；未写同步记录，未改动已同步元数据'; }
+      f.test = {testing:false, at:NOW, kind:kind, detail:detail};
+      f.stale = false;
+      render();
+    }, 500);
+  }
+  function validateForm(f){
+    const err = {};
+    if(f.mode === 'create'){
+      if(!f.repo.trim()) err.repo = '请填写仓库标识';
+      else if(f.provider === 'github' && !/^[^\/\s]+\/[^\/\s]+$/.test(f.repo.trim())) err.repo = 'GitHub 仓库标识格式为 owner/repo';
+      if(!f.apiBase.trim()) err.apiBase = '请填写 API 域名';
+      else if(!/^https:\/\//.test(f.apiBase.trim())) err.apiBase = 'API 域名必须使用 https://';
+    }
+    if(f.mode === 'create' && !f.token.trim()) err.token = '请填写访问令牌';
+    if(f.mode === 'token' && !f.token.trim()) err.token = '请填写新令牌；留空不会修改原令牌';
+    return err;
+  }
+  function saveBinding(){
+    const f = state.form;
+    if(!f) return;
+    const err = validateForm(f);
+    f.errors = err;
+    if(Object.keys(err).length){ render(); return; }
+    if(f.mode === 'create'){
+      const dup = bindings.find(b => !b.revoked && b.provider === f.provider && b.repo === f.repo.trim());
+      if(dup){ f.errors.repo = '同一项目下已存在该提供商的同一仓库绑定；原绑定与令牌不变'; render(); return; }
+      const tail = f.token.slice(-4);
+      const mask = f.provider === 'github' ? 'ghp_****' + tail : '****' + tail;
+      bindings.push({
+        id:'b' + Date.now(), provider:f.provider, providerLabel:f.provider === 'github' ? 'GitHub' : '云效 Codeup',
+        repo:f.repo.trim(), apiBase:f.apiBase.trim(), defaultBranch:'main', status:'已连接',
+        tokenMasked:mask, expiresAt:null,
+        lastTest:f.test && f.test.kind ? {at:f.test.at, kind:f.test.kind, detail:f.test.detail} : {at:'—', kind:'未验证', detail:''},
+        lastSync:null, synced:false, baseline:null, records:[]
+      });
+      state.form = null;
+      state.ui = 'default';
+      toast('已保存绑定，令牌仅显示掩码', '');
+    } else {
+      const b = binding(f.bindingId);
+      const tail = f.token.slice(-4);
+      b.tokenMasked = (b.provider === 'github' ? 'ghp_****' : '****') + tail;
+      if(f.test && f.test.kind === '成功') b.status = '已连接';
+      state.form = null;
+      toast('令牌已更新，bindingId 与元数据不变', '');
+    }
+    render();
+  }
+  function syncBinding(id){
+    const b = binding(id);
+    if(!b || b.revoked || state.syncing) return;
+    state.syncing = id;
+    render();
+    setTimeout(() => {
+      state.syncing = null;
+      if(b.status === '令牌失效'){
+        b.records.unshift({at:NOW.slice(5), duration:'—', status:'鉴权失败', note:'同步失败；保留上次成功基线与时间'});
+        state.notice = banner('error', '<strong>同步失败 · 鉴权失败。</strong> <span class="small">已保留上次成功元数据与时间（' + esc(b.lastSync.at) + '），未清空已有元数据。</span>');
+      } else {
+        b.lastSync = {at:NOW, duration:'6.4s', status:'成功'};
+        b.baseline = {ref:b.defaultBranch, sha:'a1b2c3d', at:NOW};
+        b.records.unshift({at:NOW.slice(5), duration:'6.4s', status:'成功', note:'仓库 1 · 分支 18 · 提交 100'});
+        state.notice = banner('success', '<strong>同步完成 · 6.4s。</strong> <span class="small">写入元数据基线：仓库 1 · 分支 18 · 提交 100；不含目录树与文件内容。</span>');
+      }
+      render();
+    }, 900);
+  }
+  function openDrawer(path, size){
+    const revoked = binding(state.browseBinding).revoked;
+    if(revoked) return;
+    state.drawer = {path:path, size:size, loading:true, kind:'', at:''};
+    render();
+    setTimeout(() => {
+      const d = state.drawer;
+      if(!d) return;
+      d.loading = false;
+      d.at = NOW;
+      if(path.endsWith('.png')){ d.kind = 'bad'; d.title = '二进制 / 非文本文件不支持预览'; d.detail = '供应商按 base64 返回或标记为二进制；界面不展示乱码。'; d.recorded = true; }
+      else if(path.endsWith('.log')){ d.kind = 'bad'; d.title = '文件 3.4 MiB 超过单次读取上限 1 MiB'; d.detail = '上限 1,048,576 字节；已显示实际大小与上限，不截断后冒充完整内容。请改用更小范围或直接粘贴片段。'; d.recorded = true; }
+      else { d.kind = 'ok'; d.content = FILE_CONTENT[path] || '# ' + path + '\n\n（演示内容）\n'; }
+      render();
+    }, 420);
+  }
+
+  document.addEventListener('click', function(e){
+    const uiBtn = e.target.closest('[data-ui]');
+    if(uiBtn){ state.ui = uiBtn.dataset.ui; state.notice = null; render(); return; }
+    const nav = e.target.closest('[data-nav]');
+    if(nav){
+      if(nav.getAttribute('aria-disabled') === 'true') return;
+      state.page = nav.dataset.nav; state.notice = null; state.ui = 'default'; state.form = null; state.drawer = null;
+      render(); return;
+    }
+    const btn = e.target.closest('[data-action]');
+    if(!btn) return;
+    const a = btn.dataset.action, id = btn.dataset.id, path = btn.dataset.path;
+    switch(a){
+      case 'toggle-theme':
+        state.theme = state.theme === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = state.theme;
+        render(); break;
+      case 'toggle-nav': state.navOpen = !state.navOpen; render(); break;
+      case 'add-binding': openCreate(); break;
+      case 'set-provider':
+        state.form.provider = btn.dataset.provider;
+        state.form.apiBase = btn.dataset.provider === 'github' ? 'https://api.github.com' : 'https://openapi-rdc.aliyuncs.com';
+        state.form.errors = {};
+        if(state.form.test) state.form.test.stale = true;
+        render(); break;
+      case 'test-connection': testConnection(); break;
+      case 'save-binding': saveBinding(); break;
+      case 'cancel-form': state.form = null; render(); break;
+      case 'test-saved': {
+        const b = binding(id);
+        b.lastTest = {at:NOW, kind:'成功', detail:'默认分支 ' + b.defaultBranch};
+        if(b.status === '未验证') b.status = '已连接';
+        toast('连接测试成功 · 默认分支 ' + b.defaultBranch + '（不写会话 / 制品 / 调用记录）');
+        render(); break;
+      }
+      case 'sync': syncBinding(id || state.browseBinding); break;
+      case 'update-token':
+        if(state.page === 'browse'){ state.page = 'projects'; state.notice = null; }
+        openToken(id); break;
+      case 'browse': state.page = 'browse'; state.browseBinding = id; state.ui = 'default'; state.notice = null; state.form = null; render(); break;
+      case 'back-projects': state.page = 'projects'; state.notice = null; render(); break;
+      case 'toggle-records': state.recordsOpen[id] = !state.recordsOpen[id]; render(); break;
+      case 'save-remark': toast('备注已保存（仅自由备注，不影响绑定）'); render(); break;
+      case 'retry':
+      case 'refresh': state.ui = 'success'; state.notice = banner('success', '已刷新 · 列表为供应商实时结果'); render(); break;
+      case 'toggle-dir':
+        if(binding(state.browseBinding).revoked) return;
+        state.expanded[path] = !state.expanded[path]; render(); break;
+      case 'tree-more': state.treeAdded['src/api'] = true; render(); break;
+      case 'open-file': openDrawer(path, btn.dataset.size); break;
+      case 'invalid-path': state.drawer = {path:'../etc/passwd', size:'', loading:false, kind:'bad', title:'路径包含 `..`，已在请求前拒绝', detail:'路径不得包含 `..`、不得为绝对路径；未发起供应商请求，未产生读取记录。', recorded:false}; render(); break;
+      case 'close-drawer': state.drawer = null; render(); break;
+      case 'prev-commits': state.commitPage = Math.max(1, state.commitPage - 1); render(); break;
+      case 'next-commits': state.commitPage = Math.min(Math.ceil(COMMITS.length / 6), state.commitPage + 1); render(); break;
+      case 'ask-unbind': state.dialog = {id:id}; render(); break;
+      case 'cancel-unbind': state.dialog = null; render(); break;
+      case 'confirm-unbind': {
+        const b = binding(state.dialog.id);
+        b.status = '已解绑'; b.revoked = true; b.tokenMasked = '—'; b.expiresAt = null;
+        state.dialog = null; state.notice = banner('warning', '<strong>已解绑。</strong> <span class="small">加密令牌已删除，不再发起请求；快照只读，目录树与文件读取入口置灰。</span>');
+        render(); break;
+      }
+      case 'rebind':
+        openCreate();
+        state.form.repo = binding(id).repo;
+        state.form.provider = binding(id).provider;
+        render();
+        break;
+      case 'go-sync':{
+        const b = binding(id);
+        state.page = 'projects'; state.ui = 'default'; state.notice = null;
+        render();
+        syncBinding(id);
+        break;
+      }
+    }
+  });
+
+  document.addEventListener('input', function(e){
+    const el = e.target.closest('[data-field]');
+    if(!el) return;
+    const f = el.dataset.field;
+    if(f === 'form.repo' || f === 'form.token' || f === 'form.apiBase'){
+      if(!state.form) return;
+      state.form[f.split('.')[1]] = el.value;
+      if(state.form.test && !state.form.test.testing){
+        state.form.test.stale = true;
+        const strip = document.querySelector('[data-testid="test-result"]');
+        if(strip){
+          strip.className = 'test-strip stale';
+          strip.innerHTML = '<span class="badge badge-muted">结果已失效</span><span class="test-detail">表单字段已修改，请重新测试；上一次结果仅作参考（' + esc(state.form.test.at) + ' · ' + esc(state.form.test.kind) + '）。</span>';
+        }
+      }
+      return;
+    }
+    if(f === 'project'){ state.project = el.value; state.form = null; render(); return; }
+    if(f === 'remark'){ state.projectDraft[state.project].remark = el.value; return; }
+    if(f === 'repo' || f === 'branch'){ state[f] = el.value; state.drawer = null; render(); return; }
+  });
+
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){
+      if(state.drawer){ state.drawer = null; render(); }
+      else if(state.dialog){ state.dialog = null; render(); }
+    }
+  });
+
+  document.documentElement.dataset.theme = state.theme;
+  render();
+})();
+</script>
+</body>
+</html>

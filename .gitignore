@@ -7,3 +7,41 @@ __pycache__/
 dist/
 build/
 .DS_Store
+
+# >>> alonwf (managed) >>>
+.aw/tmp/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.eggs/
+.venv/
+venv/
+node_modules/
+htmlcov/
+.coverage
+TestResults/
+bin/Debug/
+bin/Release/
+obj/Debug/
+obj/Release/
+.next/
+# <<< alonwf (managed) <<<
+
+# >>> ai-test-workbench 运行时与本地配置 >>>
+.env
+.env.*
+!.env.example
+*.db
+*.sqlite
+*.sqlite3
+data/
+sessions/
+logs/
+*.log
+.coverage.*
+playwright-report/
+test-results/

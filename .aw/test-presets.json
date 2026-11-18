@@ -1,0 +1,85 @@
+{
+  "$comment": "aw verify 的测试栈预设：run 里 {report} = 结构化报告路径、{report_dir} = 报告目录、{python} = 项目 .venv 或当前解释器。naming = 让测试报告里能看到 TC 编号的写法（aw verify 从报告里的用例名 / Trait / 属性读 TC）。verified = 已在真实工具上实测。",
+  "dotnet": {
+    "verified": true,
+    "run": [
+      "dotnet",
+      "test",
+      "--nologo",
+      "--logger",
+      "trx;LogFileName=aw.trx",
+      "--results-directory",
+      "{report_dir}"
+    ],
+    "report": {
+      "format": "trx",
+      "path": "{report_dir}/aw.trx"
+    },
+    "env": {
+      "DOTNET_CLI_UI_LANGUAGE": "en",
+      "VSLANG": "1033"
+    },
+    "naming": "TRX 报告里没有 xUnit Trait（实测），TC 编号必须出现在用例名里：方法名 TC012_权重合计为100，或 [Fact(DisplayName = \"TC-012 权重合计必须为 100\")]（NUnit [Test(Description)] 不进 TRX 名称，用方法名）。一个用例覆盖多个 TC 时都写进名字：TC012_TC013_…"
+  },
+  "jest": {
+    "verified": true,
+    "run": [
+      "npx",
+      "--no-install",
+      "jest",
+      "--no-cache",
+      "--passWithNoTests",
+      "--json",
+      "--outputFile={report}"
+    ],
+    "report": {
+      "format": "jest-json",
+      "path": "{report_dir}/aw.json"
+    },
+    "env": {
+      "CI": "1"
+    },
+    "naming": "describe 或 test 名称以 TC 编号开头：describe('TC-012 权重合计必须为 100', () => { ... })"
+  },
+  "vitest": {
+    "verified": false,
+    "run": [
+      "npx",
+      "--no-install",
+      "vitest",
+      "run",
+      "--passWithNoTests",
+      "--reporter=json",
+      "--outputFile={report}"
+    ],
+    "report": {
+      "format": "jest-json",
+      "path": "{report_dir}/aw.json"
+    },
+    "env": {
+      "CI": "1"
+    },
+    "naming": "describe 或 test 名称以 TC 编号开头：describe('TC-012 ...', () => { ... })"
+  },
+  "pytest": {
+    "verified": true,
+    "run": [
+      "{python}",
+      "-B",
+      "-m",
+      "pytest",
+      "-q",
+      "-p",
+      "no:cacheprovider",
+      "--junitxml={report}"
+    ],
+    "report": {
+      "format": "junit",
+      "path": "{report_dir}/aw.xml"
+    },
+    "env": {
+      "PYTHONDONTWRITEBYTECODE": "1"
+    },
+    "naming": "函数名包含 TC 编号：def test_tc012_weights_must_sum_to_100(): ..."
+  }
+}

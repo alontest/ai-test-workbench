@@ -1,0 +1,15 @@
+{
+  "module": "knowledge-base",
+  "type": "feature",
+  "phases": [
+    "intake",
+    "requirements-analysis",
+    "interaction-design",
+    "tech-arch",
+    "tech-design",
+    "tech-tasks",
+    "test-verification"
+  ],
+  "created": "2026-11-17T20:50:11+08:00",
+  "base": "b29b8fd1ed5f439fa5d8ca3575ad0e6732ddae53"
+}

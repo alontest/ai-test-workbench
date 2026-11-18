@@ -1,0 +1,33 @@
+{
+  "$comment": "aw check 的唯一依据：每个阶段要哪些文件、文件里要有哪些标记（普通字符串按子串，re: 开头按正则）。types = 需求类型 → 默认阶段与对个别阶段的覆盖（required 逐文件覆盖，null = 不要求；any_of 整个替换）。aw new --add <阶段> 可加回可选阶段。",
+  "min_bytes": 120,
+  "order": ["intake", "requirements-analysis", "interaction-design", "tech-arch", "tech-design", "tech-tasks", "test-verification"],
+  "phases": {
+    "intake": {"title": "步骤0：上下文扫描、需求分类、执行路径确认", "agent": "aw-analyst", "dir": "requirements-analysis",
+      "required": {"intake.md": ["需求类型", "变更性质", "执行路径"], "raw-requirements.md": []}},
+    "requirements-analysis": {"title": "① 需求分析与规格定义", "agent": "aw-analyst", "dir": "requirements-analysis",
+      "required": {"requirements.md": ["用户故事", "AC-"], "design.md": [], "tasks.md": [], "docs/context.md": [], "docs/flowchart.md": ["mermaid"]}},
+    "interaction-design": {"title": "② 交互设计与视觉规范", "agent": "aw-ux", "dir": "interaction-design",
+      "required": {"requirements.md": ["AC-UX"], "design.md": ["线框图", "Design Tokens"], "tasks.md": [], "docs/context.md": []}},
+    "tech-arch": {"title": "③-a 技术选型、风险、架构决策", "agent": "aw-architect", "dir": "technical-design",
+      "required": {"design.md": ["技术选型", "风险登记表"], "docs/architecture-decisions.md": ["ADR"]}},
+    "tech-design": {"title": "③-b 组件 / 数据库 / API 设计", "agent": "aw-architect", "dir": "technical-design",
+      "required": {}, "any_of": [["docs/api-spec.md", "docs/database-schema.md", "docs/component-tree.md", "change-spec.md"]]},
+    "tech-tasks": {"title": "③-c 文件结构、环境、开发任务拆解", "agent": "aw-architect", "dir": "technical-design",
+      "required": {"requirements.md": ["AC-TECH"], "tasks.md": ["re:- \\[[ xX]\\]", "TASK-"], "docs/file-structure.md": [], "docs/context.md": []}},
+    "test-verification": {"title": "④ 测试用例与覆盖确认", "agent": "aw-qa", "dir": "test-verification",
+      "required": {"requirements.md": ["AC-QA"], "design.md": ["TC-", "覆盖", "执行结果"], "tasks.md": []}}
+  },
+  "types": {
+    "feature": {"phases": ["intake", "requirements-analysis", "interaction-design", "tech-arch", "tech-design", "tech-tasks", "test-verification"]},
+    "ui": {"phases": ["intake", "requirements-analysis", "interaction-design", "tech-design", "tech-tasks", "test-verification"],
+      "override": {"tech-design": {"required": {"docs/component-tree.md": []}, "any_of": []}}},
+    "refactor": {"phases": ["intake", "requirements-analysis", "tech-arch", "tech-design", "tech-tasks", "test-verification"]},
+    "bugfix": {"phases": ["intake", "requirements-analysis", "tech-arch", "tech-tasks", "test-verification"],
+      "override": {
+        "requirements-analysis": {"required": {"docs/flowchart.md": null, "bug-flowchart.md": ["错误行为", "正确行为", "mermaid"]}},
+        "tech-arch": {"required": {"design.md": ["回归风险"]}},
+        "tech-design": {"any_of": [["docs/api-spec.md", "docs/database-schema.md", "change-spec.md"]]},
+        "tech-tasks": {"required": {"docs/file-structure.md": null}}}}
+  }
+}
