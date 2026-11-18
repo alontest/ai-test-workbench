@@ -1,7 +1,7 @@
 # Test Verification Requirements — workbench-core
 
 > 阶段：test-verification。模块：ai-test-workbench（本 spec 只覆盖 `workbench-core` 域）。
-> 上游：`requirements-analysis/docs/context.md`（US 11 / AC 42 / EARS 17）、`technical-design/tasks.md`（55 个任务、70 个 TC）、`technical-design/docs/context.md`。
+> 上游：`requirements-analysis/docs/context.md`（US 11 / AC 42 / EARS 17）、`technical-design/tasks.md`（55 个任务、70 个 TC）、`technical-design/docs/context.md`；另含实现期补充并已由 `aw verify` 通过的 TC-071（DB 错误映射方言可移植性）。
 > 依据：`approvals.md` 的 `tech-design · 2026-11-18 11:35:21 · 重新确认` 与 `tech-tasks · 2026-11-18 11:35:21 · 重新确认`（跨 spec 知识库注入扩展 ADR-042；55 任务 / 70 TC）。
 > 本体：`ontology-slices/test-verification.md` 不存在（项目无 `ontology-work/views/index.json`），本阶段不做本体对照，TC 的「涉及本体」一律记为「无」。
 > 开发尚未开始（仓库只有骨架 `src/workbench/__init__.py`、`tests/conftest.py`），本阶段只产出用例、映射与执行计划；所有 TC 的初始结果为 `待执行`。
@@ -13,7 +13,7 @@
 | 交付物 | 说明 | 落点 |
 |--------|------|------|
 | 测试策略与分层 | 框架选型、单元/集成/迁移/人工验收的分工与占比 | `design.md` §测试策略、§测试分层 |
-| 70 个 TC 用例 | TC-001 ~ TC-070（TC-001 ~ 063 基线；TC-064 ~ 070 知识库注入扩展），逐条含目的、前置、原子步骤、可验证预期、边界数据、pytest 落点 | `design.md` §测试用例列表 |
+| 71 个 TC 用例 | TC-001 ~ TC-071（TC-001 ~ 063 基线；TC-064 ~ 070 知识库注入扩展；TC-071 DB 错误映射方言差异），逐条含目的、前置、原子步骤、可验证预期、边界数据、pytest 落点 | `design.md` §测试用例列表 |
 | TC ↔ AC ↔ 任务映射 | 42 条功能 AC + 6 条 AC-TECH 全覆盖；每个非 `[no-test]` 任务映射到覆盖它的 TC | `design.md` §覆盖矩阵、`tc-map.json` |
 | 测试数据与环境策略 | 临时 SQLite 文件库、MySQL 第二方言、假 AI 适配器、时钟注入、上传夹具 | `design.md` §测试数据与环境策略 |
 | 缺陷分级与回归口径 | 缺陷等级、修复后回归范围、偶发失败处理 | `design.md` §缺陷分级与回归口径 |
@@ -66,7 +66,7 @@ THEN 每条原始需求都能追到 AC、TC 与执行结果，覆盖率 = 有对
 **AC-QA-7（用例名可被 `aw verify` 识别）**
 GIVEN `.aw/test-presets.json` 的 pytest 命名规则
 WHEN 编写用例
-THEN 每个 TC 至少有一个函数名包含 TC 编号的 pytest 用例（`def test_tcNNN_*()`），70 个 TC 全部可由 `python3 .aw/aw.py verify` 从 JUnit 报告识别。
+THEN 每个 TC 至少有一个函数名包含 TC 编号的 pytest 用例（`def test_tcNNN_*()`），71 个 TC 全部可由 `python3 .aw/aw.py verify` 从 JUnit 报告识别。
 
 **AC-QA-8（门禁分工不混用）**
 GIVEN 既定验证口径
@@ -78,7 +78,8 @@ THEN 明确区分「本地 SQLite pytest 结果」「CI MySQL job」「CI Vitest
 - 测试框架跟随已确认技术栈：pytest + pytest-asyncio + httpx `ASGITransport`；前端 Vitest + Testing Library（CI job 3）。仓库未安装任何 pack（`.aw/install.json` 的 `packs` 为空），按通用最佳实践并在 `design.md` 注明。
 - 本地 `aw verify` 只跑 SQLite（`.aw/config.json` 仅配置 pytest）；MySQL 由 CI job 2 覆盖。
 - 5 个 `[no-test]` 任务（TASK-TD-001/018/048/049/050）不映射 TC，由构建、CI 实际运行、部署与备份手工演练验收。
-- 跨 spec TC 编号约定：core 使用 TC-001 ~ TC-070；knowledge-base 计划使用 TC-101 起；repo-integration 计划使用 TC-201 起。编号段不重叠、不复用。
+- 跨 spec TC 编号约定：core 使用 TC-001 ~ TC-071；knowledge-base 计划使用 TC-101 起；repo-integration 计划使用 TC-201 起。编号段不重叠、不复用。
+- 本地 `aw verify` 只跑 SQLite；TC-071 是 CI `mysql-tests` job 暴露方言差异（MySQL 3819/1062/1451/1452）后补的回归用例，说明本地 SQLite 绿不等于双方言通过。
 - 知识库边界：TC-064 ~ TC-070 只验证 core 的迁移列、注入留痕、唯一入口 `/ai/complete`、错误映射、`kbDeleted` 序列化与展示；知识库导入、检索、失效判定与正文组装由 knowledge-base spec（TC-101 起）覆盖，本 spec 用假 `InjectionPreparer` 验证契约。
 - 测试数据一律在临时目录生成，不提交大文件与真实密钥；`AW_ADMIN_PASSWORD`、`AW_ENCRYPTION_KEY` 用测试固定值。
 

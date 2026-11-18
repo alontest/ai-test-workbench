@@ -563,3 +563,11 @@
 - 步骤：查事件列表与调用详情；删除 kb 行；Vitest 渲染卡片
 - 预期：payload 与详情含快照字段和 `kbDeleted`；前端标「知识库已删除」；无注入不渲染
 - 回归触发：时间线、调用详情、注入卡片变更
+
+## TC-071
+
+- 来源：AC-TECH-2 / AC-TECH-3（RISK-011，无独立功能 AC）；任务 TASK-TD-011
+- 前置：应用可启动；注入携带 errno 的 `DBAPIError` 桩
+- 步骤：MySQL 3819 与 SQLite CHECK；MySQL 1062/1451/1452；连接中断 2006
+- 预期：CHECK → 400 且不泄露约束文本；重复/外键 → 409；连接中断 → 500 `internal_error`；错误体含 `requestId`
+- 回归触发：错误映射、SQLAlchemy/驱动升级、方言差异；本条由 CI `mysql-tests` job 暴露后补充

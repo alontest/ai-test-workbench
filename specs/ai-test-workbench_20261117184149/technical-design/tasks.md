@@ -4,7 +4,7 @@
 > 依据：`approvals.md` 末行 `tech-design · 2026-11-18 10:47:44 · 确认`；OQ-TD-01 ~ 05 全按 A（`answers.md` 2026-11-18 10:44:10「全按建议」）。
 > 本体：`specs/ai-test-workbench_20261117184149/ontology-slices/tech-tasks.md` 不存在（项目无 `ontology-work/views/index.json`），任务不附 `ENT-` / `BR-` 编号；实体名沿用 `_shared/domain-map.md`（Session / SessionEvent / Artifact / AiCallRecord / ProjectContext / ProviderConfig / ModelBinding）。
 > OQ-TT-01 ~ 04 已于 2026-11-18 确认（`answers.md`）：GitHub Actions + 公开仓库、30 个端点、Vitest 进必过门禁（Playwright 不进）、备份手工演练。
-> **文档状态：draft — 2026-11-18 因跨 spec 知识库注入扩展（A101 / A102 / A103 B）变更，待用户重新确认。** 变更前任务已于 2026-11-18 确认；新增 TASK-TD-051 ~ 055 与 TC-064 ~ TC-070。
+> **文档状态：draft — 2026-11-18 因跨 spec 知识库注入扩展（A101 / A102 / A103 B）变更，待用户重新确认。** 变更前任务已于 2026-11-18 确认；新增 TASK-TD-051 ~ 055 与 TC-064 ~ TC-071（TC-071 为数据库错误兜底映射，由 TASK-TD-011 承载）。
 > 2026-11-18 依赖版本核实：FastAPI 0.163.2、SQLAlchemy 2.1.9、pydantic-settings 2.16.3，均为实际安装版本，无降级（见 ADR-043）。
 > 本文件是 aw-implementer 的唯一任务来源；复选框行不得改写。
 
@@ -165,14 +165,14 @@
   - **状态**：pending
 
 - [x] TASK-TD-011：搭建 FastAPI 应用骨架与统一错误/分页
-  - **描述**：`create_app()`、路由注册、静态托管、异常处理器、`requestId`、游标编解码、Origin 校验依赖。
-  - **涉及文件**：`src/workbench/main.py`、`src/workbench/api/errors.py`、`src/workbench/api/deps.py`、`src/workbench/api/v1/router.py`、`src/workbench/api/pagination.py`、`tests/test_api_skeleton.py`
-  - **具体操作**：错误体 `{code,message,details[],requestId}`；`ApiError` 映射表；请求体校验失败 400 `validation_error` 逐字段；`limit` 1–100（事件 1–200）；base64url 游标编码/解码；非安全方法校验 Origin/Referer 命中 `AW_PUBLIC_ORIGIN`，否则 403 `forbidden_origin`；SPA fallback 到 `index.html`。用例 `test_tc060_error_envelope_and_cursor`、`test_tc061_origin_check_rejects_cross_site`。
+  - **描述**：`create_app()`、路由注册、静态托管、异常处理器（含数据库约束违反映射）、`requestId`、游标编解码、Origin 校验依赖。
+  - **涉及文件**：`src/workbench/main.py`、`src/workbench/api/errors.py`、`src/workbench/api/deps.py`、`src/workbench/api/v1/router.py`、`src/workbench/api/pagination.py`、`tests/test_api_skeleton.py`、`tests/test_db_error_mapping.py`
+  - **具体操作**：错误体 `{code,message,details[],requestId}`；`ApiError` 映射表；请求体校验失败 400 `validation_error` 逐字段；`limit` 1–100（事件 1–200）；base64url 游标编码/解码；非安全方法校验 Origin/Referer 命中 `AW_PUBLIC_ORIGIN`，否则 403 `forbidden_origin`；SPA fallback 到 `index.html`。用例 `test_tc060_error_envelope_and_cursor`、`test_tc061_origin_check_rejects_cross_site`；数据库错误兜底：MySQL 3819 / SQLite CHECK → 400 `validation_error`，1062 / 1451 / 1452 → 409 `conflict`，连接中断等未识别错误 → 500 `internal_error`，约束名与驱动原文不入响应；用例 `test_tc071_db_error_mapping_is_dialect_portable`。
   - **优先级**：P0
   - **复杂度**：M（2–3d）
   - **依赖**：TASK-TD-002、TASK-TD-007
   - **对应 AC**：AC-TECH-3
-  - **TC**：TC-060、TC-061
+  - **TC**：TC-060、TC-061、TC-071
   - **估算**：8h [逻辑]，不确定性低
   - **状态**：pending
 
@@ -713,7 +713,7 @@
 
 ### TC 编号与实现的对应关系
 
-- **TC 编号范围**：TC-001 ~ TC-070。TC-001 ~ TC-063 为确认前基线；TC-064 ~ TC-070 为 2026-11-18 跨 spec 知识库注入扩展（A101 / A102 / A103 B）新增，全部由 pytest 用例给出结果。
+- **TC 编号范围**：TC-001 ~ TC-071。TC-001 ~ TC-063 为确认前基线；TC-064 ~ TC-070 为 2026-11-18 跨 spec 知识库注入扩展（A101 / A102 / A103 B）新增；TC-071 为数据库错误兜底映射（TASK-TD-011）。全部由 pytest 用例给出结果。
 - **前端 Vitest 复用已有 TC 编号**：同一 TC 有两个实现——pytest（服务端/接口层，权威结果）+ Vitest（组件层，同一编号作为第二实现）。Vitest 用例标题形如 `TC-026 创建会话缺模型时禁用提交`，只用于定位与追溯，不产生新 TC。
 - **没有「只由 Vitest 提供结果」的 TC**：任何 AC 的可验证结论都必须能在 pytest 中找到对应用例；纯视觉效果（对比度、布局、动效）不设 TC，按 interaction-design 的人工/Playwright 记录验收。
 - **知识库注入的边界**：TC-064 ~ TC-070 只验证 core 的列/事件/序列化、唯一入口、错误映射与迁移顺序；知识库导入、检索、失效判定、正文组装与其 AC（AC-014 系列）由 knowledge-base spec 的测试覆盖，本 spec 不重复实现或用例。
@@ -723,18 +723,18 @@
 
 | 层 | 命令 / job | 是否进入 `aw verify` 证据 | 失败后果 |
 |----|-----------|--------------------------|---------|
-| pytest（SQLite） | `pytest` / CI job 1 `backend-tests` | 是；70 个 TC 的通过/失败全部来自这里 | `aw verify` 红，禁止 close |
+| pytest（SQLite） | `pytest` / CI job 1 `backend-tests` | 是；71 个 TC 的通过/失败全部来自这里 | `aw verify` 红，禁止 close |
 | pytest（MySQL） | `AW_TEST_DATABASE_URL=... pytest` / CI job 2 `mysql-tests` | 否（同一批 TC 的第二方言执行） | CI 红；RISK-011 视为未通过 |
 | Vitest | `cd web && npm run test -- --run` / CI job 3 `frontend-tests` | **否** | CI 红；分支保护阻止合并 |
 
 - **UI 用例的通过/失败如何被看见**：只在 CI 的 Vitest job（必过）与其上传的测试报告中可见；它**不写入** `.aw` 的 verify 证据，`aw.py verify` / `aw close` 不会读取。因此 UI 层失败靠 CI 必过 job 与分支保护兜底，评审时须同时看 CI 三个 job 全绿，不能只看 `aw verify` 绿。
-- 已知局限（明确记录）：`aw close` 只证明 pytest 的 70 个 TC 有结果，不证明 Vitest 通过；Vitest 的保障来自 CI 必过 job，二者缺一不可。
+- 已知局限（明确记录）：`aw close` 只证明 pytest 的 71 个 TC 有结果，不证明 Vitest 通过；Vitest 的保障来自 CI 必过 job，二者缺一不可。
 
 ### CI 三个 job 的门禁作用
 
 | job | 内容 | 门禁作用 |
 |-----|------|---------|
-| `backend-tests` | SQLite 上跑 `python3 .aw/aw.py verify`（或等价 pytest） | 产出 70 个 TC 的权威结果；必过 |
+| `backend-tests` | SQLite 上跑 `python3 .aw/aw.py verify`（或等价 pytest） | 产出 71 个 TC 的权威结果；必过 |
 | `mysql-tests` | `mysql:8.4` service + `alembic upgrade head` + 同一套 pytest | 证明双方言；不新增 TC；必过 |
 | `frontend-tests` | `npm ci && npm run test -- --run`（Vitest） | 证明 UI 层同一 TC 的第二实现；必过；不进 `aw verify` |
 
@@ -742,7 +742,7 @@
 
 ## TC ↔ AC 映射
 
-> 口径见上节「测试与门禁」：`aw.py verify` 从 pytest 报告读取 `TC-NNN`；70 个 TC 全部由 pytest 给出结果（含 TC-064 ~ TC-070），Vitest 以同一编号提供 UI 层的第二实现（不新增专属 TC），其失败由 CI 必过 job 3 兜底。Playwright E2E 不进必过门禁。
+> 口径见上节「测试与门禁」：`aw.py verify` 从 pytest 报告读取 `TC-NNN`；71 个 TC 全部由 pytest 给出结果（含 TC-064 ~ TC-071），Vitest 以同一编号提供 UI 层的第二实现（不新增专属 TC），其失败由 CI 必过 job 3 兜底。Playwright E2E 不进必过门禁。
 
 | TC | AC | 主要任务 | 验证点 |
 |----|----|---------|--------|
@@ -816,8 +816,9 @@
 | TC-068 | AC-TECH-3（A103 B） | 053/055 | 失效未精确确认 → 409，无外部请求、无 AiCallRecord |
 | TC-069 | AC-TECH-3（A103 B） | 053 | 精确确认后调用；空集 409、超预算 400 |
 | TC-070 | AC-009-3 / AC-010-2 | 054 | 时间线与调用详情展示注入快照与「知识库已删除」 |
+| TC-071 | AC-TECH-3 | 011 | 数据库约束违反的双方言统一映射：3819/SQLite CHECK → 400、1062/1451 → 409 `conflict`、连接中断 → 500 |
 
-覆盖统计：42 条功能 AC 全覆盖（US-001 ~ US-011），6 条 AC-TECH 全覆盖；共 70 个 TC（TC-064 ~ TC-070 为跨 spec 扩展，对应 A101 ~ A103；知识库自身 AC 由 knowledge-base spec 覆盖）。
+覆盖统计：42 条功能 AC 全覆盖（US-001 ~ US-011），6 条 AC-TECH 全覆盖；共 71 个 TC（TC-064 ~ TC-070 为跨 spec 扩展，对应 A101 ~ A103；TC-071 为数据库错误兜底映射；知识库自身 AC 由 knowledge-base spec 覆盖）。
 
 ## Critical 风险对照
 
@@ -837,4 +838,4 @@
 - 任务总数：55（XS 3 / S 21 / M 31），无 L/XL；其中 TASK-TD-051 ~ 055 为 2026-11-18 跨 spec 知识库注入扩展新增。
 - 批次工时：A 133h、B 246h、C 70h、D 27h，合计 476h；按每日 4.8h 有效开发折算约 99 人日。
 - 风险与前置：CI 为 GitHub Actions（OQ-TT-01 已确认，仓库将建成 GitHub 公开仓库）；MySQL 用例依赖 service 容器（本地缺 Docker 时跳过并在报告标注）；前端 Vitest 为必过 job，Playwright E2E 可选；`RISK-007` 依赖锁定由 `uv.lock` / `package-lock.json` 保证。
-- 批次验收：批次 A（pytest 全绿 + 迁移到 head）、批次 B（TC-001 ~ TC-050、TC-062）、批次 C（TC-046 ~ TC-048、TC-031、TC-051 ~ TC-056 + 手工验收项）、批次 D（TC-064 ~ TC-070，pytest；MySQL job 复跑 `0006` 迁移）。
+- 批次验收：批次 A（pytest 全绿 + 迁移到 head + TC-071）、批次 B（TC-001 ~ TC-050、TC-062）、批次 C（TC-046 ~ TC-048、TC-031、TC-051 ~ TC-056 + 手工验收项）、批次 D（TC-064 ~ TC-070，pytest；MySQL job 复跑 `0006` 迁移）。

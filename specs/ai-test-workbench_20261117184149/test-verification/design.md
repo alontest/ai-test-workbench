@@ -1,9 +1,9 @@
 # Test Verification Design — workbench-core
 
-> 阶段：test-verification。来源：`requirements-analysis/docs/context.md`（US-001 ~ US-011、AC 42 条）、`technical-design/tasks.md`（55 个任务、70 个 TC、TC ↔ AC 映射）、`technical-design/docs/api-spec.md`、`technical-design/docs/database-schema.md`、`technical-design/design.md`（风险登记表）、`interaction-design/design.md`（31 项交互验证记录）。
+> 阶段：test-verification。来源：`requirements-analysis/docs/context.md`（US-001 ~ US-011、AC 42 条）、`technical-design/tasks.md`（55 个任务、70 个 TC、TC ↔ AC 映射）、实现期补充 TC-071、`technical-design/docs/api-spec.md`、`technical-design/docs/database-schema.md`、`technical-design/design.md`（风险登记表）、`interaction-design/design.md`（31 项交互验证记录）。
 > 依据：`approvals.md` 的 `tech-design · 2026-11-18 11:35:21 · 重新确认` 与 `tech-tasks · 2026-11-18 11:35:21 · 重新确认`（跨 spec 知识库注入扩展 ADR-042；55 任务 / 70 TC）。
-> 既定口径（不改）：`aw.py verify` 只解析 pytest，pytest 是 70 个 TC 的权威结果来源；Vitest 复用同一 TC 编号作为 UI 第二实现，只进 CI `frontend-tests` job，不进 `.aw` 证据；本地 `aw verify` 只跑 SQLite，MySQL 由 CI job 2 覆盖；5 个 `[no-test]` 任务（TASK-TD-001/018/048/049/050）不映射 TC。
-> 跨 spec TC 编号约定：core 使用 TC-001 ~ TC-070；knowledge-base 计划使用 TC-101 起；repo-integration 计划使用 TC-201 起。编号一经使用不复用、不交叉，避免多个 spec 的测试报告在 `aw verify` 解析时互相覆盖。
+> 既定口径（不改）：`aw.py verify` 只解析 pytest，pytest 是 71 个 TC 的权威结果来源；Vitest 复用同一 TC 编号作为 UI 第二实现，只进 CI `frontend-tests` job，不进 `.aw` 证据；本地 `aw verify` 只跑 SQLite，MySQL 由 CI job 2 覆盖；5 个 `[no-test]` 任务（TASK-TD-001/018/048/049/050）不映射 TC。
+> 跨 spec TC 编号约定：core 使用 TC-001 ~ TC-071；knowledge-base 计划使用 TC-101 起；repo-integration 计划使用 TC-201 起。编号一经使用不复用、不交叉，避免多个 spec 的测试报告在 `aw verify` 解析时互相覆盖。
 > 本体：`ontology-slices/test-verification.md` 不存在，不做本体对照。
 
 ## 测试策略
@@ -42,7 +42,7 @@
 
 ### 决策 5：跨 spec 的 TC 编号与证据边界
 
-- core 使用 **TC-001 ~ TC-070**（TC-001 ~ TC-063 为基线，TC-064 ~ TC-070 为 2026-11-18 知识库注入扩展）；knowledge-base spec 计划使用 **TC-101 起**；repo-integration spec 计划使用 **TC-201 起**。
+- core 使用 **TC-001 ~ TC-071**（TC-001 ~ TC-063 为基线，TC-064 ~ TC-070 为 2026-11-18 知识库注入扩展，TC-071 为 DB 错误映射方言回归）；knowledge-base spec 计划使用 **TC-101 起**；repo-integration spec 计划使用 **TC-201 起**。
 - 编号段一经分配不复用、不改号；各 spec 的 pytest 用例名都带本段编号，避免 `aw.py verify` 在一个仓库内解析多个 spec 的报告时把同名 TC 归并成一条。
 - 跨 spec 契约（`InjectionPreparer`、`knowledge_base` 表、`kbDeleted`）在 core 侧只由假实现与读时左连接验证；知识库导入/检索/失效判定/正文组装的 TC 属 knowledge-base spec（TC-101 起），core 不重复造用例。
 - 前端 Vitest 仍复用各自 spec 的同一编号作为第二实现，不产生新编号。
@@ -1250,6 +1250,27 @@
 - pytest 与 CI 的覆盖边界：pytest 覆盖事件 payload、详情序列化与 `kbDeleted` 布尔值；Vitest 覆盖卡片渲染、文案与「无注入不渲染」，只由 CI job 3 报告，`aw verify` 不读取；卡片视觉与双主题由人工 M-01 复核。
 - 边界异常数据：多 kb 条目排序；`excludedCodes` 非空展示；`kbDeleted` 表不存在。
 
+### TC-071：数据库约束错误映射的方言可移植性
+- 测试目的：验证 MySQL 与 SQLite 的驱动异常被统一映射为 400/409/500，不泄露原始约束文本，且两类方言行为一致。
+- 测试类型：集成·接口（方言错误桩）
+- 关联需求：无独立功能 AC；挂在 AC-TECH-2（双方言迁移与运行）、AC-TECH-3（HTTP 错误契约）与 RISK-011（双方言漂移）下；任务 TASK-TD-011
+- 涉及本体：无
+- 自动化落点：`tests/test_db_error_mapping.py::test_tc071_db_error_mapping_is_dialect_portable`
+- 前置条件：`create_app` 可启动；注入携带 errno 的 `DBAPIError` 桩（MySQL 3819 / 1062 / 1451 / 1452、SQLite CHECK 文本、连接中断 2006）。
+- 测试步骤：
+  1. 触发 MySQL CHECK 违例（3819）与 SQLite CHECK 违例。
+  2. 触发 MySQL 重复键（1062）与外键违例（1451/1452）。
+  3. 触发连接中断（2006）。
+  4. 检查各响应状态、`code`、`requestId` 与 `X-Request-Id`。
+- 预期结果：
+  1. 两类方言的 CHECK 违例均为 400，`message` 为通用文案，不含约束名与原始 SQL。
+  2. 重复键与外键违例均为 409（`code=conflict`）。
+  3. 连接中断为 500 `internal_error`，不含堆栈与驱动原文。
+  4. 所有响应仍为 `{code, message, details[], requestId}`，`requestId` 与响应头一致。
+- 边界异常数据：未知 errno、errno 为字符串、`orig` 缺失时回退 500；错误体不得回显表名与键值。
+- 实现观察：当前 400 的 `code` 为 `validation_error`，与 `api-spec.md` 错误码表的 `validation_error` 不一致；已登记 DATA-006，需实现或 spec 二选一修正，本阶段不改代码。
+- CI 证据：本条源于 CI `mysql-tests` job 暴露的方言差异（MySQL 3819/1062/1451/1452 与 SQLite CHECK 文本不同），本地只跑 SQLite 看不到这些错误码，说明「本地 SQLite 绿」不等于双方言通过，CI 第二 job 是必需证据。
+
 ## 覆盖矩阵（TC ↔ AC ↔ 任务）
 
 > 覆盖定义：每个 AC 至少一个 TC（正向 + 异常要求见 AC-QA-2）。执行状态在开发完成后由 `aw verify` 回填，当前全部为「已定义、待执行」。
@@ -1327,16 +1348,17 @@
 | TC-068 | AC-TECH-3 | 053/055 | test_sessions_ai_complete.py::test_tc068_invalid_entries_require_confirmation；test_knowledge_contract.py::test_tc068_preparer_contract | ⏳ 待执行 |
 | TC-069 | AC-TECH-3 | 053 | test_sessions_ai_complete.py::test_tc069_confirmed_injection_and_limits | ⏳ 待执行 |
 | TC-070 | AC-009-3 / AC-010-2 | 054 | test_sessions_api.py::test_tc070_knowledge_injection_timeline_payload；Vitest KnowledgeInjectionEventCard.test.tsx（标题带 TC-070） | ⏳ 待执行 |
+| TC-071 | AC-TECH-2 / AC-TECH-3（RISK-011；无独立功能 AC） | 011 | test_db_error_mapping.py::test_tc071_db_error_mapping_is_dialect_portable | ✅ passed（2026-11-18 13:04:22） |
 
 ### 覆盖统计
 
 | 维度 | 结果 |
 |------|------|
 | 功能 AC 覆盖 | 42/42（100%），每条至少 1 个 TC |
-| AC-TECH 覆盖 | 6/6（TC-057 ~ TC-064、TC-068 覆盖 1/2/3/4/6；AC-TECH-5 由流程校验覆盖，Q-TV-01 已确认 A） |
-| TC 定义与 pytest 落点 | 70/70（100%），每个 TC 至少一个 `test_tcNNN_*` |
+| AC-TECH 覆盖 | 6/6（TC-057 ~ TC-064、TC-068、TC-071 覆盖 1/2/3/4/6；AC-TECH-5 由流程校验覆盖，Q-TV-01 已确认 A） |
+| TC 定义与 pytest 落点 | 71/71（100%），每个 TC 至少一个 `test_tcNNN_*` |
 | 非 `[no-test]` 任务映射 | 50/50（TASK-TD-002 ~ 017、019 ~ 047、051 ~ 055；见 `tc-map.json`） |
-| Critical 风险覆盖 | RISK-001/002/005/010/011/012 各 ≥2 TC（RISK-011 含 TC-064 迁移顺序）；RISK-009 由范围约束覆盖 |
+| Critical 风险覆盖 | RISK-001/002/005/010/011/012 各 ≥2 TC（RISK-011 含 TC-064 迁移顺序与 TC-071 方言映射）；RISK-009 由范围约束覆盖 |
 
 ## 需求覆盖率报告（Round-Trip）
 
@@ -1363,7 +1385,7 @@
 | 扩展（answers 确认）：文本/文件输入与制品 | AC-006-1 ~ 3、AC-007-1 ~ 3 | TC-032 ~ TC-040 | 待执行 | ⏳ pending |
 | 扩展（answers 确认）：单用户登录与访问控制 | AC-011-1 ~ 7 | TC-001 ~ TC-012 | 待执行 | ⏳ pending |
 | 扩展（A101 / A102 / A103 B，2026-11-18）：知识库注入留痕、唯一调用入口与 `kbDeleted` | AC-005-1、AC-009-3、AC-010-2、AC-TECH-2、AC-TECH-3 | TC-064 ~ TC-070 | 待执行 | ⏳ pending |
-| 技术验收（tech-tasks） | AC-TECH-1 ~ 6 | TC-057 ~ TC-064、TC-068（AC-TECH-5 流程） | 待执行 | ⏳ pending |
+| 技术验收（tech-tasks） | AC-TECH-1 ~ 6 | TC-057 ~ TC-064、TC-068、TC-071（AC-TECH-5 流程） | TC-071 通过，其余待执行 | ⏳ pending |
 
 ### 覆盖率汇总
 
@@ -1372,9 +1394,9 @@
 | 原始需求条目覆盖 | 7/7（100%） |
 | 功能 AC → TC 覆盖 | 42/42（100%） |
 | AC-TECH → TC 覆盖 | 6/6（100%，其中 AC-TECH-5 为流程覆盖） |
-| TC 定义 → pytest 落点 | 70/70（100%） |
-| TC 执行通过率 | 0/70（全部 `待执行`；开发完成后统计） |
-| 测试问题清单 | 17 项（SEC 5 / DATA 5 / UX 4 / PERF 3），均为待验证风险，不是已确认缺陷 |
+| TC 定义 → pytest 落点 | 71/71（100%） |
+| TC 执行通过率 | 1/71 已回填通过（TC-071，`aw verify` 2026-11-18 13:04:22）；最近一次 verify 报告另有 23 个 TC 为 passed、尚未回填；其余为 `待执行` |
+| 测试问题清单 | 18 项（SEC 5 / DATA 6 / UX 4 / PERF 3），其中 1 项为 TC-071 暴露的错误码契约差异（DATA-006），其余为待验证风险 |
 
 ## 执行结果
 
@@ -1452,6 +1474,7 @@
 | TC-068 | 失效未精确确认 409 且无记录/无外部请求 | 集成·接口/契约 | 待执行 | — | 待开发完成 |
 | TC-069 | 精确确认后调用；空集 409、超预算 400 | 集成·接口 | 待执行 | — | 待开发完成 |
 | TC-070 | 时间线与调用详情展示注入快照 | 集成·接口 + Vitest | 待执行 | — | 待开发完成；UI 渲染由 CI job 3 提供证据 |
+| TC-071 | 数据库约束错误映射的方言可移植性 | 集成·接口 | 通过 | 2026-11-18 13:04:22 | `aw verify` 通过（head eef4da4）；源于 CI `mysql-tests` 抓出的双方言差异 |
 
 ## 测试问题清单（ISSUE LIST）
 
@@ -1469,6 +1492,7 @@
 | DATA-003 | 🟡 数据 | 200,000 字符、10MB、10 个、同名校验边界偏差或静默截断 | TC-034、TC-037、TC-038 | 精确边界值 |
 | DATA-004 | 🟡 数据 | 终态会话仍接受写入或标记完成不写事件 | TC-029、TC-035 | 状态流转 + 事件断言 |
 | DATA-005 | 🟡 数据 | 注入四列与快照/正文不一致，或失败后留痕被回滚 | TC-064、TC-066 | 列不变量 + CHECK + 失败路径断言 |
+| DATA-006 | 🟡 数据 | DB 约束违例 400 的 `code` 实现为 `validation_error`，`api-spec.md` 错误码表规定为 `validation_error`；两者需对齐（改实现或补 spec） | TC-071、TC-060 | 对照错误码表 + TC-071 断言（当前通过值即实现值） |
 | UX-001 | 🟢 体验 | 空态与错误态混淆、筛选无结果被当成错误 | TC-027、TC-031、TC-048 | 接口空列表 + Vitest 空态 |
 | UX-002 | 🟢 体验 | 锁定倒计时、过期提示与草稿恢复不符设计 | TC-004、TC-011、M-01/M-02 | 人工 + Playwright |
 | UX-003 | 🟢 体验 | 调用中可重复提交、失败后提示不可读 | TC-041、M-06 | Vitest + 人工 |
@@ -1491,7 +1515,7 @@
 
 ### 回归口径
 
-- 任何修复后必须重跑：全量 pytest（70 个 TC）+ `python3 .aw/aw.py verify`。
+- 任何修复后必须重跑：全量 pytest（71 个 TC）+ `python3 .aw/aw.py verify`。
 - 改动范围 → 必跑用例：
   - 认证/依赖/Cookie/Origin → TC-001 ~ TC-012、TC-060、TC-061。
   - 迁移/模型/约束 → TC-058、TC-059、TC-064，并确认 CI job 2 绿。
@@ -1529,7 +1553,7 @@
 
 | 层 | 命令 / job | 是否进 `.aw` 证据 | 证明什么 | 失败后果 |
 |----|-----------|------------------|---------|---------|
-| 本地 pytest（SQLite） | `python3 .aw/aw.py verify`（或 `pytest`） | 是；70 个 TC 的权威结果 | 功能、接口、契约、SQLite 迁移（含 0006） | verify 红，禁止 close |
+| 本地 pytest（SQLite） | `python3 .aw/aw.py verify`（或 `pytest`） | 是；71 个 TC 的权威结果 | 功能、接口、契约、SQLite 迁移（含 0006）；不含 MySQL 独有错误码 | verify 红，禁止 close |
 | CI job 1 `backend-tests` | `uv sync --frozen` + `aw.py verify` | 否（同一批用例的复跑） | 干净环境可复现 | CI 红 |
 | CI job 2 `mysql-tests` | MySQL 8.4 service + `alembic upgrade head` + 同一套 pytest | 否 | 双方言（RISK-011） | CI 红 |
 | CI job 3 `frontend-tests` | `npm ci && npm run test -- --run`（Vitest） | 否 | UI 层同一 TC 编号的第二实现 | CI 红；分支保护阻止合并 |
@@ -1541,13 +1565,14 @@
 - Vitest 绿不等于 `aw verify` 通过；`aw close` 不读取 Vitest。
 - Playwright 不进任何必过 job。
 - 本地缺 `AW_TEST_DATABASE_URL` 时不允许把 TC-059 整体 skip；TC-059 的通用约束断言必须在 SQLite 上执行并产生报告结果。
+- TC-071 是 CI `mysql-tests` job 暴露方言差异后补的回归用例：MySQL 3819/1062/1451/1452 只在真实 MySQL 驱动下出现，本地 SQLite 用例通过不能替代 CI job 2；该条同时说明「本地只跑 SQLite」的局限与第二 job 的必要性。
 
 ## 验收清单
 
 关闭前逐项确认：
 
-- [ ] 70 个 TC 在 `## 执行结果` 中都有结果（`通过` / `失败` / `未执行` + 理由），无 `待执行` 遗留。
-- [ ] `python3 .aw/aw.py verify` 绿；失败数为 0；70 个 TC 全部由 pytest 报告识别。
+- [ ] 71 个 TC 在 `## 执行结果` 中都有结果（`通过` / `失败` / `未执行` + 理由），无 `待执行` 遗留。
+- [ ] `python3 .aw/aw.py verify` 绿；失败数为 0；71 个 TC 全部由 pytest 报告识别。
 - [ ] 功能 AC 42/42、AC-TECH 6/6 在覆盖矩阵中有 TC 或流程说明（AC-TECH-5）。
 - [ ] 7 个 🔴 Critical 风险均有对应 TC 且通过；RISK-009 的范围约束无突破（无知识库/仓库集成代码）。
 - [ ] CI 三个 job 全绿（`backend-tests`、`mysql-tests`、`frontend-tests`），CI run 记录已归档。
@@ -1560,7 +1585,7 @@
 
 ## 下游衔接
 
-- 跨 spec 编号：core 固定使用 TC-001 ~ TC-070；knowledge-base 从 TC-101 起；repo-integration 从 TC-201 起。新增 TC 只能在本段内顺延（core 不新增 TC-071+，除非整体重新编号并同步三份 spec）。
+- 跨 spec 编号：core 固定使用 TC-001 ~ TC-071；knowledge-base 从 TC-101 起；repo-integration 从 TC-201 起。新增 TC 只能在本段内顺延（core 不新增 TC-072+，除非整体重新编号并同步三份 spec）。
 - 开发阶段：`aw-implementer` 按 `technical-design/tasks.md` 分批实现（含批次 D：TASK-TD-051 ~ 055），同时按本文件的「自动化落点」写 `test_tcNNN_*` 用例；不得改本文件的 TC 编号、AC 映射与预期。
 - 验证阶段（`MODE=verify`）：`aw.py verify` 产出 `evidence/verify.json` 的 `tcs`，由 aw-qa 回填 `## 执行结果`、`## 测试问题清单` 与 `## 需求覆盖率报告`；pytest 报告里没有的 TC 才允许人工执行后回填。
 - 回归：`docs/regression.md` 按 TC 分节维护，后续 spec 复用时按节合并。

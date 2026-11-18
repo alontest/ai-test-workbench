@@ -38,6 +38,7 @@
 | HTTP | code | 场景 |
 |------|------|------|
 | 400 | `validation_error` | 字段缺失/格式/范围错误（含空正文、超限字数） |
+| 400 | `validation_error` | 数据库 CHECK 约束违反的统一出口（MySQL 3819 / SQLite CHECK），消息「请求参数违反数据约束。」 |
 | 400 | `prompt_too_long` | 提示 >200,000 字符（`details` 含 `charCount` / `maxChars`） |
 | 400 | `text_too_long` | 粘贴正文 >200,000 字符 |
 | 400 | `text_empty` | 正文为空或仅空白 |
@@ -51,6 +52,7 @@
 | 409 | `model_name_duplicate` | 同提供商下模型名重复（大小写不敏感） |
 | 409 | `provider_disabled` / `model_disabled` | 目标不可用于新调用 |
 | 409 | `session_closed` | 会话已结束，拒绝写入/调用 |
+| 409 | `conflict` | 数据库重复键/外键约束兜底（MySQL 1062 / 1451 / 1452），消息「资源已存在或状态冲突。」；资源专属 409 code（如 `project_name_duplicate`）由服务层在各端点定义，`conflict` 仅是兜底 |
 | 400 | `prompt_budget_exceeded` | 提示 + 注入块 >200,000 字符（`details` 含分段字数与上限） |
 | 400 | `injection_snapshot_mismatch` | 注入快照字符数与实际组装正文不一致（内部契约错误） |
 | 409 | `knowledge_invalid_entries` | 知识库条目失效且 `confirmInvalidCodes` 未精确匹配（`details.invalidItems`） |
@@ -64,6 +66,8 @@
 | 502 | `ai_auth` / `ai_rate_limit` / `ai_server_error` / `ai_unreachable` / `ai_invalid_request` | 上游调用最终失败（已写 AiCallRecord） |
 | 504 | `ai_timeout` | 单次尝试 120s 无响应（已写 AiCallRecord，status=timeout） |
 | 507 | `artifact_write_failed` | 磁盘写入失败（已清理半成品） |
+
+数据库错误兜底：CHECK 约束 → 400 `validation_error`；重复键/外键 → 409 `conflict`；未识别错误（如连接中断 2006）→ 500 `internal_error`。约束名与驱动原文不进入响应消息。
 
 ## 端点总览
 

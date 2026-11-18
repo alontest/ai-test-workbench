@@ -1,7 +1,7 @@
 # Test Verification Tasks — workbench-core
 
 > 阶段：test-verification。任务 ID 前缀 `TASK-TV-`。
-> 依据：`design.md` 的 70 个 TC、分层策略与人工验证清单；上游任务见 `technical-design/tasks.md`（TASK-TD-001 ~ 055，含批次 D 知识库注入扩展）。
+> 依据：`design.md` 的 71 个 TC、分层策略与人工验证清单；上游任务见 `technical-design/tasks.md`（TASK-TD-001 ~ 055，含批次 D 知识库注入扩展）。TC-071 为实现期补充、已由 `aw verify` 通过的回归用例。
 > 状态：全部 `pending`。本阶段只产出计划与清单，不写实现代码；用例由开发任务（TASK-TD-*）落地时按 `design.md` 的自动化落点编写。
 
 ## 概览
@@ -9,7 +9,7 @@
 - 任务总数：11
 - P0：7（001 ~ 006、011）；P1：3（007 ~ 009）；P2：1（010）
 - 预估工时：约 40h（不含开发实现；均为验证活动与记录）
-- 覆盖：70 个 TC ↔ 50 个非 `[no-test]` 任务（见 `tc-map.json`）；42 功能 AC + 6 AC-TECH + 7 个跨 spec 扩展 TC
+- 覆盖：71 个 TC ↔ 50 个非 `[no-test]` 任务（见 `tc-map.json`）；42 功能 AC + 6 AC-TECH + 7 个跨 spec 扩展 TC + 1 个方言回归 TC
 
 ## 任务清单
 
@@ -31,7 +31,7 @@
   - **复杂度**：M（2–3d）
   - **关联需求**：AC-011-2、AC-003-1、AC-003-3、AC-007-1/2、AC-005-1、AC-001-1、AC-002-3、AC-TECH-1/2/3/6
   - **依赖**：TASK-TV-001
-  - **覆盖 TC**：TC-002、TC-009、TC-017、TC-019、TC-021、TC-039、TC-040、TC-042、TC-049、TC-051、TC-056、TC-057、TC-058、TC-059、TC-060、TC-061、TC-063
+  - **覆盖 TC**：TC-002、TC-009、TC-017、TC-019、TC-021、TC-039、TC-040、TC-042、TC-049、TC-051、TC-056、TC-057、TC-058、TC-059、TC-060、TC-061、TC-063、TC-071
   - **状态**：pending
 
 - [ ] TASK-TV-003：认证与访问控制用例
@@ -81,7 +81,7 @@
   - **复杂度**：S（<1d）
   - **关联需求**：AC-TECH-2、AC-TECH-3、AC-QA-8
   - **依赖**：TASK-TD-018、TASK-TV-002
-  - **覆盖 TC**：TC-058、TC-059（job 1/2）、UI 第二实现（job 3）
+  - **覆盖 TC**：TC-058、TC-059、TC-071（job 1/2，TC-071 即由 job 2 暴露的方言差异）、UI 第二实现（job 3）
   - **状态**：pending
 
 - [ ] TASK-TV-008：人工验收执行与证据归档
@@ -101,7 +101,7 @@
   - **复杂度**：S（<1d）
   - **关联需求**：AC-QA-4、AC-QA-6、AC-QA-8
   - **依赖**：TASK-TV-002 ~ TASK-TV-008、TASK-TV-011
-  - **覆盖 TC**：TC-001 ~ TC-070（结果回填）
+  - **覆盖 TC**：TC-001 ~ TC-071（结果回填）
   - **状态**：pending
 
 - [ ] TASK-TV-010：回归清单维护
@@ -111,7 +111,7 @@
   - **复杂度**：XS（<4h）
   - **关联需求**：AC-QA-1、AC-QA-6
   - **依赖**：TASK-TV-002 ~ TASK-TV-006、TASK-TV-011
-  - **覆盖 TC**：TC-001 ~ TC-070（清单维护）
+  - **覆盖 TC**：TC-001 ~ TC-071（清单维护）
   - **状态**：pending
 
 - [ ] TASK-TV-011：知识库注入扩展用例（批次 D）
