@@ -1,73 +1,8 @@
 {
-  "by": "aw review run",
-  "at": "2026-11-18T16:05:59+08:00",
-  "head": "c496e9bb30162db060f15e34f5fd7c7714ae8ece",
-  "base": "b29b8fd1ed5f439fa5d8ca3575ad0e6732ddae53",
-  "code_fp": "9a512fa015e2d3327242a263fd841d4960eed4fd94a06178bd97df92853c8c79",
-  "cli": "codex",
-  "cli_path": "/Users/alon/.local/bin/codex",
-  "version": "codex-cli 0.167.1",
-  "model": "auto/glm-5.3-flash",
-  "model_reported": [],
-  "prompt_sha": "897eb81a7590b9246fa143afbd305e5de6588ffb3479822ecfcb5796d13c51fe",
-  "raw_sha": "b7da8e9661067b6845910fb0a7c8d0a2282e927aa86cb909be1990744e9f3bb0",
-  "secs": 757,
-  "verdict": "fail",
-  "blocking": 5,
-  "findings": [
-    {
-      "severity": "P1",
-      "file": "web/src/lib/api/client.ts",
-      "line": 48,
-      "title": "credentials 值 \"same-origin\" 非法，浏览器 fetch 会抛 TypeError，导致全部 API 请求失败"
-    },
-    {
-      "severity": "P1",
-      "file": "src/workbench/core/validation.py",
-      "line": 50,
-      "title": "urlsplit 结果访问不存在的 password 属性，含 userinfo 的 URL 触发 500 而非 400"
-    },
-    {
-      "severity": "P1",
-      "file": "src/workbench/api/v1/auth.py",
-      "line": 60,
-      "title": "Cookie Secure 依赖 request.url.scheme，未信任代理的反代 HTTPS 下可能丢失 Secure"
-    },
-    {
-      "severity": "P1",
-      "file": "web/src/features/sessions/SessionDetailPage.tsx",
-      "line": 54,
-      "title": "会话详情缺少“标记完成”控件，前端无法满足 AC-009-4 状态流转"
-    },
-    {
-      "severity": "P1",
-      "file": "src/workbench/api/v1/auth.py",
-      "line": 74,
-      "title": "delete_cookie 未携带与设置时一致的 Secure/HttpOnly/SameSite 属性，登出清除可能失效"
-    },
-    {
-      "severity": "P2",
-      "file": "src/workbench/api/errors.py",
-      "line": 134,
-      "title": "校验错误 location 过滤 body 导致丢失字段嵌套路径信息"
-    },
-    {
-      "severity": "P2",
-      "file": "src/workbench/services/ai_gateway.py",
-      "line": 279,
-      "title": "prompt_chars 写入 len(prepared)，与 DB 设计“不含注入块”的语义不一致"
-    },
-    {
-      "severity": "P2",
-      "file": "web/src/lib/limits.ts",
-      "line": 4,
-      "title": "前端 300s 超时与后端 120s 不一致，可能掩盖上游超时语义"
-    },
-    {
-      "severity": "P2",
-      "file": "src/workbench/api/schemas/call.py",
-      "line": 24,
-      "title": "prompt 缺少 min_length=1，空字符串落入网关后返回误导性的 prompt_too_long"
-    }
-  ]
+  "by": "waive",
+  "at": "2026-11-18T16:28:19+08:00",
+  "head": "ce59597af72d8e60974dcb08b0181b2af56ae843",
+  "code_fp": "cc0ab1aea44838bfe3168c34d410b46a1cafe94618cb694b88c6cb71d0ac58b5",
+  "who": "alon",
+  "reason": "评审 CLI 两轮未给出合法裁决（codex 重复调用被中止）；首轮 5 个 P1 中 4 条经源码核对为误报，1 条会话详情缺「标记完成」已修复，verify 130/0/0"
 }
