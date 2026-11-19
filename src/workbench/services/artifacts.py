@@ -80,6 +80,12 @@ def _view(row: Artifact) -> ArtifactView:
     }
 
 
+def _sanitize_name(file_name: str) -> str:
+    """客户端文件名只保留 basename，绝不参与路径拼接。"""
+    normalized = file_name.replace("\\", "/")
+    return Path(normalized).name
+
+
 async def save(
     session_id: int,
     *,
@@ -88,6 +94,7 @@ async def save(
     claimed_content_type: str | None = None,
     kind: Literal["upload", "generated"] = "upload",
 ) -> ArtifactView:
+    file_name = _sanitize_name(file_name)
     extension = _validate_extension(file_name)
     if kind not in ("upload", "generated"):
         raise DomainError("validation_error", "制品类型非法。")

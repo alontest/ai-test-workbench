@@ -1,0 +1,15 @@
+{
+  "at": "2026-11-18T16:42:21+08:00",
+  "head": "fed22aa9826361cd9f89bcd17e01dac5152f42cb",
+  "code_fp": "2c49755900f9c39ad066dfe3a02c9b1d8bf2dbd5c9de6b454de207ac373b44ff",
+  "manual_tcs": [],
+  "rules": {
+    ".aw/config.json": "0dd29aece13537711f8f9a17fcb96370fec950922b8f67d22502bcd8abcf2ff3",
+    ".aw/test-presets.json": "673d6357286c09941000c3938152780d0b3b28ba704f116df104177949bfaf0f",
+    "reviewer": "943fc11490e011b78d74020fb2fab1aa3505692e60f71ec8b0baa066061ccfa6"
+  },
+  "rules_changed": [
+    ".aw/config.json",
+    ".aw/test-presets.json"
+  ]
+}

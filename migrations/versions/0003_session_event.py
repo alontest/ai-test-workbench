@@ -100,12 +100,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index("ix_session_event_session_id_event_id", table_name="session_event")
+    # 索引随 DROP TABLE 删除；MySQL 不允许先删支撑外键的索引（错误 1553）。
     op.drop_table("session_event")
-    op.drop_index("ix_analysis_session_model_id", table_name="analysis_session")
-    op.drop_index("ix_analysis_session_updated_at", table_name="analysis_session")
-    op.drop_index("ix_analysis_session_status_updated_at", table_name="analysis_session")
-    op.drop_index(
-        "ix_analysis_session_project_id_updated_at", table_name="analysis_session"
-    )
     op.drop_table("analysis_session")

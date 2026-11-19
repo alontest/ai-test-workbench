@@ -116,9 +116,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index("ix_model_binding_provider_id_enabled", table_name="model_binding")
+    # 索引随 DROP TABLE 删除；MySQL 不允许先删支撑外键的索引（错误 1553）。
     op.drop_table("model_binding")
-    op.drop_index("ix_provider_config_enabled", table_name="provider_config")
     op.drop_table("provider_config")
-    op.drop_index("ix_project_context_updated_at", table_name="project_context")
     op.drop_table("project_context")

@@ -148,6 +148,77 @@ async def test_tc045_retry_then_timeout(database, settings) -> None:
 
 
 @pytest.mark.asyncio
+async def test_tc045_cancellation_finalizes_record(database, settings) -> None:
+    sm = database.sessionmaker
+    project_id = await seed_project(sm)
+    provider_id = await seed_provider(sm)
+    model_id = await seed_model(sm, provider_id)
+    session_id = await seed_session(sm, project_id=project_id, model_id=model_id)
+    queued_session_id = await seed_session(
+        sm, project_id=project_id, model_id=model_id, title="排队会话"
+    )
+
+    entered = asyncio.Event()
+    release = asyncio.Event()
+
+    class HoldingAdapter:
+        calls = 0
+
+        async def complete(self, **kwargs):  # noqa: ANN003, ANN201
+            HoldingAdapter.calls += 1
+            entered.set()
+            await release.wait()
+            return "should-not-return"
+
+        async def test_connection(self, **kwargs):  # pragma: no cover
+            raise NotImplementedError
+
+    gateway = AiGateway(adapter=HoldingAdapter())
+    gateway._semaphore = asyncio.Semaphore(1)
+
+    running = asyncio.create_task(gateway.complete(session_id, model_id, "first"))
+    await entered.wait()
+    queued = asyncio.create_task(gateway.complete(queued_session_id, model_id, "queued"))
+    await asyncio.sleep(0.05)
+
+    async with sm() as db:
+        running_count = await db.scalar(
+            select(func.count()).select_from(AiCallRecord).where(AiCallRecord.status == "running")
+        )
+        total_count = await db.scalar(select(func.count()).select_from(AiCallRecord))
+    assert running_count == 1
+    assert total_count == 1
+    assert HoldingAdapter.calls == 1
+
+    running.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await running
+    release.set()
+    queued_result = await queued
+    assert queued_result.status == "success"
+    assert queued_result.latency_ms < 500
+
+    async with sm() as db:
+        interrupted = await db.scalar(
+            select(AiCallRecord).where(AiCallRecord.session_id == session_id)
+        )
+        queued_record = await db.get(AiCallRecord, queued_result.call_id)
+        assert interrupted is not None
+        assert interrupted.status == "failed"
+        assert interrupted.error_code == "interrupted"
+        assert interrupted.finished_at is not None
+        assert interrupted.latency_ms is not None
+        assert queued_record.status == "success"
+        event = await db.scalar(
+            select(SessionEvent).where(
+                SessionEvent.session_id == session_id, SessionEvent.type == "call"
+            )
+        )
+        assert event.payload["errorCode"] == "interrupted"
+        assert event.payload["status"] == "failed"
+
+
+@pytest.mark.asyncio
 async def test_tc041_preconditions_create_no_record(database, settings) -> None:
     sm = database.sessionmaker
     project_id = await seed_project(sm)

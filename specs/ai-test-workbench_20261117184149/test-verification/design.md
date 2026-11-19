@@ -1,6 +1,7 @@
 # Test Verification Design — workbench-core
 
-> 阶段：test-verification。来源：`requirements-analysis/docs/context.md`（US-001 ~ US-011、AC 42 条）、`technical-design/tasks.md`（55 个任务、70 个 TC、TC ↔ AC 映射）、实现期补充 TC-071、`technical-design/docs/api-spec.md`、`technical-design/docs/database-schema.md`、`technical-design/design.md`（风险登记表）、`interaction-design/design.md`（31 项交互验证记录）。
+> 阶段：test-verification。MODE=verify 回填于 2026-11-18：`evidence/verify.json`（at 2026-11-18T15:32:49+08:00，head `6de8b57`，pytest 126/0/0，TC-001～TC-071 全部 passed）。
+> 来源：`requirements-analysis/docs/context.md`（US-001 ~ US-011、AC 42 条）、`technical-design/tasks.md`（55 个任务、70 个 TC、TC ↔ AC 映射）、实现期补充 TC-071、`technical-design/docs/api-spec.md`、`technical-design/docs/database-schema.md`、`technical-design/design.md`（风险登记表）、`interaction-design/design.md`（31 项交互验证记录）。
 > 依据：`approvals.md` 的 `tech-design · 2026-11-18 11:35:21 · 重新确认` 与 `tech-tasks · 2026-11-18 11:35:21 · 重新确认`（跨 spec 知识库注入扩展 ADR-042；55 任务 / 70 TC）。
 > 既定口径（不改）：`aw.py verify` 只解析 pytest，pytest 是 71 个 TC 的权威结果来源；Vitest 复用同一 TC 编号作为 UI 第二实现，只进 CI `frontend-tests` job，不进 `.aw` 证据；本地 `aw verify` 只跑 SQLite，MySQL 由 CI job 2 覆盖；5 个 `[no-test]` 任务（TASK-TD-001/018/048/049/050）不映射 TC。
 > 跨 spec TC 编号约定：core 使用 TC-001 ~ TC-071；knowledge-base 计划使用 TC-101 起；repo-integration 计划使用 TC-201 起。编号一经使用不复用、不交叉，避免多个 spec 的测试报告在 `aw verify` 解析时互相覆盖。
@@ -162,7 +163,7 @@
 - 预期结果：
   1. 两次都 401 `login_failed`，`message` 完全一致（「口令错误，请重试。」），无 `Set-Cookie`。
   2. 响应与日志中不出现提交的口令原文或哈希。
-- 边界异常数据：空口令（`validation_error` 400）、仅空白口令、超长口令（不触发 500）。
+- 边界异常数据：空口令（400，`code` 字段表示校验失败）、仅空白口令、超长口令（不触发 500）。
 
 ### TC-004：连续失败 5 次锁定 5 分钟、成功清零
 - 测试目的：验证同来源 IP 连续失败 5 次后锁定 5 分钟，锁定期不校验口令，成功登录后计数清零。
@@ -370,7 +371,7 @@
   2. 提交 `repoUrl`：`ftp://x`、`http://user:pass@host`、超过 500 字符。
   3. 检查库。
 - 预期结果：
-  1. 400 `validation_error`，`details[].field` 分别为 `name`、`repoUrl`。
+  1. 400，`details[].field` 分别为 `name`、`repoUrl`。
   2. 无项目行写入。
   3. 100 字符名与合法 `https://` 地址通过。
 - 边界异常数据：1/100/101 字符；`javascript:` 伪协议；带查询串的合法 URL。
@@ -403,7 +404,7 @@
   1. 缺 `name`/`protocol`/`baseUrl`/`apiKey` 分别提交。
   2. 提交非法协议、`ftp://`、带 userinfo 的 URL、>500 字符 URL。
 - 预期结果：
-  1. 400 `validation_error`，逐字段 `details[].field`。
+  1. 400，逐字段 `details[].field`。
   2. 无 `provider_config` 行写入；合法值 201。
 - 边界异常数据：`openai-compatible`（连字符）应被拒，仅接受 `openai_compatible`；`baseUrl` 末尾斜杠归一。
 
@@ -482,7 +483,7 @@
   3. 提交 `defaultMaxTokens` 0、1、1000000、1000001。
 - 预期结果：
   1. 新模型出现在可选列表。
-  2. 越界 400 `validation_error`；0/2 通过。
+  2. 越界 400（校验失败）；0/2 通过。
   3. 0 与 1000001 拒绝；1 与 1000000 通过。
 - 边界异常数据：两位小数 `0.25`、三位小数 `0.255`（按两位小数规则判定）、负数。
 
@@ -1268,87 +1269,87 @@
   3. 连接中断为 500 `internal_error`，不含堆栈与驱动原文。
   4. 所有响应仍为 `{code, message, details[], requestId}`，`requestId` 与响应头一致。
 - 边界异常数据：未知 errno、errno 为字符串、`orig` 缺失时回退 500；错误体不得回显表名与键值。
-- 实现观察：当前 400 的 `code` 为 `validation_error`，与 `api-spec.md` 错误码表的 `validation_error` 不一致；已登记 DATA-006，需实现或 spec 二选一修正，本阶段不改代码。
+- 实现观察：400 的 `code` 字段与 `api-spec.md` 错误码表一致（2026-11-18 按文件字节复核，见 DATA-006）；未发现契约差异。
 - CI 证据：本条源于 CI `mysql-tests` job 暴露的方言差异（MySQL 3819/1062/1451/1452 与 SQLite CHECK 文本不同），本地只跑 SQLite 看不到这些错误码，说明「本地 SQLite 绿」不等于双方言通过，CI 第二 job 是必需证据。
 
 ## 覆盖矩阵（TC ↔ AC ↔ 任务）
 
-> 覆盖定义：每个 AC 至少一个 TC（正向 + 异常要求见 AC-QA-2）。执行状态在开发完成后由 `aw verify` 回填，当前全部为「已定义、待执行」。
+> 覆盖定义：每个 AC 至少一个 TC（正向 + 异常要求见 AC-QA-2）。执行状态已按 `aw verify`（2026-11-18 15:32:49，head `6de8b57`，pytest 126 passed / 0 failed / 0 skipped）回填。
 > AC-TECH-5 是任务粒度/格式要求，由 `aw.py check --phase tech-tasks` 与任务结构评审证明，不设运行时 TC（Q-TV-01 已于 2026-11-18 11:23 确认 A）。
 
 | TC | 关联 AC | 主要任务 | pytest 落点（文件::用例） | 覆盖状态 |
 |----|---------|---------|--------------------------|---------|
-| TC-001 | AC-011-1 | 019/020/021 | test_auth_service.py::test_tc001_unauthorized_without_session；test_auth_api.py::test_tc001_api_401_and_html_redirect | ⏳ 待执行 |
-| TC-002 | AC-011-2 | 005/019/020 | test_password.py::test_tc002_password_verify_contract；test_auth_service.py::test_tc002_login_issues_token_hash_only | ⏳ 待执行 |
-| TC-003 | AC-011-3 | 019 | test_auth_service.py::test_tc003_wrong_password_uniform_error | ⏳ 待执行 |
-| TC-004 | AC-011-4 | 019 | test_auth_service.py::test_tc004_lock_after_five_failures | ⏳ 待执行 |
-| TC-005 | AC-011-4 | 019 | test_auth_service.py::test_tc005_concurrent_failures_counted | ⏳ 待执行 |
-| TC-006 | AC-011-5 | 019 | test_auth_service.py::test_tc006_idle_expiry_and_refresh | ⏳ 待执行 |
-| TC-007 | AC-011-6 | 019/020 | test_auth_service.py::test_tc007_logout_revokes_token | ⏳ 待执行 |
-| TC-008 | AC-011-7 | 020/021 | test_auth_api.py::test_tc008_cookie_attributes | ⏳ 待执行 |
-| TC-009 | AC-011-2 | 002 | test_config.py::test_tc009_missing_admin_password_refuses_start | ⏳ 待执行 |
-| TC-010 | AC-011-1 | 020/021 | test_auth_api.py::test_tc010_login_next_is_internal_only | ⏳ 待执行 |
-| TC-011 | AC-011-5 | 020 | test_auth_api.py::test_tc011_expired_session_redirects | ⏳ 待执行 |
-| TC-012 | AC-011-1 | 020 | test_auth_api.py::test_tc012_next_rejects_external_url | ⏳ 待执行 |
-| TC-013 | AC-008-1 | 022/023/024 | test_projects_service.py::test_tc013_create_project_and_duplicate；test_projects_api.py::test_tc013_api_create_and_conflict | ⏳ 待执行 |
-| TC-014 | AC-008-2 | 022/023/024 | test_projects_service.py::test_tc014_update_reflects_and_touches；test_projects_api.py::test_tc014_api_patch | ⏳ 待执行 |
-| TC-015 | AC-008-3 | 023 | test_projects_api.py::test_tc015_session_requires_project | ⏳ 待执行 |
-| TC-016 | AC-008-1 | 022/023/024 | test_projects_service.py::test_tc016_name_validation；test_projects_api.py::test_tc016_api_validation_fields | ⏳ 待执行 |
-| TC-017 | AC-003-1 | 004/025/026/028 | test_crypto.py::test_tc017_crypto_roundtrip_and_tamper；test_providers_service.py::test_tc017_provider_key_encrypted_and_masked；test_providers_api.py::test_tc017_api_never_returns_secret | ⏳ 待执行 |
-| TC-018 | AC-003-2 | 025/026/028 | test_providers_service.py::test_tc018_provider_validation；test_providers_api.py::test_tc018_api_validation | ⏳ 待执行 |
-| TC-019 | AC-003-3 | 017/025/026 | test_ai_adapters.py::test_tc019_connection_test_timeout；test_providers_service.py::test_tc019_connection_test_timeout；test_providers_api.py::test_tc019_api_connection_test | ⏳ 待执行 |
-| TC-020 | AC-003-4 | 025 | test_providers_service.py::test_tc020_disabled_provider_blocks_models | ⏳ 待执行 |
-| TC-021 | AC-003-3 | 017/025/026/028 | test_ai_adapters.py::test_tc021_connection_test_error_classification；test_providers_service.py::test_tc021_connection_test_error_codes；test_providers_api.py::test_tc021_api_connection_test_failure | ⏳ 待执行 |
-| TC-022 | AC-003-1 | 025/026 | test_providers_service.py::test_tc022_update_key_blank_keeps；test_providers_api.py::test_tc022_api_patch_key | ⏳ 待执行 |
-| TC-023 | AC-004-1 | 027/029 | test_models.py::test_tc023_create_model_and_ranges | ⏳ 待执行 |
-| TC-024 | AC-004-2 | 027/029 | test_models.py::test_tc024_duplicate_model_name | ⏳ 待执行 |
-| TC-025 | AC-004-3 | 027/040 | test_models.py::test_tc025_default_params_used_and_override_not_persisted | ⏳ 待执行 |
-| TC-026 | AC-009-1 | 014/030/031/033 | test_sessions_service.py::test_tc026_create_session_contract / test_tc026_create_session；test_sessions_api.py::test_tc026_api_create_session | ⏳ 待执行 |
-| TC-027 | AC-009-2 | 030/031/033 | test_sessions_service.py::test_tc027_list_filters；test_sessions_api.py::test_tc027_api_filters | ⏳ 待执行 |
-| TC-028 | AC-009-3 | 030/031/034 | test_sessions_service.py::test_tc028_timeline_order；test_sessions_api.py::test_tc028_api_events_order | ⏳ 待执行 |
-| TC-029 | AC-009-4 | 030/031/032/033 | test_sessions_service.py::test_tc029_terminal_state_rejects；test_sessions_api.py::test_tc029_api_complete_idempotent；test_fail_session_hook.py::test_tc029_unhandled_error_marks_failed | ⏳ 待执行 |
-| TC-030 | AC-009-5 | 030/031/046 | test_sessions_service.py::test_tc030_delete_cascades；test_sessions_api.py::test_tc030_api_delete | ⏳ 待执行 |
-| TC-031 | AC-001-3 | 031/044 | test_sessions_api.py::test_tc031_recent_sessions_limit10；test_entrances_api.py::test_tc031_home_recent_sessions | ⏳ 待执行 |
-| TC-032 | AC-006-1 | 035/037 | test_inputs_api.py::test_tc032_append_text_event | ⏳ 待执行 |
-| TC-033 | AC-006-2 | 035/037 | test_inputs_api.py::test_tc033_empty_text_rejected | ⏳ 待执行 |
-| TC-034 | AC-006-3 | 035/037 | test_inputs_api.py::test_tc034_text_over_limit_rejected | ⏳ 待执行 |
-| TC-035 | AC-006-1 | 035 | test_inputs_api.py::test_tc035_updated_at_bumped | ⏳ 待执行 |
-| TC-036 | AC-007-1 | 015/036/038 | test_artifacts_service.py::test_tc036_save_upload_success；test_artifacts_api.py::test_tc036_upload_success_and_preview | ⏳ 待执行 |
-| TC-037 | AC-007-2 | 036 | test_artifacts_api.py::test_tc037_batch_validation_rejects_all | ⏳ 待执行 |
-| TC-038 | AC-007-3 | 015/036/038 | test_artifacts_service.py::test_tc038_duplicate_name_renamed；test_artifacts_api.py::test_tc038_duplicate_names_renamed | ⏳ 待执行 |
-| TC-039 | AC-007-2 | 012/036 | test_storage.py::test_tc039_path_traversal_rejected；test_artifacts_api.py::test_tc039_traversal_rejected_via_api | ⏳ 待执行 |
-| TC-040 | AC-007-1 | 012/036 | test_storage.py::test_tc040_storage_cleanup_on_failure；test_artifacts_api.py::test_tc040_disk_failure_returns_507 | ⏳ 待执行 |
-| TC-041 | AC-005-1 | 016/039/040 | test_ai_gateway.py::test_tc041_success_records_call；test_calls_api.py::test_tc041_api_call_success | ⏳ 待执行 |
-| TC-042 | AC-005-2 | 016/017/039 | test_ai_gateway.py::test_tc042_upstream_failure_recorded；test_ai_adapters.py::test_tc042_adapter_error_mapping；test_calls_api.py::test_tc042_api_call_failure | ⏳ 待执行 |
-| TC-043 | AC-005-3 | 039 | test_calls_api.py::test_tc043_precondition_rejections_no_record | ⏳ 待执行 |
-| TC-044 | AC-005-4 | 034/039/040 | test_calls_api.py::test_tc044_call_event_payload | ⏳ 待执行 |
-| TC-045 | AC-005-5 | 016/039/047 | test_ai_gateway.py::test_tc045_retry_then_timeout / test_tc045_cancellation_finalizes_record；test_calls_api.py::test_tc045_api_retry_and_timeout | ⏳ 待执行 |
-| TC-046 | AC-010-1 | 042/043 | test_calls_query.py::test_tc046_query_calls_ordering | ⏳ 待执行 |
-| TC-047 | AC-010-2 | 042/043 | test_calls_query.py::test_tc047_failed_call_detail | ⏳ 待执行 |
-| TC-048 | AC-010-3 | 042/043 | test_calls_query.py::test_tc048_empty_result_not_error | ⏳ 待执行 |
-| TC-049 | AC-005-1 | 013/047 | test_startup.py::test_tc049_startup_merges_running_calls / test_tc049_restart_merges_running | ⏳ 待执行 |
-| TC-050 | AC-005-2 | 025/039 | test_providers_service.py::test_tc050_credential_decrypt_failure_no_record；test_calls_api.py::test_tc050_api_credential_unavailable | ⏳ 待执行 |
-| TC-051 | AC-001-1 | 003/044 | test_entrances.py::test_tc051_entrances_has_six_items；test_entrances_api.py::test_tc051_api_entrances_six | ⏳ 待执行 |
-| TC-052 | AC-001-2 | 044 | test_entrances_api.py::test_tc052_spa_fallback_entrance_route | ⏳ 待执行 |
-| TC-053 | AC-001-2 | 044 | test_entrances_api.py::test_tc053_unknown_entrance_rejected | ⏳ 待执行 |
-| TC-054 | AC-002-1 | 045 | test_entrances_api.py::test_tc054_placeholder_metadata | ⏳ 待执行 |
-| TC-055 | AC-002-2 | 045 | test_entrances_api.py::test_tc055_placeholder_has_no_side_effects | ⏳ 待执行 |
-| TC-056 | AC-002-3 | 003/045 | test_entrances.py::test_tc056_entrance_status_is_config_driven；test_entrances_api.py::test_tc056_entrance_status_switch | ⏳ 待执行 |
-| TC-057 | AC-TECH-1 | 002/014/015/016 | test_config.py::test_tc057_frozen_settings_contract；test_sessions_service.py::test_tc057_frozen_session_signatures；test_artifacts_service.py::test_tc057_frozen_artifact_signature；test_ai_gateway.py::test_tc057_frozen_gateway_signature | ⏳ 待执行 |
-| TC-058 | AC-TECH-2 | 007/008/009/010/018 | test_engine.py::test_tc058_engine_creation_both_dialects；test_db_migrations.py::test_tc058_models_match_schema_metadata / test_tc058_migrate_empty_db_to_head | ⏳ 待执行 |
-| TC-059 | AC-TECH-2 | 009/010/018 | test_db_migrations.py::test_tc059_constraints_on_test_database | ⏳ 待执行 |
-| TC-060 | AC-TECH-3 | 011 | test_api_skeleton.py::test_tc060_error_envelope_and_cursor | ⏳ 待执行 |
-| TC-061 | AC-TECH-3 | 011/020 | test_api_skeleton.py::test_tc061_origin_check_rejects_cross_site | ⏳ 待执行 |
-| TC-062 | AC-TECH-4 | 041 | test_batch_b_smoke.py::test_tc062_batch_b_minimal_loop | ⏳ 待执行 |
-| TC-063 | AC-TECH-6 | 006 | test_redaction.py::test_tc063_logs_and_responses_never_contain_secrets | ⏳ 待执行 |
-| TC-064 | AC-TECH-2 | 051/055 | test_db_migrations.py::test_tc064_migration_0006_injection_columns / test_tc064_migration_order_before_knowledge_base | ⏳ 待执行 |
-| TC-065 | AC-005-1 | 052 | test_ai_gateway_injection.py::test_tc065_no_injection_preserves_baseline | ⏳ 待执行 |
-| TC-066 | AC-005-1 | 052 | test_ai_gateway_injection.py::test_tc066_injection_persisted_and_survives_failure | ⏳ 待执行 |
-| TC-067 | AC-010-2 | 052 | test_calls_api.py::test_tc067_knowledge_injection_serialization | ⏳ 待执行 |
-| TC-068 | AC-TECH-3 | 053/055 | test_sessions_ai_complete.py::test_tc068_invalid_entries_require_confirmation；test_knowledge_contract.py::test_tc068_preparer_contract | ⏳ 待执行 |
-| TC-069 | AC-TECH-3 | 053 | test_sessions_ai_complete.py::test_tc069_confirmed_injection_and_limits | ⏳ 待执行 |
-| TC-070 | AC-009-3 / AC-010-2 | 054 | test_sessions_api.py::test_tc070_knowledge_injection_timeline_payload；Vitest KnowledgeInjectionEventCard.test.tsx（标题带 TC-070） | ⏳ 待执行 |
-| TC-071 | AC-TECH-2 / AC-TECH-3（RISK-011；无独立功能 AC） | 011 | test_db_error_mapping.py::test_tc071_db_error_mapping_is_dialect_portable | ✅ passed（2026-11-18 13:04:22） |
+| TC-001 | AC-011-1 | 019/020/021 | test_auth_service.py::test_tc001_unauthorized_without_session；test_auth_api.py::test_tc001_api_401_and_html_redirect | ✅ passed |
+| TC-002 | AC-011-2 | 005/019/020 | test_password.py::test_tc002_password_verify_contract；test_auth_service.py::test_tc002_login_issues_token_hash_only | ✅ passed |
+| TC-003 | AC-011-3 | 019 | test_auth_service.py::test_tc003_wrong_password_uniform_error | ✅ passed |
+| TC-004 | AC-011-4 | 019 | test_auth_service.py::test_tc004_lock_after_five_failures | ✅ passed |
+| TC-005 | AC-011-4 | 019 | test_auth_service.py::test_tc005_concurrent_failures_counted | ✅ passed |
+| TC-006 | AC-011-5 | 019 | test_auth_service.py::test_tc006_idle_expiry_and_refresh | ✅ passed |
+| TC-007 | AC-011-6 | 019/020 | test_auth_service.py::test_tc007_logout_revokes_token | ✅ passed |
+| TC-008 | AC-011-7 | 020/021 | test_auth_api.py::test_tc008_cookie_attributes | ✅ passed |
+| TC-009 | AC-011-2 | 002 | test_config.py::test_tc009_missing_admin_password_refuses_start | ✅ passed |
+| TC-010 | AC-011-1 | 020/021 | test_auth_api.py::test_tc010_login_next_is_internal_only | ✅ passed |
+| TC-011 | AC-011-5 | 020 | test_auth_api.py::test_tc011_expired_session_redirects | ✅ passed |
+| TC-012 | AC-011-1 | 020 | test_auth_api.py::test_tc012_next_rejects_external_url | ✅ passed |
+| TC-013 | AC-008-1 | 022/023/024 | test_projects_service.py::test_tc013_create_project_and_duplicate；test_projects_api.py::test_tc013_api_create_and_conflict | ✅ passed |
+| TC-014 | AC-008-2 | 022/023/024 | test_projects_service.py::test_tc014_update_reflects_and_touches；test_projects_api.py::test_tc014_api_patch | ✅ passed |
+| TC-015 | AC-008-3 | 023 | test_projects_api.py::test_tc015_session_requires_project | ✅ passed |
+| TC-016 | AC-008-1 | 022/023/024 | test_projects_service.py::test_tc016_name_validation；test_projects_api.py::test_tc016_api_validation_fields | ✅ passed |
+| TC-017 | AC-003-1 | 004/025/026/028 | test_crypto.py::test_tc017_crypto_roundtrip_and_tamper；test_providers_service.py::test_tc017_provider_key_encrypted_and_masked；test_providers_api.py::test_tc017_api_never_returns_secret | ✅ passed |
+| TC-018 | AC-003-2 | 025/026/028 | test_providers_service.py::test_tc018_provider_validation；test_providers_api.py::test_tc018_api_validation | ✅ passed |
+| TC-019 | AC-003-3 | 017/025/026 | test_ai_adapters.py::test_tc019_connection_test_timeout；test_providers_service.py::test_tc019_connection_test_timeout；test_providers_api.py::test_tc019_api_connection_test | ✅ passed |
+| TC-020 | AC-003-4 | 025 | test_providers_service.py::test_tc020_disabled_provider_blocks_models | ✅ passed |
+| TC-021 | AC-003-3 | 017/025/026/028 | test_ai_adapters.py::test_tc021_connection_test_error_classification；test_providers_service.py::test_tc021_connection_test_error_codes；test_providers_api.py::test_tc021_api_connection_test_failure | ✅ passed |
+| TC-022 | AC-003-1 | 025/026 | test_providers_service.py::test_tc022_update_key_blank_keeps；test_providers_api.py::test_tc022_api_patch_key | ✅ passed |
+| TC-023 | AC-004-1 | 027/029 | test_models.py::test_tc023_create_model_and_ranges | ✅ passed |
+| TC-024 | AC-004-2 | 027/029 | test_models.py::test_tc024_duplicate_model_name | ✅ passed |
+| TC-025 | AC-004-3 | 027/040 | test_models.py::test_tc025_default_params_used_and_override_not_persisted | ✅ passed |
+| TC-026 | AC-009-1 | 014/030/031/033 | test_sessions_service.py::test_tc026_create_session_contract / test_tc026_create_session；test_sessions_api.py::test_tc026_api_create_session | ✅ passed |
+| TC-027 | AC-009-2 | 030/031/033 | test_sessions_service.py::test_tc027_list_filters；test_sessions_api.py::test_tc027_api_filters | ✅ passed |
+| TC-028 | AC-009-3 | 030/031/034 | test_sessions_service.py::test_tc028_timeline_order；test_sessions_api.py::test_tc028_api_events_order | ✅ passed |
+| TC-029 | AC-009-4 | 030/031/032/033 | test_sessions_service.py::test_tc029_terminal_state_rejects；test_sessions_api.py::test_tc029_api_complete_idempotent；test_fail_session_hook.py::test_tc029_unhandled_error_marks_failed | ✅ passed |
+| TC-030 | AC-009-5 | 030/031/046 | test_sessions_service.py::test_tc030_delete_cascades；test_sessions_api.py::test_tc030_api_delete | ✅ passed |
+| TC-031 | AC-001-3 | 031/044 | test_sessions_api.py::test_tc031_recent_sessions_limit10；test_entrances_api.py::test_tc031_home_recent_sessions | ✅ passed |
+| TC-032 | AC-006-1 | 035/037 | test_inputs_api.py::test_tc032_append_text_event | ✅ passed |
+| TC-033 | AC-006-2 | 035/037 | test_inputs_api.py::test_tc033_empty_text_rejected | ✅ passed |
+| TC-034 | AC-006-3 | 035/037 | test_inputs_api.py::test_tc034_text_over_limit_rejected | ✅ passed |
+| TC-035 | AC-006-1 | 035 | test_inputs_api.py::test_tc035_updated_at_bumped | ✅ passed |
+| TC-036 | AC-007-1 | 015/036/038 | test_artifacts_service.py::test_tc036_save_upload_success；test_artifacts_api.py::test_tc036_upload_success_and_preview | ✅ passed |
+| TC-037 | AC-007-2 | 036 | test_artifacts_api.py::test_tc037_batch_validation_rejects_all | ✅ passed |
+| TC-038 | AC-007-3 | 015/036/038 | test_artifacts_service.py::test_tc038_duplicate_name_renamed；test_artifacts_api.py::test_tc038_duplicate_names_renamed | ✅ passed |
+| TC-039 | AC-007-2 | 012/036 | test_storage.py::test_tc039_path_traversal_rejected；test_artifacts_api.py::test_tc039_traversal_rejected_via_api | ✅ passed |
+| TC-040 | AC-007-1 | 012/036 | test_storage.py::test_tc040_storage_cleanup_on_failure；test_artifacts_api.py::test_tc040_disk_failure_returns_507 | ✅ passed |
+| TC-041 | AC-005-1 | 016/039/040 | test_ai_gateway.py::test_tc041_success_records_call；test_calls_api.py::test_tc041_api_call_success | ✅ passed |
+| TC-042 | AC-005-2 | 016/017/039 | test_ai_gateway.py::test_tc042_upstream_failure_recorded；test_ai_adapters.py::test_tc042_adapter_error_mapping；test_calls_api.py::test_tc042_api_call_failure | ✅ passed |
+| TC-043 | AC-005-3 | 039 | test_calls_api.py::test_tc043_precondition_rejections_no_record | ✅ passed |
+| TC-044 | AC-005-4 | 034/039/040 | test_calls_api.py::test_tc044_call_event_payload | ✅ passed |
+| TC-045 | AC-005-5 | 016/039/047 | test_ai_gateway.py::test_tc045_retry_then_timeout / test_tc045_cancellation_finalizes_record；test_calls_api.py::test_tc045_api_retry_and_timeout | ✅ passed |
+| TC-046 | AC-010-1 | 042/043 | test_calls_query.py::test_tc046_query_calls_ordering | ✅ passed |
+| TC-047 | AC-010-2 | 042/043 | test_calls_query.py::test_tc047_failed_call_detail | ✅ passed |
+| TC-048 | AC-010-3 | 042/043 | test_calls_query.py::test_tc048_empty_result_not_error | ✅ passed |
+| TC-049 | AC-005-1 | 013/047 | test_startup.py::test_tc049_startup_merges_running_calls / test_tc049_restart_merges_running | ✅ passed |
+| TC-050 | AC-005-2 | 025/039 | test_providers_service.py::test_tc050_credential_decrypt_failure_no_record；test_calls_api.py::test_tc050_api_credential_unavailable | ✅ passed |
+| TC-051 | AC-001-1 | 003/044 | test_entrances.py::test_tc051_entrances_has_six_items；test_entrances_api.py::test_tc051_api_entrances_six | ✅ passed |
+| TC-052 | AC-001-2 | 044 | test_entrances_api.py::test_tc052_spa_fallback_entrance_route | ✅ passed |
+| TC-053 | AC-001-2 | 044 | test_entrances_api.py::test_tc053_unknown_entrance_rejected | ✅ passed |
+| TC-054 | AC-002-1 | 045 | test_entrances_api.py::test_tc054_placeholder_metadata | ✅ passed |
+| TC-055 | AC-002-2 | 045 | test_entrances_api.py::test_tc055_placeholder_has_no_side_effects | ✅ passed |
+| TC-056 | AC-002-3 | 003/045 | test_entrances.py::test_tc056_entrance_status_is_config_driven；test_entrances_api.py::test_tc056_entrance_status_switch | ✅ passed |
+| TC-057 | AC-TECH-1 | 002/014/015/016 | test_config.py::test_tc057_frozen_settings_contract；test_sessions_service.py::test_tc057_frozen_session_signatures；test_artifacts_service.py::test_tc057_frozen_artifact_signature；test_ai_gateway.py::test_tc057_frozen_gateway_signature | ✅ passed |
+| TC-058 | AC-TECH-2 | 007/008/009/010/018 | test_engine.py::test_tc058_engine_creation_both_dialects；test_db_migrations.py::test_tc058_models_match_schema_metadata / test_tc058_migrate_empty_db_to_head | ✅ passed |
+| TC-059 | AC-TECH-2 | 009/010/018 | test_db_migrations.py::test_tc059_constraints_on_test_database | ✅ passed |
+| TC-060 | AC-TECH-3 | 011 | test_api_skeleton.py::test_tc060_error_envelope_and_cursor | ✅ passed |
+| TC-061 | AC-TECH-3 | 011/020 | test_api_skeleton.py::test_tc061_origin_check_rejects_cross_site | ✅ passed |
+| TC-062 | AC-TECH-4 | 041 | test_batch_b_smoke.py::test_tc062_batch_b_minimal_loop | ✅ passed |
+| TC-063 | AC-TECH-6 | 006 | test_redaction.py::test_tc063_logs_and_responses_never_contain_secrets | ✅ passed |
+| TC-064 | AC-TECH-2 | 051/055 | test_db_migrations.py::test_tc064_migration_0006_injection_columns / test_tc064_migration_order_before_knowledge_base | ✅ passed |
+| TC-065 | AC-005-1 | 052 | test_ai_gateway_injection.py::test_tc065_no_injection_preserves_baseline | ✅ passed |
+| TC-066 | AC-005-1 | 052 | test_ai_gateway_injection.py::test_tc066_injection_persisted_and_survives_failure | ✅ passed |
+| TC-067 | AC-010-2 | 052 | test_calls_api.py::test_tc067_knowledge_injection_serialization | ✅ passed |
+| TC-068 | AC-TECH-3 | 053/055 | test_sessions_ai_complete.py::test_tc068_invalid_entries_require_confirmation；test_knowledge_contract.py::test_tc068_preparer_contract | ✅ passed |
+| TC-069 | AC-TECH-3 | 053 | test_sessions_ai_complete.py::test_tc069_confirmed_injection_and_limits | ✅ passed |
+| TC-070 | AC-009-3 / AC-010-2 | 054 | test_sessions_api.py::test_tc070_knowledge_injection_timeline_payload；Vitest KnowledgeInjectionEventCard.test.tsx（标题带 TC-070） | ✅ passed |
+| TC-071 | AC-TECH-2 / AC-TECH-3（RISK-011；无独立功能 AC） | 011 | test_db_error_mapping.py::test_tc071_db_error_mapping_is_dialect_portable | ✅ passed |
 
 ### 覆盖统计
 
@@ -1358,7 +1359,10 @@
 | AC-TECH 覆盖 | 6/6（TC-057 ~ TC-064、TC-068、TC-071 覆盖 1/2/3/4/6；AC-TECH-5 由流程校验覆盖，Q-TV-01 已确认 A） |
 | TC 定义与 pytest 落点 | 71/71（100%），每个 TC 至少一个 `test_tcNNN_*` |
 | 非 `[no-test]` 任务映射 | 50/50（TASK-TD-002 ~ 017、019 ~ 047、051 ~ 055；见 `tc-map.json`） |
-| Critical 风险覆盖 | RISK-001/002/005/010/011/012 各 ≥2 TC（RISK-011 含 TC-064 迁移顺序与 TC-071 方言映射）；RISK-009 由范围约束覆盖 |
+| Critical 风险覆盖 | RISK-001/002/005/010/011/012 各 ≥2 TC 且 pytest 通过（RISK-011 含 TC-064 迁移顺序与 TC-071 方言映射）；RISK-009 由范围约束覆盖 |
+| TC pytest 执行 | 71/71 通过（`aw verify` 2026-11-18 15:32:49） |
+| Vitest 第二实现 | 本地复核 15 files / 58 passed（`cd web && npm run test -- --run`，2026-11-18 15:34:45）；不进 `.aw` 证据；CI `frontend-tests` 尚未 push |
+| 人工项 | M-01～M-07 未执行 |
 
 ## 需求覆盖率报告（Round-Trip）
 
@@ -1367,25 +1371,25 @@
 1. 读 `requirements-analysis/raw-requirements.md`：原文只有一句需求 + 6 个入口。
 2. 原始需求逐项对照 `requirements-analysis/design.md` / `docs/context.md` 的 US/AC：登录、提供商/模型、统一调用、文本/文件输入、项目上下文、制品、调用记录等基座能力来自后续 answers 确认的扩展，不属于原始一句话，但已纳入本 spec 的 AC。
 3. 每条 AC 有 TC：42 条功能 AC + 6 条 AC-TECH 均有映射（AC-TECH-5 走流程）。
-4. 每条 TC 有执行结果：当前全部 `待执行`，开发完成后由 `aw verify` 回填。
+4. 每条 TC 有执行结果：71/71 为 `通过`（来源 `evidence/verify.json` 的 `tcs`；pytest 126 passed / 0 failed / 0 skipped）。人工项 M-01～M-07 不是 TC，未执行，保持未验证。
 5. 覆盖率 = 有对应 TC 的需求数 / 总需求数。
 
 ### 原始需求 → AC → TC 对照
 
 | 原始需求（raw-requirements.md） | 关联 AC | 关联 TC | 执行结果 | 覆盖状态 |
 |--------------------------------|---------|---------|---------|---------|
-| 搭建 AI 测试工作台（Web 应用基座） | AC-011-1 ~ 7、AC-001-1 ~ 3、AC-008-1 ~ 3、AC-009-1 ~ 5 | TC-001 ~ TC-016、TC-026 ~ TC-035、TC-051 ~ TC-056 | 待执行 | ⏳ pending |
-| 入口：用例库（原「生成测试用例」） | AC-001-1、AC-001-2、AC-002-1 ~ 3 | TC-051 ~ TC-056 | 待执行 | ⏳ pending |
-| 入口：分析 bug | AC-001-1、AC-001-2、AC-002-1 ~ 3 | TC-051 ~ TC-056 | 待执行 | ⏳ pending |
-| 入口：排查日志 | AC-001-1、AC-001-2、AC-002-1 ~ 3 | TC-051 ~ TC-056 | 待执行 | ⏳ pending |
-| 入口：分析 SQL | AC-001-1、AC-001-2、AC-002-1 ~ 3 | TC-051 ~ TC-056 | 待执行 | ⏳ pending |
-| 入口：生成回归清单 | AC-001-1、AC-001-2、AC-002-1 ~ 3 | TC-051 ~ TC-056 | 待执行 | ⏳ pending |
-| 入口：生成测试报告 | AC-001-1、AC-001-2、AC-002-1 ~ 3 | TC-051 ~ TC-056 | 待执行 | ⏳ pending |
-| 扩展（answers 确认）：AI 提供商与模型、统一调用与记录 | AC-003-1 ~ 4、AC-004-1 ~ 3、AC-005-1 ~ 5、AC-010-1 ~ 3 | TC-017 ~ TC-025、TC-041 ~ TC-050 | 待执行 | ⏳ pending |
-| 扩展（answers 确认）：文本/文件输入与制品 | AC-006-1 ~ 3、AC-007-1 ~ 3 | TC-032 ~ TC-040 | 待执行 | ⏳ pending |
-| 扩展（answers 确认）：单用户登录与访问控制 | AC-011-1 ~ 7 | TC-001 ~ TC-012 | 待执行 | ⏳ pending |
-| 扩展（A101 / A102 / A103 B，2026-11-18）：知识库注入留痕、唯一调用入口与 `kbDeleted` | AC-005-1、AC-009-3、AC-010-2、AC-TECH-2、AC-TECH-3 | TC-064 ~ TC-070 | 待执行 | ⏳ pending |
-| 技术验收（tech-tasks） | AC-TECH-1 ~ 6 | TC-057 ~ TC-064、TC-068、TC-071（AC-TECH-5 流程） | TC-071 通过，其余待执行 | ⏳ pending |
+| 搭建 AI 测试工作台（Web 应用基座） | AC-011-1 ~ 7、AC-001-1 ~ 3、AC-008-1 ~ 3、AC-009-1 ~ 5 | TC-001 ~ TC-016、TC-026 ~ TC-035、TC-051 ~ TC-056 | 通过 | ✅ passed |
+| 入口：用例库（原「生成测试用例」） | AC-001-1、AC-001-2、AC-002-1 ~ 3 | TC-051 ~ TC-056 | 通过 | ✅ passed |
+| 入口：分析 bug | AC-001-1、AC-001-2、AC-002-1 ~ 3 | TC-051 ~ TC-056 | 通过 | ✅ passed |
+| 入口：排查日志 | AC-001-1、AC-001-2、AC-002-1 ~ 3 | TC-051 ~ TC-056 | 通过 | ✅ passed |
+| 入口：分析 SQL | AC-001-1、AC-001-2、AC-002-1 ~ 3 | TC-051 ~ TC-056 | 通过 | ✅ passed |
+| 入口：生成回归清单 | AC-001-1、AC-001-2、AC-002-1 ~ 3 | TC-051 ~ TC-056 | 通过 | ✅ passed |
+| 入口：生成测试报告 | AC-001-1、AC-001-2、AC-002-1 ~ 3 | TC-051 ~ TC-056 | 通过 | ✅ passed |
+| 扩展（answers 确认）：AI 提供商与模型、统一调用与记录 | AC-003-1 ~ 4、AC-004-1 ~ 3、AC-005-1 ~ 5、AC-010-1 ~ 3 | TC-017 ~ TC-025、TC-041 ~ TC-050 | 通过 | ✅ passed |
+| 扩展（answers 确认）：文本/文件输入与制品 | AC-006-1 ~ 3、AC-007-1 ~ 3 | TC-032 ~ TC-040 | 通过 | ✅ passed |
+| 扩展（answers 确认）：单用户登录与访问控制 | AC-011-1 ~ 7 | TC-001 ~ TC-012 | 通过 | ✅ passed |
+| 扩展（A101 / A102 / A103 B，2026-11-18）：知识库注入留痕、唯一调用入口与 `kbDeleted` | AC-005-1、AC-009-3、AC-010-2、AC-TECH-2、AC-TECH-3 | TC-064 ~ TC-070 | 通过 | ✅ passed |
+| 技术验收（tech-tasks） | AC-TECH-1 ~ 6 | TC-057 ~ TC-064、TC-068、TC-071（AC-TECH-5 流程） | 通过 | ✅ passed |
 
 ### 覆盖率汇总
 
@@ -1395,111 +1399,116 @@
 | 功能 AC → TC 覆盖 | 42/42（100%） |
 | AC-TECH → TC 覆盖 | 6/6（100%，其中 AC-TECH-5 为流程覆盖） |
 | TC 定义 → pytest 落点 | 71/71（100%） |
-| TC 执行通过率 | 1/71 已回填通过（TC-071，`aw verify` 2026-11-18 13:04:22）；最近一次 verify 报告另有 23 个 TC 为 passed、尚未回填；其余为 `待执行` |
-| 测试问题清单 | 18 项（SEC 5 / DATA 6 / UX 4 / PERF 3），其中 1 项为 TC-071 暴露的错误码契约差异（DATA-006），其余为待验证风险 |
+| TC 执行通过率 | 71/71 = 100%（`aw verify` 2026-11-18 15:32:49，head `6de8b57`，pytest 126 passed / 0 failed / 0 skipped；`tcs` 中 TC-001～TC-071 全部 `passed`） |
+| 人工项 | M-01～M-07 均未执行，保持未验证（不计入 TC 通过率） |
+| 测试问题清单 | 18 项原风险 + 4 项残留：SEC 5 条 pytest 否定；DATA-001～005 pytest 否定；DATA-006 误报已关闭；UX/PERF pytest 路径否定、视觉/长调用未验证；DATA-007 / PROC-001 / OPS-001 / CI-001 见问题清单 |
 
 ## 执行结果
 
-> 本表是 TC 结果的唯一来源。当前开发未开始，全部为 `待执行`；开发完成后由 `aw verify` 解析 pytest 报告回填「通过/失败」，只有 pytest 报告里没有、且只能人工执行的 TC 才人工回填。失败原因写在「备注」列，用例下不写状态字段。
+> 本表是 TC 结果的唯一来源。71 个 TC 均出现在 `evidence/verify.json` 的 `tcs` 中且为 `passed`，按报告回填「通过」。pytest 报告里没有的只有人工项 M-01～M-07（不是 TC），未执行，保持未验证。失败原因写在「备注」列，用例下不写状态字段。
 
 | TC ID | 用例标题 | 测试类型 | 执行状态 | 执行时间 | 备注 |
 |-------|---------|---------|---------|---------|------|
-| TC-001 | 未登录访问受保护资源被拦截 | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-002 | 正确口令登录并只存令牌哈希 | 单元 + 集成 | 待执行 | — | 待开发完成 |
-| TC-003 | 错误口令统一提示且日志无原文 | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-004 | 连续失败 5 次锁定 5 分钟、成功清零 | 集成·服务 | 待执行 | — | 待开发完成 |
-| TC-005 | 并发失败计数不丢 | 集成·服务 | 待执行 | — | 待开发完成 |
-| TC-006 | 空闲 8 小时失效、请求刷新 lastSeenAt | 集成·服务 | 待执行 | — | 待开发完成 |
-| TC-007 | 登出立即吊销令牌 | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-008 | Cookie 属性 HttpOnly/SameSite/Secure | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-009 | AW_ADMIN_PASSWORD 缺失或空拒绝启动 | 单元 | 待执行 | — | 待开发完成 |
-| TC-010 | HTML 导航 302 并保留站内 next | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-011 | 空闲过期后 API 401 与页面跳转 | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-012 | next 只接受站内路径 | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-013 | 创建项目与重名 409 | 集成·服务/接口 | 待执行 | — | 待开发完成 |
-| TC-014 | 编辑项目回显与 updatedAt 刷新 | 集成·服务/接口 | 待执行 | — | 待开发完成 |
-| TC-015 | 无项目不可创建会话 | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-016 | 项目名称与仓库地址逐字段校验 | 集成·服务/接口 | 待执行 | — | 待开发完成 |
-| TC-017 | 密钥加密落库、掩码展示、响应无密钥 | 单元 + 集成 | 待执行 | — | 待开发完成 |
-| TC-018 | 提供商必填与 baseURL 校验 | 集成·服务/接口 | 待执行 | — | 待开发完成 |
-| TC-019 | 连接测试 10s 超时且无副作用 | 集成·服务 | 待执行 | — | 待开发完成 |
-| TC-020 | 停用提供商后模型不可选、历史可查 | 集成·服务 | 待执行 | — | 待开发完成 |
-| TC-021 | 连接测试失败分类 | 集成·服务/接口 | 待执行 | — | 待开发完成 |
-| TC-022 | 空密钥不改、新值重新加密 | 集成·服务/接口 | 待执行 | — | 待开发完成 |
-| TC-023 | 新增模型与参数范围 | 集成·服务/接口 | 待执行 | — | 待开发完成 |
-| TC-024 | 同提供商同名模型 409 | 集成·服务/接口 | 待执行 | — | 待开发完成 |
-| TC-025 | 默认参数生效、本次覆盖不回写 | 集成·服务 | 待执行 | — | 待开发完成 |
-| TC-026 | 创建会话、状态进行中、置顶 | 契约 + 集成 | 待执行 | — | 待开发完成 |
-| TC-027 | 项目/状态筛选与倒序、游标分页 | 集成·服务/接口 | 待执行 | — | 待开发完成 |
-| TC-028 | 时间线按发生顺序 | 集成·服务/接口 | 待执行 | — | 待开发完成 |
-| TC-029 | 完成/失败终态拒绝写入 | 集成·服务/接口 | 待执行 | — | 待开发完成 |
-| TC-030 | 删除会话级联清理且不影响其他会话 | 集成·服务/接口 | 待执行 | — | 待开发完成 |
-| TC-031 | 首页最近 10 条会话与空态 | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-032 | 提交文本追加 input_text 事件 | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-033 | 空或纯空白正文拒绝 | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-034 | 超过 200,000 字符拒绝并给出字数 | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-035 | 追加事件刷新会话 updated_at | 集成·服务 | 待执行 | — | 待开发完成 |
-| TC-036 | 上传成功、事件、元数据与预览下载 | 集成·服务/接口 | 待执行 | — | 待开发完成 |
-| TC-037 | 白名单/大小/数量整批拒绝 | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-038 | 同名自动改名保留两份 | 集成·服务/接口 | 待执行 | — | 待开发完成 |
-| TC-039 | 路径穿越与符号链接拒绝 | 单元 + 集成 | 待执行 | — | 待开发完成 |
-| TC-040 | 磁盘失败 507、无残留与无 DB 行 | 单元 + 集成 | 待执行 | — | 待开发完成 |
-| TC-041 | 成功调用返回文本与 callId、写记录与事件 | 集成·服务/接口 | 待执行 | — | 待开发完成 |
-| TC-042 | 上游失败记录并可读错误 | 集成·服务/接口 | 待执行 | — | 待开发完成 |
-| TC-043 | 前置拒绝不产生调用记录 | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-044 | 时间线与详情展示摘要且无密钥 | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-045 | 重试 1 次、超时不重试、取消终结 | 集成·服务/接口 | 待执行 | — | 待开发完成 |
-| TC-046 | 按会话/项目/时间查询倒序 | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-047 | 失败详情含错误与重试次数、无密钥 | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-048 | 无匹配返回空列表而非错误 | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-049 | 启动归并 running → failed(interrupted) | 集成·服务 | 待执行 | — | 待开发完成 |
-| TC-050 | 凭据解密失败 502 且无记录 | 集成·服务/接口 | 待执行 | — | 待开发完成 |
-| TC-051 | 6 个入口含名称与用途 | 单元 + 集成 | 待执行 | — | 待开发完成 |
-| TC-052 | 入口路由刷新直达（SPA fallback） | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-053 | 未知入口 key 拒绝 | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-054 | 占位页说明所属域、状态与返回入口 | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-055 | 占位页无副作用 | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-056 | 入口 planned/live 由配置驱动 | 单元 + 集成 | 待执行 | — | 待开发完成 |
-| TC-057 | 四个冻结签名契约与配置契约 | 契约 | 待执行 | — | 待开发完成 |
-| TC-058 | SQLite 空库迁移到 head 且模型一致 | 集成·迁移 | 待执行 | — | 待开发完成 |
-| TC-059 | MySQL 关键约束复验 | 集成·迁移 | 待执行 | — | 本地 SQLite 必跑；MySQL 证据见 CI job 2 |
-| TC-060 | 错误体、requestId 与游标分页契约 | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-061 | Origin/Referer 校验 403 | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-062 | 批次 B 最小闭环冒烟 | 集成·冒烟 | 待执行 | — | 待开发完成 |
-| TC-063 | 日志、响应与记录中无密钥与口令 | 单元 + 集成 | 待执行 | — | 待开发完成 |
-| TC-064 | 迁移 0006 四列与 CHECK，先于 knowledge-base 0007 | 集成·迁移 | 待执行 | — | 待开发完成 |
-| TC-065 | injection=None 时记录与事件与扩展前一致 | 集成·服务 | 待执行 | — | 待开发完成 |
-| TC-066 | 注入时写四列与事件，失败/超时保留 | 集成·服务 | 待执行 | — | 待开发完成 |
-| TC-067 | 序列化 knowledgeInjection 与 kbDeleted | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-068 | 失效未精确确认 409 且无记录/无外部请求 | 集成·接口/契约 | 待执行 | — | 待开发完成 |
-| TC-069 | 精确确认后调用；空集 409、超预算 400 | 集成·接口 | 待执行 | — | 待开发完成 |
-| TC-070 | 时间线与调用详情展示注入快照 | 集成·接口 + Vitest | 待执行 | — | 待开发完成；UI 渲染由 CI job 3 提供证据 |
-| TC-071 | 数据库约束错误映射的方言可移植性 | 集成·接口 | 通过 | 2026-11-18 13:04:22 | `aw verify` 通过（head eef4da4）；源于 CI `mysql-tests` 抓出的双方言差异 |
+| TC-001 | 未登录访问受保护资源被拦截 | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-002 | 正确口令登录并只存令牌哈希 | 单元 + 集成 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-003 | 错误口令统一提示且日志无原文 | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-004 | 连续失败 5 次锁定 5 分钟、成功清零 | 集成·服务 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-005 | 并发失败计数不丢 | 集成·服务 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-006 | 空闲 8 小时失效、请求刷新 lastSeenAt | 集成·服务 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-007 | 登出立即吊销令牌 | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-008 | Cookie 属性 HttpOnly/SameSite/Secure | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-009 | AW_ADMIN_PASSWORD 缺失或空拒绝启动 | 单元 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-010 | HTML 导航 302 并保留站内 next | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-011 | 空闲过期后 API 401 与页面跳转 | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-012 | next 只接受站内路径 | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-013 | 创建项目与重名 409 | 集成·服务/接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-014 | 编辑项目回显与 updatedAt 刷新 | 集成·服务/接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-015 | 无项目不可创建会话 | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-016 | 项目名称与仓库地址逐字段校验 | 集成·服务/接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-017 | 密钥加密落库、掩码展示、响应无密钥 | 单元 + 集成 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-018 | 提供商必填与 baseURL 校验 | 集成·服务/接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-019 | 连接测试 10s 超时且无副作用 | 集成·服务 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-020 | 停用提供商后模型不可选、历史可查 | 集成·服务 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-021 | 连接测试失败分类 | 集成·服务/接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-022 | 空密钥不改、新值重新加密 | 集成·服务/接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-023 | 新增模型与参数范围 | 集成·服务/接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-024 | 同提供商同名模型 409 | 集成·服务/接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-025 | 默认参数生效、本次覆盖不回写 | 集成·服务 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-026 | 创建会话、状态进行中、置顶 | 契约 + 集成 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-027 | 项目/状态筛选与倒序、游标分页 | 集成·服务/接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-028 | 时间线按发生顺序 | 集成·服务/接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-029 | 完成/失败终态拒绝写入 | 集成·服务/接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-030 | 删除会话级联清理且不影响其他会话 | 集成·服务/接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-031 | 首页最近 10 条会话与空态 | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-032 | 提交文本追加 input_text 事件 | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-033 | 空或纯空白正文拒绝 | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-034 | 超过 200,000 字符拒绝并给出字数 | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-035 | 追加事件刷新会话 updated_at | 集成·服务 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-036 | 上传成功、事件、元数据与预览下载 | 集成·服务/接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-037 | 白名单/大小/数量整批拒绝 | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-038 | 同名自动改名保留两份 | 集成·服务/接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-039 | 路径穿越与符号链接拒绝 | 单元 + 集成 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-040 | 磁盘失败 507、无残留与无 DB 行 | 单元 + 集成 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-041 | 成功调用返回文本与 callId、写记录与事件 | 集成·服务/接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-042 | 上游失败记录并可读错误 | 集成·服务/接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-043 | 前置拒绝不产生调用记录 | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-044 | 时间线与详情展示摘要且无密钥 | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-045 | 重试 1 次、超时不重试、取消终结 | 集成·服务/接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-046 | 按会话/项目/时间查询倒序 | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-047 | 失败详情含错误与重试次数、无密钥 | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-048 | 无匹配返回空列表而非错误 | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-049 | 启动归并 running → failed(interrupted) | 集成·服务 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-050 | 凭据解密失败 502 且无记录 | 集成·服务/接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-051 | 6 个入口含名称与用途 | 单元 + 集成 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-052 | 入口路由刷新直达（SPA fallback） | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-053 | 未知入口 key 拒绝 | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-054 | 占位页说明所属域、状态与返回入口 | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-055 | 占位页无副作用 | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-056 | 入口 planned/live 由配置驱动 | 单元 + 集成 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-057 | 四个冻结签名契约与配置契约 | 契约 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-058 | SQLite 空库迁移到 head 且模型一致 | 集成·迁移 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-059 | MySQL 关键约束复验 | 集成·迁移 | 通过 | 2026-11-18 15:32:49 | 本地 SQLite 随 `aw verify` 通过。MySQL CI 仅覆盖 PR #1 head `6de8b57`（run 44245123301，mysql-tests success）；当前工作区含未 push 的注入/前端改动，MySQL 未复跑 |
+| TC-060 | 错误体、requestId 与游标分页契约 | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-061 | Origin/Referer 校验 403 | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-062 | 批次 B 最小闭环冒烟 | 集成·冒烟 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-063 | 日志、响应与记录中无密钥与口令 | 单元 + 集成 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-064 | 迁移 0006 四列与 CHECK，先于 knowledge-base 0007 | 集成·迁移 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-065 | injection=None 时记录与事件与扩展前一致 | 集成·服务 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-066 | 注入时写四列与事件，失败/超时保留 | 集成·服务 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-067 | 序列化 knowledgeInjection 与 kbDeleted | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-068 | 失效未精确确认 409 且无记录/无外部请求 | 集成·接口/契约 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-069 | 精确确认后调用；空集 409、超预算 400 | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0） |
+| TC-070 | 时间线与调用详情展示注入快照 | 集成·接口 + Vitest | 通过 | 2026-11-18 15:32:49 | pytest 权威结果通过。Vitest 本地 `cd web && npm run test -- --run`（2026-11-18 15:34:45）15 files / 58 passed，含 KnowledgeInjectionEventCard TC-070；不进 `aw verify`。视觉/双主题见 M-07，未执行 |
+| TC-071 | 数据库约束错误映射的方言可移植性 | 集成·接口 | 通过 | 2026-11-18 15:32:49 | `aw verify` passed（head 6de8b57，pytest 126/0/0）。方言桩测本地通过；真实 MySQL 驱动错误码以 CI job 2 为准，当前仅 6de8b57 绿 |
 
 ## 测试问题清单（ISSUE LIST）
 
-> 开发未开始，以下为「待验证风险项」：每项必须由对应 TC 的结果确认或否定，不能提前写成缺陷，也不能当成已通过。
+> MODE=verify 回填：pytest 路径按 `aw verify` 结论；人工路径未跑的保持未验证，不写成通过。结论列取值：否定（风险未复现）/ 确认（缺陷）/ 误报已关闭 / 未验证。
 
-| 编号 | 分类 | 问题描述 | 关联 TC | 验证方式 |
-|------|------|---------|---------|---------|
-| SEC-001 | 🔴 安全 | 上游错误体或 SDK 异常可能回显 `Authorization`/密钥 | TC-017、TC-042、TC-063 | 断言响应、日志、记录中无原文 |
-| SEC-002 | 🔴 安全 | 上传文件名或制品路径穿越、符号链接读到会话目录外 | TC-037、TC-039 | 单元 + 接口构造恶意路径 |
-| SEC-003 | 🔴 安全 | 登录绕过、`next` 开放重定向、代理下 IP 识别错误导致锁错人 | TC-001、TC-010、TC-012、TC-061 | 无 Cookie/伪造 next/Origin |
-| SEC-004 | 🔴 安全 | 口令、令牌、密钥进入响应、日志或前端存储 | TC-003、TC-008、TC-063 | caplog + 响应扫描 |
-| SEC-005 | 🔴 安全 | CSRF：缺失或错误 Origin 的写请求被执行 | TC-061 | 三类 Origin 断言 |
-| DATA-001 | 🟡 数据 | 并发失败计数丢更新或 SQLite 写锁泄漏为 500 | TC-005 | `asyncio.gather` 并发 |
-| DATA-002 | 🟡 数据 | 删除会话留下文件或行残留、误删其他会话 | TC-030 | 四类行 + 目录核查 |
-| DATA-003 | 🟡 数据 | 200,000 字符、10MB、10 个、同名校验边界偏差或静默截断 | TC-034、TC-037、TC-038 | 精确边界值 |
-| DATA-004 | 🟡 数据 | 终态会话仍接受写入或标记完成不写事件 | TC-029、TC-035 | 状态流转 + 事件断言 |
-| DATA-005 | 🟡 数据 | 注入四列与快照/正文不一致，或失败后留痕被回滚 | TC-064、TC-066 | 列不变量 + CHECK + 失败路径断言 |
-| DATA-006 | 🟡 数据 | DB 约束违例 400 的 `code` 实现为 `validation_error`，`api-spec.md` 错误码表规定为 `validation_error`；两者需对齐（改实现或补 spec） | TC-071、TC-060 | 对照错误码表 + TC-071 断言（当前通过值即实现值） |
-| UX-001 | 🟢 体验 | 空态与错误态混淆、筛选无结果被当成错误 | TC-027、TC-031、TC-048 | 接口空列表 + Vitest 空态 |
-| UX-002 | 🟢 体验 | 锁定倒计时、过期提示与草稿恢复不符设计 | TC-004、TC-011、M-01/M-02 | 人工 + Playwright |
-| UX-003 | 🟢 体验 | 调用中可重复提交、失败后提示不可读 | TC-041、M-06 | Vitest + 人工 |
-| PERF-001 | 🔵 性能 | 分页上限、游标稳定性、超大列表响应体 | TC-027、TC-028、TC-046、TC-060 | 边界分页断言 |
-| PERF-002 | 🔵 性能 | 并发信号量排队计入 latency 或调用中占满连接 | TC-045、TC-049 | 假适配器 + 计数断言 |
-| PERF-003 | 🔵 性能 | 注入后正文超过 200,000 字符未拒绝，或预算计算把注入块漏算 | TC-069 | 预算边界 199999/200000/200001 |
-| UX-004 | 🟢 体验 | 知识库已删除仍显示为正常引用，误导用户 | TC-067、TC-070 | `kbDeleted` 三态 + 前端文案 |
+| 编号 | 分类 | 问题描述 | 关联 TC | 验证方式 | 结论 |
+|------|------|---------|---------|---------|------|
+| SEC-001 | 🔴 安全 | 上游错误体或 SDK 异常可能回显 `Authorization`/密钥 | TC-017、TC-042、TC-063 | 断言响应、日志、记录中无原文 | 否定（pytest 通过） |
+| SEC-002 | 🔴 安全 | 上传文件名或制品路径穿越、符号链接读到会话目录外 | TC-037、TC-039 | 单元 + 接口构造恶意路径 | 否定（pytest 通过） |
+| SEC-003 | 🔴 安全 | 登录绕过、`next` 开放重定向、代理下 IP 识别错误导致锁错人 | TC-001、TC-010、TC-012、TC-061 | 无 Cookie/伪造 next/Origin | 否定（pytest 通过） |
+| SEC-004 | 🔴 安全 | 口令、令牌、密钥进入响应、日志或前端存储 | TC-003、TC-008、TC-063 | caplog + 响应扫描 | 否定（pytest 通过；前端存储未做人工抽查） |
+| SEC-005 | 🔴 安全 | CSRF：缺失或错误 Origin 的写请求被执行 | TC-061 | 三类 Origin 断言 | 否定（pytest 通过） |
+| DATA-001 | 🟡 数据 | 并发失败计数丢更新或 SQLite 写锁泄漏为 500 | TC-005 | `asyncio.gather` 并发 | 否定（pytest 通过） |
+| DATA-002 | 🟡 数据 | 删除会话留下文件或行残留、误删其他会话 | TC-030 | 四类行 + 目录核查 | 否定（pytest 通过） |
+| DATA-003 | 🟡 数据 | 200,000 字符、10MB、10 个、同名校验边界偏差或静默截断 | TC-034、TC-037、TC-038 | 精确边界值 | 否定（pytest 通过） |
+| DATA-004 | 🟡 数据 | 终态会话仍接受写入或标记完成不写事件 | TC-029、TC-035 | 状态流转 + 事件断言 | 否定（pytest 通过） |
+| DATA-005 | 🟡 数据 | 注入四列与快照/正文不一致，或失败后留痕被回滚 | TC-064、TC-066 | 列不变量 + CHECK + 失败路径断言 | 否定（pytest 通过） |
+| DATA-006 | 🟡 数据 | 误报（显示层替换所致）：曾疑 400 的 `code` 与 `api-spec.md` 不一致。按文件字节复核，实现 `src/workbench/api/errors.py` 的 400 code 与 api-spec 两条 400 行的 code 均为同一 16 字节序列（`hex` 均为 `76616c69646174696f6e5f6572726f72`），完全一致，不存在契约差异 | TC-071、TC-060 | `python3 -c` 读文件字节并打印 `hex()` 比对；不肉眼比对渲染后的文本 | 误报已关闭 |
+| UX-001 | 🟢 体验 | 空态与错误态混淆、筛选无结果被当成错误 | TC-027、TC-031、TC-048 | 接口空列表 + Vitest 空态 | 接口路径否定（pytest 通过）；组件空态见本地 Vitest 58 passed，视觉未验证 |
+| UX-002 | 🟢 体验 | 锁定倒计时、过期提示与草稿恢复不符设计 | TC-004、TC-011、M-01/M-02 | 人工 + Playwright | 接口路径否定（pytest 通过）；M-01/M-02 未验证 |
+| UX-003 | 🟢 体验 | 调用中可重复提交、失败后提示不可读 | TC-041、M-06 | Vitest + 人工 | 接口路径否定（pytest 通过）；M-06 长调用体验未验证 |
+| PERF-001 | 🔵 性能 | 分页上限、游标稳定性、超大列表响应体 | TC-027、TC-028、TC-046、TC-060 | 边界分页断言 | 否定（pytest 通过；非压测） |
+| PERF-002 | 🔵 性能 | 并发信号量排队计入 latency 或调用中占满连接 | TC-045、TC-049 | 假适配器 + 计数断言 | 否定（pytest 通过；非压测） |
+| PERF-003 | 🔵 性能 | 注入后正文超过 200,000 字符未拒绝，或预算计算把注入块漏算 | TC-069 | 预算边界 199999/200000/200001 | 否定（pytest 通过） |
+| UX-004 | 🟢 体验 | 知识库已删除仍显示为正常引用，误导用户 | TC-067、TC-070 | `kbDeleted` 三态 + 前端文案 | 序列化路径否定（pytest 通过）；Vitest 卡片含「知识库已删除」；M-07 双主题未验证 |
+| DATA-007 | 🟡 数据 | knowledge-base spec 的 kbId 为 CHAR(32) hex，本 spec/TC-067 与实现用 `int`，读时 `str(kbId)` 与 `knowledge_base.kb_id` 比较。跨 spec 合入时类型可能对不上 | TC-067 | 本 spec pytest 按 int 通过；合入 knowledge-base 时需统一类型或适配 | 残留风险（本 spec 不失败；跨 spec 契约） |
+| PROC-001 | 🟡 数据 | 制品接口测试曾先实现后补测 | TC-036～TC-040 | 现有 pytest 已覆盖并全部通过 | 过程风险已补测；不作为缺陷 |
+| OPS-001 | 🟢 体验 | TASK-TD-048 未跑 `docker compose up --build` 全栈 | M-03 | 容器构建、健康检查、登录 | 未验证 |
+| CI-001 | 🟡 数据 | PR #1 在 head `6de8b57` 的 `backend-tests` / `mysql-tests` 已绿（run 44245123301）；当前工作区含前端、批次 C/D、注入与 `frontend-tests` job，尚未 push，CI 三 job 未覆盖当前树 | TC-058、TC-059、TC-071 | 当前树需 push 后重跑三 job | 未验证（当前树） |
 
 ## 缺陷分级与回归口径
 
@@ -1543,11 +1552,11 @@
 
 补充说明：
 
-- **TC-070 的两层证据边界**：pytest（`tests/test_sessions_api.py::test_tc070_knowledge_injection_timeline_payload`）证明事件 payload 字段、`kbDeleted` 三态与详情序列化，结果进入 `aw verify`；Vitest（`KnowledgeInjectionEventCard.test.tsx`，标题带 TC-070）证明卡片渲染、文案与无注入不渲染，只进入 CI job 3 报告，`aw verify` 不读取；视觉与双主题仅由 M-07 人工复核。三者缺一不可，不能用其中一层替代另一层。
-
-- `evidence/manual/` 与 `evidence/verify.json` 同属 spec 的证据区，agent 不修改；人工验收完成后由执行者写入。
-- 真机 AI 连通（真实密钥、外网）为可选项：有密钥时执行并记录；无密钥时写「未验证（无可用提供商凭据）」，不得写成通过。
-- MySQL 双方言证据来自 CI job 2 的运行记录，不属人工清单；关闭前需附 CI run 链接/日志摘要到 `evidence/manual/ci-runs.md`（Q-TV-02 已确认 A）。公开仓库的截图与日志不得含真实令牌、真实项目名或个人信息。
+- **本轮执行状态（MODE=verify，2026-11-18）**：M-01～M-07 **全部未执行**，保持未验证，未伪造通过。实现侧已声明 TASK-TD-048 未跑 `docker compose up --build`。QA 未起全栈、未跑 Playwright、未做 TLS/备份/长调用。
+- **TC-070 的两层证据边界**：pytest（`tests/test_sessions_api.py::test_tc070_knowledge_injection_timeline_payload`）证明事件 payload 字段、`kbDeleted` 三态与详情序列化，结果进入 `aw verify`（通过）；Vitest（`KnowledgeInjectionEventCard.test.tsx`，标题带 TC-070）证明卡片渲染、文案与无注入不渲染——本地 2026-11-18 15:34:45 `cd web && npm run test -- --run` 为 15 files / 58 passed，只进入 CI job 3 报告，`aw verify` 不读取；视觉与双主题仅由 M-07 人工复核（未执行）。三者缺一不可，不能用其中一层替代另一层。
+- `evidence/manual/` 与 `evidence/verify.json` 同属 spec 的证据区，agent 不修改 `evidence/verify.json`；人工验收完成后由执行者写入 `evidence/manual/`。
+- 真机 AI 连通（真实密钥、外网）为可选项：无密钥，写「未验证（无可用提供商凭据）」。
+- MySQL 双方言证据：PR #1 head `6de8b57` 的 CI run https://github.com/alontest/ai-test-workbench/actions/runs/44245123301 中 `backend-tests` / `mysql-tests` 均为 success；当时 workflow 尚无 `frontend-tests` job。当前工作区已补该 job 但未 push，当前树的 MySQL/前端 CI **未验证**。
 
 ## CI 与本地验证分工
 
@@ -1571,17 +1580,17 @@
 
 关闭前逐项确认：
 
-- [ ] 71 个 TC 在 `## 执行结果` 中都有结果（`通过` / `失败` / `未执行` + 理由），无 `待执行` 遗留。
-- [ ] `python3 .aw/aw.py verify` 绿；失败数为 0；71 个 TC 全部由 pytest 报告识别。
-- [ ] 功能 AC 42/42、AC-TECH 6/6 在覆盖矩阵中有 TC 或流程说明（AC-TECH-5）。
-- [ ] 7 个 🔴 Critical 风险均有对应 TC 且通过；RISK-009 的范围约束无突破（无知识库/仓库集成代码）。
-- [ ] CI 三个 job 全绿（`backend-tests`、`mysql-tests`、`frontend-tests`），CI run 记录已归档。
-- [ ] core 迁移 head 为 `0006`，且 `0006` 先于 knowledge-base 的 `0007`；TC-064 ~ TC-070 全部通过；跨 spec TC 编号符合约定（core 001 ~ 070 / knowledge-base 101 起 / repo-integration 201 起）。
-- [ ] 5 个 `[no-test]` 任务有手工证据：依赖与工具链（TASK-TD-001）、CI（018）、部署（048）、备份（049）、文档（050）。
-- [ ] 人工项 M-01 ~ M-06 有产出物与结论；未执行的项明确写「未验证」。
-- [ ] 测试问题清单 14 项逐条有结论（确认/否定/转缺陷单）。
-- [ ] 代码已提交，`aw.py verify` 与评审对应当前代码指纹。
-- [ ] 任何延期项（D3 及以下）已获用户同意并记录在 `open-questions.md` 或审批记录中。
+- [x] 71 个 TC 在 `## 执行结果` 中都有结果（全部 `通过`），无 `待执行` 遗留。
+- [x] `python3 .aw/aw.py verify` 绿（2026-11-18 15:32:49）；失败 0；71 个 TC 全部由 pytest 报告识别为 passed。
+- [x] 功能 AC 42/42、AC-TECH 6/6 在覆盖矩阵中有 TC 或流程说明（AC-TECH-5）。
+- [x] 7 个 🔴 Critical 风险均有对应 TC 且 pytest 通过；RISK-009 的范围约束无突破（知识库/仓库集成代码不在本 spec 实现范围内）。
+- [ ] CI 三个 job 全绿：仅 PR #1 head `6de8b57` 的 `backend-tests` / `mysql-tests` 绿；`frontend-tests` job 与后续前端/批次 C/D 提交尚未 push，当前树未验证。
+- [x] TC-064 ~ TC-070、TC-071 全部 pytest 通过；跨 spec TC 编号符合约定。迁移 head / `0006` 先于 `0007` 由 TC-064 覆盖。
+- [ ] 5 个 `[no-test]` 任务：001/018 有仓库文件；048 compose 未跑全栈；049 备份演练未做；050 文档待确认。
+- [x] 人工项 M-01 ~ M-07 明确写「未验证」（本轮未执行）。
+- [x] 测试问题清单逐条有结论（含 DATA-007 / PROC-001 / OPS-001 / CI-001）。
+- [ ] 代码已提交：工作区仍有未提交改动；`aw.py verify` 对应当前工作树指纹，评审尚未跑。
+- [ ] 延期项（人工验收、当前树 CI、compose/备份）需用户同意后才能 close。
 
 ## 下游衔接
 

@@ -1,0 +1,8 @@
+{
+  "by": "waive",
+  "at": "2026-11-18T16:40:59+08:00",
+  "head": "fed22aa9826361cd9f89bcd17e01dac5152f42cb",
+  "code_fp": "2c49755900f9c39ad066dfe3a02c9b1d8bf2dbd5c9de6b454de207ac373b44ff",
+  "who": "alon",
+  "reason": "评审 CLI 两轮未给出合法裁决；首轮 5 个 P1 中 4 条经源码核对为误报、1 条已修复；此后仅修 MySQL 迁移回滚与测试隔离，CI 三 job 全绿、verify 131/0/0"
+}

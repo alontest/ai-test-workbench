@@ -6,13 +6,17 @@ import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse
+from urllib.parse import quote
 
-from workbench.api.errors import register_error_handlers
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse
+
+from workbench.api.errors import ApiError, register_error_handlers
 from workbench.api.v1.router import api_router
 from workbench.config import Settings, get_settings
+from workbench.core.entrances import get_entrance
 from workbench.db.engine import Database, configure_database, create_engine_from_url
+from workbench.services import auth
 
 WEB_DIST = Path(__file__).resolve().parents[2] / "web" / "dist"
 
@@ -21,6 +25,7 @@ def create_app(
     *,
     settings: Settings | None = None,
     database: Database | None = None,
+    ai_gateway=None,  # noqa: ANN001
 ) -> FastAPI:
     resolved_settings = settings or get_settings()
     owned_database: Database | None = None
@@ -40,6 +45,43 @@ def create_app(
     app = FastAPI(title="AI 测试工作台", lifespan=lifespan)
     app.state.settings = resolved_settings
     app.state.database = database
+    if ai_gateway is not None:
+        app.state.ai_gateway = ai_gateway
+
+    @app.middleware("http")
+    async def _auth_guard(request: Request, call_next):  # noqa: ANN001, ANN202
+        path = request.url.path
+        if (
+            request.method == "OPTIONS"
+            or path == "/api/v1/auth/login"
+            or path == "/login"
+            or path.startswith("/assets/")
+            or path == "/favicon.ico"
+        ):
+            return await call_next(request)
+        token = request.cookies.get("aw_session")
+        session = await auth.authenticate(token)
+        if session is not None:
+            request.state.login_session = session
+            request.state.auth_token = token
+            return await call_next(request)
+        if path.startswith("/api/"):
+            request_id = getattr(request.state, "request_id", "")
+            headers = {"X-Request-Id": request_id} if request_id else {}
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "code": "unauthorized",
+                    "message": "未登录或会话已过期。",
+                    "details": [],
+                    "requestId": request_id,
+                },
+                headers=headers,
+            )
+        target = path + (f"?{request.url.query}" if request.url.query else "")
+        return RedirectResponse(
+            "/login?next=" + quote(target, safe=""), status_code=302
+        )
 
     @app.middleware("http")
     async def _request_id(request: Request, call_next):  # noqa: ANN001, ANN202
@@ -50,6 +92,20 @@ def create_app(
 
     register_error_handlers(app)
     app.include_router(api_router)
+
+    @app.get("/entrances/{key}", include_in_schema=False)
+    async def _entrance_html(key: str):  # noqa: ANN202
+        if get_entrance(key) is None:
+            raise ApiError(
+                400,
+                "entrance_unknown",
+                "未知入口。",
+                [{"field": "key", "message": key}],
+            )
+        index = WEB_DIST / "index.html"
+        if index.is_file():
+            return FileResponse(index)
+        raise ApiError(404, "not_found", "页面不存在。")
 
     if WEB_DIST.is_dir():
         _mount_spa(app)
@@ -69,5 +125,7 @@ def _mount_spa(app: FastAPI) -> None:
             and candidate.is_file()
         ):
             return FileResponse(candidate)
+        if full_path.startswith("assets/") or full_path == "favicon.ico":
+            return PlainTextResponse("Not Found", status_code=404)
         return FileResponse(index)
 

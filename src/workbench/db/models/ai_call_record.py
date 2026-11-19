@@ -67,6 +67,10 @@ class AiCallRecord(Base):
         CheckConstraint("injected_chars >= 0", name="ck_ai_call_record_injected_chars"),
         CheckConstraint("prompt_chars >= 0", name="ck_ai_call_record_prompt_chars"),
         CheckConstraint("total_chars >= 0", name="ck_ai_call_record_total_chars"),
+        CheckConstraint(
+            "total_chars = prompt_chars + injected_chars",
+            name="ck_ai_call_record_total_chars_sum",
+        ),
         Index("ix_ai_call_record_session_id_call_id", "session_id", "call_id"),
         Index("ix_ai_call_record_status_created_at", "status", "created_at"),
         Index("ix_ai_call_record_created_at", "created_at"),

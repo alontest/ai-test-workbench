@@ -66,10 +66,28 @@ ENTRANCES: tuple[Entrance, ...] = (
 )
 
 ENTRANCE_KEYS: tuple[str, ...] = tuple(item.key for item in ENTRANCES)
+VALID_STATUSES: frozenset[str] = frozenset({"planned", "live"})
+
+
+def iter_entrances() -> tuple[Entrance, ...]:
+    for item in ENTRANCES:
+        if item.status not in VALID_STATUSES:
+            raise ValueError(f"illegal entrance status: {item.status}")
+    return ENTRANCES
 
 
 def get_entrance(key: str) -> Entrance | None:
-    for item in ENTRANCES:
+    for item in iter_entrances():
         if item.key == key:
             return item
     return None
+
+
+def entrance_to_dict(item: Entrance) -> dict[str, str]:
+    return {
+        "key": item.key,
+        "name": item.name,
+        "description": item.description,
+        "domain": item.domain,
+        "status": item.status,
+    }

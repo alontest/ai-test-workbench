@@ -5,13 +5,28 @@ from __future__ import annotations
 from decimal import Decimal
 
 from workbench.core.crypto import encrypt
+from workbench.core.passwords import hash_password
 from workbench.db.base import utcnow
 from workbench.db.models import (
+    AdminCredential,
     AnalysisSession,
     ModelBinding,
     ProjectContext,
     ProviderConfig,
 )
+
+
+async def seed_admin(sessionmaker, password: str) -> None:
+    async with sessionmaker() as db:
+        db.add(
+            AdminCredential(
+                credential_id=1,
+                algorithm="argon2id",
+                password_hash=hash_password(password),
+                updated_at=utcnow(),
+            )
+        )
+        await db.commit()
 
 
 async def seed_project(sessionmaker, name: str = "支付中心") -> int:
@@ -94,6 +109,19 @@ async def seed_session(
         db.add(row)
         await db.commit()
         return row.session_id
+
+
+def make_app(settings, database, **kwargs):  # noqa: ANN001, ANN003, ANN201
+    from workbench.main import create_app
+
+    return create_app(settings=settings, database=database, **kwargs)
+
+
+def build_client(app, *, base_url: str = "http://testserver"):  # noqa: ANN001, ANN201
+    import httpx
+
+    transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
+    return httpx.AsyncClient(transport=transport, base_url=base_url)
 
 
 async def seed_session_graph(sessionmaker) -> tuple[int, int, int]:
