@@ -15,4 +15,13 @@
 - **上下文纪律**：主会话只做调度，阶段产物由子代理（aw-analyst / aw-ux / aw-architect / aw-qa / aw-implementer / aw-reviewer）生成；主会话不要读 `.aw/phases/`。
 - **产物位置**：规格写 `specs/<module>_<timestamp>/<phase-dir>/`；知识库 `docs/<module>/` 由 skill `kb-sync` 在用户确认后同步，子代理不直接写。
 - **进度**：`python3 .aw/aw.py status`；单阶段自检：`python3 .aw/aw.py check <SPEC_DIR> --phase <阶段>`。
+
+## 仓库不变量
+
+这两条以前靠提交前记得去改，现在由测试兜底，本地 `pytest` 和 CI 都会跑：
+
+| 规则 | 由什么保证 |
+| --- | --- |
+| 迁移与模型必须能渲染成 MySQL 8 可执行的 DDL，CHECK 不得引用自增列 | `tests/test_mysql_ddl_rules.py` |
+| 用例名里的 TC 编号必须登记在 `specs/<spec>/test-verification/tc-map.json` | `tests/test_spec_tc_sync.py` |
 <!-- <<< alonwf (managed) <<< -->
