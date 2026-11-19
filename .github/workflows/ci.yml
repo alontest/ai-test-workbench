@@ -14,16 +14,14 @@ jobs:
         with:
           python-version: "3.12"
       - run: uv sync --frozen
-      - name: Run aw verify (SQLite)
-        run: python3 .aw/aw.py verify specs/ai-test-workbench_20261117184149
+      - name: Run pytest suite (SQLite)
+        run: uv run pytest -q --junitxml=reports/sqlite.xml
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: backend-reports
-          path: |
-            .aw/tmp/**
-            reports/**
+          path: reports/**
           if-no-files-found: ignore
 
   mysql-tests:
