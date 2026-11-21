@@ -100,7 +100,7 @@ async def test_tc208_yunxiao_six_methods_normalize_success() -> None:
                     ]
                 },
             )
-        if path == f"{CENTER_BASE}/67890/files/blobs":
+        if path == f"{CENTER_BASE}/67890/files/README.md":
             return httpx.Response(
                 200,
                 json={
@@ -231,8 +231,13 @@ async def test_tc208_yunxiao_file_blob_encodes_file_path() -> None:
     await provider.aclose()
 
     # Assert
-    assert requests[0].url.path.endswith("/67890/files/blobs")
-    assert requests[0].url.params["filePath"] == "src/main.py"
+    # 官方语法是 GET .../files/{rest:.*}?ref=<ref>：文件路径进路径段，
+    # 且 `/` 要编码成 `%2F`（2026-11-21 用真实组织验证：保留 `/` 返回 404）。
+    # url.path 会把 %2F 解码回 /，所以看原始 URL 字符串才验证得出编码确实发生。
+    assert (
+        "/67890/files/src%2Fmain.py?ref=main" in str(requests[0].url)
+    ), str(requests[0].url)
+    assert "filePath" not in requests[0].url.params
     assert requests[0].url.params["ref"] == "main"
     assert TOKEN not in str(requests[0].url)
     assert file.encoding == "base64"

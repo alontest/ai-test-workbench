@@ -78,11 +78,44 @@ def _list(payload: Any) -> list[dict[str, Any]]:
     return result
 
 
+def _as_int(value: Any) -> int | None:
+    """云效同一字段可能给 int 或数字字符串；非法值返回 None。"""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.strip().isdigit():
+        return int(value.strip())
+    return None
+
+
 def _object(payload: Any) -> dict[str, Any]:
     result = _unwrap(payload)
     if not isinstance(result, dict):
         raise ProviderError("invalid_response")
     return result
+
+
+# 云效 ``ListFiles`` 用 git 对象类型命名：``tree`` 是目录，``blob`` 是文件。
+# 2026-11-21 用真实组织验证时发现：原实现只认 ``"dir"``，把全部目录都判成了
+# 文件，导致点开目录去读文件、返回 404。这里按真实值判断，并用 git mode
+# （``040000`` 为目录）兜底，避免供应商改字段名时再退化。
+_TREE_TYPES = frozenset({"tree", "dir", "directory", "folder"})
+_BLOB_TYPES = frozenset({"blob", "file"})
+_GIT_MODE_DIR = "040000"
+
+
+def _entry_type(item: dict[str, Any]) -> str:
+    raw = item.get("type")
+    if isinstance(raw, str):
+        lowered = raw.strip().lower()
+        if lowered in _TREE_TYPES:
+            return "dir"
+        if lowered in _BLOB_TYPES:
+            return "file"
+    if str(item.get("mode") or "").strip() == _GIT_MODE_DIR:
+        return "dir"
+    return "file"
 
 
 def _text(value: Any) -> str | None:
@@ -294,17 +327,11 @@ class YunxiaoProvider(BaseProvider):
         )
         entries: list[TreeEntry] = []
         for item in _list(payload):
-            raw_type = item.get("type")
-            entry_type = (
-                "dir"
-                if isinstance(raw_type, str) and "dir" in raw_type.lower()
-                else "file"
-            )
             entries.append(
                 TreeEntry(
                     name=_required(item, "name"),
                     path=_required(item, "path"),
-                    type=entry_type,
+                    type=_entry_type(item),
                     size_bytes=None,
                 )
             )
@@ -321,13 +348,23 @@ class YunxiaoProvider(BaseProvider):
     async def read_file(
         self, repo: RepositoryRef, *, ref: str, path: str
     ) -> FileContent:
+        # 官方语法：GET .../repositories/{repoId}/files/{rest:.*}?ref=<ref>
+        # 文件路径是**路径段**（需 URL 编码），不是 /files/blobs 加 filePath 查询参数。
+        # 2026-11-21 用真实组织验证：用 /files/blobs 时云效把 "blobs" 当成文件路径，
+        # 报 404 "revision(main) path(blobs) not found"。
+        # 官方文档写「文件路径需 URL 编码」，实测含义是连 `/` 也要编码：
+        # 保留 `/` 会 404，`%2F` 才 200（2026-11-21 实测 jialeshop-core/pom.xml）。
+        encoded = quote(path, safe="")
         payload, _ = await self._get_json(
-            f"{self._repo_path(repo)}/files/blobs",
-            params={"ref": ref, "filePath": path},
+            f"{self._repo_path(repo)}/files/{encoded}",
+            params={"ref": ref},
         )
         item = _object(payload)
-        size = item.get("size")
-        if not isinstance(size, int):
+        # 云效的 size 有时是 int、有时是字符串（同一端点在不同请求头下不一致，
+        # 2026-11-21 实测：裸 curl 返回 int 14948，带 Accept 头返回 "14948"）。
+        # 两种都要接受，否则真实调用会报 invalid_response。
+        size = _as_int(item.get("size"))
+        if size is None:
             raise ProviderError("invalid_response")
         encoding = item.get("encoding", "base64")
         if encoding not in _VALID_ENCODINGS:
