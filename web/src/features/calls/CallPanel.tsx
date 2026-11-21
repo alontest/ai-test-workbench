@@ -8,6 +8,16 @@ import { isApiError } from "../../lib/api/errors";
 import { queryKeys } from "../../lib/api/keys";
 import { CALL_TIMEOUT_MS, countChars, PROMPT_MAX_CHARS } from "../../lib/limits";
 import {
+  invalidItemsOf,
+  sameRef,
+  toKnowledgeRefs,
+} from "../knowledge/api/client";
+import type { InvalidItem, KbEntryRef } from "../knowledge/api/types";
+import { KbCharBudget } from "../knowledge/components/KbCharBudget";
+import { KbInjectPicker } from "../knowledge/components/KbInjectPicker";
+import { KbInvalidEntryDialog } from "../knowledge/components/KbInvalidEntryDialog";
+import { useInjectionPreview } from "../knowledge/hooks/useInjectionPreview";
+import {
   CharacterCounter,
   counterState,
 } from "../composer/CharacterCounter";
@@ -31,6 +41,20 @@ function parseOptionalNumber(raw: string): number | undefined {
   return Number.isFinite(value) ? value : undefined;
 }
 
+function mergeUnavailable(
+  current: KbEntryRef[],
+  incoming: InvalidItem[],
+): KbEntryRef[] {
+  const merged = [...current];
+  for (const item of incoming) {
+    const ref = { kbId: item.kbId, code: item.code };
+    if (!merged.some((existing) => sameRef(existing, ref))) {
+      merged.push(ref);
+    }
+  }
+  return merged;
+}
+
 export function CallPanel({
   session,
   readOnly = false,
@@ -41,9 +65,21 @@ export function CallPanel({
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [params, setParams] = useState<AdvancedParamsValue>(EMPTY_PARAMS);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [selection, setSelection] = useState<KbEntryRef[]>([]);
+  const [unavailable, setUnavailable] = useState<KbEntryRef[]>([]);
+  const [invalidItems, setInvalidItems] = useState<InvalidItem[]>([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [retryBody, setRetryBody] = useState<Record<string, unknown> | null>(
+    null,
+  );
   const chars = countChars(prompt);
   const state = counterState(chars, maxChars);
   const exceeded = state === "exceeded";
+  const preview = useInjectionPreview(session.sessionId, {
+    refs: selection,
+    userPrompt: prompt,
+  });
+  const overLimit = preview.data?.overLimit ?? false;
   const mutation = useMutation({
     mutationFn: async (body: Record<string, unknown>) => {
       const controller = new AbortController();
@@ -60,25 +96,47 @@ export function CallPanel({
     },
     onSuccess: async () => {
       setSubmitError(null);
+      setRetryBody(null);
       await queryClient.invalidateQueries({ queryKey: ["sessions"] });
       await queryClient.invalidateQueries({ queryKey: queryKeys.calls });
     },
-    onError: (error) => {
-      if (isApiError(error)) {
-        setSubmitError(error.code);
+    onError: (error, variables) => {
+      if (!isApiError(error)) {
+        setSubmitError("ai_timeout");
         return;
       }
-      setSubmitError("ai_timeout");
+      if (error.code === "knowledge_invalid_entries") {
+        const items = invalidItemsOf(error);
+        if (items.length > 0) {
+          setInvalidItems(items);
+          setUnavailable((current) => mergeUnavailable(current, items));
+          setSelection((current) =>
+            current.filter(
+              (ref) =>
+                !items.some(
+                  (item) =>
+                    item.kbId === ref.kbId && item.code === ref.code,
+                ),
+            ),
+          );
+          setRetryBody(variables);
+          setConfirmOpen(true);
+          setSubmitError(null);
+          return;
+        }
+      }
+      setSubmitError(error.code);
     },
   });
 
   const disabled =
-    readOnly || exceeded || mutation.isPending || !prompt.trim();
+    readOnly ||
+    exceeded ||
+    overLimit ||
+    mutation.isPending ||
+    !prompt.trim();
 
-  function onSubmit() {
-    if (disabled) {
-      return;
-    }
+  function baseBody(): Record<string, unknown> {
     const body: Record<string, unknown> = { prompt };
     if (advancedOpen) {
       const temperature = parseOptionalNumber(params.temperature);
@@ -90,7 +148,29 @@ export function CallPanel({
         body.maxTokens = maxTokens;
       }
     }
-    mutation.mutate(body);
+    if (selection.length > 0) {
+      body.knowledgeRefs = toKnowledgeRefs(selection);
+    }
+    return body;
+  }
+
+  function onSubmit() {
+    if (disabled) {
+      return;
+    }
+    setRetryBody(null);
+    mutation.mutate(baseBody());
+  }
+
+  function onConfirmInvalid() {
+    setConfirmOpen(false);
+    if (!retryBody) {
+      return;
+    }
+    mutation.mutate({
+      ...retryBody,
+      confirmInvalidCodes: invalidItems.map(({ kbId, code }) => ({ kbId, code })),
+    });
   }
 
   return (
@@ -125,6 +205,20 @@ export function CallPanel({
         />
       </FormField>
       <CharacterCounter value={chars} max={maxChars} />
+      <KbInjectPicker
+        sessionId={session.sessionId}
+        selection={selection}
+        onChange={setSelection}
+        disabled={readOnly || mutation.isPending}
+        unavailable={unavailable}
+      />
+      <KbCharBudget
+        itemCount={selection.length}
+        promptChars={preview.data?.promptChars ?? chars}
+        injectedChars={preview.data?.injectedChars ?? 0}
+        limit={preview.data?.limit ?? maxChars}
+        pending={preview.isFetching}
+      />
       <Button
         type="button"
         variant="ghost"
@@ -155,6 +249,17 @@ export function CallPanel({
       >
         {mutation.isPending ? "调用中…" : "发起调用"}
       </Button>
+      <KbInvalidEntryDialog
+        open={confirmOpen}
+        invalidItems={invalidItems}
+        validCount={selection.length}
+        loading={mutation.isPending}
+        onConfirm={onConfirmInvalid}
+        onCancel={() => {
+          setConfirmOpen(false);
+          setRetryBody(null);
+        }}
+      />
     </form>
   );
 }

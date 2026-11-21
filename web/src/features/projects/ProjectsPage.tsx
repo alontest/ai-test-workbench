@@ -5,6 +5,7 @@ import { ErrorState } from "../../components/ui/Feedback";
 import { Spinner } from "../../components/ui/Loading";
 import { apiFetch } from "../../lib/api/client";
 import { queryKeys } from "../../lib/api/keys";
+import { RepoBindingPanel } from "../repos/components/RepoBindingPanel";
 import { ProjectDialog } from "./ProjectDialog";
 import { ProjectKnowledgeSummary } from "./ProjectKnowledgeSummary";
 import { ProjectList } from "./ProjectList";
@@ -19,6 +20,7 @@ export function ProjectsPage() {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<Project | undefined>();
   const [creating, setCreating] = useState(false);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const query = useQuery({
     queryKey: queryKeys.projects,
     queryFn: () => apiFetch<PageResponse>("/projects"),
@@ -45,7 +47,13 @@ export function ProjectsPage() {
         </Button>
       </header>
       <ProjectKnowledgeSummary />
-      <ProjectList projects={query.data.items} onEdit={setEditing} />
+      <ProjectList
+        projects={query.data.items}
+        onEdit={setEditing}
+        onSelect={(project) => setSelectedId(project.projectId)}
+        selectedId={selectedId}
+      />
+      <RepoBindingPanel projectId={selectedId} />
       {creating || editing ? (
         <ProjectDialog
           open

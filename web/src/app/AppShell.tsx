@@ -48,6 +48,8 @@ export function AppShell() {
             <NavLink to="/projects">项目上下文</NavLink>
             <NavLink to="/providers">AI 提供商与模型</NavLink>
             <NavLink to="/calls">调用记录</NavLink>
+            <NavLink to="/knowledge-bases">知识库</NavLink>
+            <NavLink to="/repos">仓库浏览</NavLink>
           </div>
         </nav>
       </aside>

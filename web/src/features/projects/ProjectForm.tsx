@@ -20,7 +20,11 @@ export function ProjectForm({ value, onChange, errors }: ProjectFormProps) {
           onChange={(event) => patch("name", event.target.value)}
         />
       </FormField>
-      <FormField label="仓库地址" error={errors.repoUrl}>
+      <FormField
+        label="仓库地址（自由备注）"
+        error={errors.repoUrl}
+        hint="人工备注，实际拉取以下方「仓库绑定」为准（AMB-030）"
+      >
         <Input
           value={value.repoUrl}
           onChange={(event) => patch("repoUrl", event.target.value)}

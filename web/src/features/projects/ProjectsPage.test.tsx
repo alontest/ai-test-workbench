@@ -136,14 +136,19 @@ describe("TC-016 名称校验逐字段", () => {
 });
 
 describe("知识库挂载位", () => {
-  test("ProjectKnowledgeSummary 只渲染空占位", async () => {
+  test("ProjectKnowledgeSummary 保留挂载位并展示 0 个知识库", async () => {
     const api = installFetchMock();
     api.on("GET", "/api/v1/projects", () =>
+      jsonResponse({ items: [], nextCursor: null }),
+    );
+    api.on("GET", "/api/v1/knowledge-bases", () =>
       jsonResponse({ items: [], nextCursor: null }),
     );
     renderPage();
     const mount = await screen.findByTestId("knowledge-summary");
     expect(mount).toHaveAttribute("data-mount", "knowledge-summary");
-    expect(mount.textContent?.trim()).toBe("");
+    expect(
+      await within(mount).findByText(/还没有关联知识库/),
+    ).toBeInTheDocument();
   });
 });

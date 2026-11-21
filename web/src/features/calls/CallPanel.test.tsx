@@ -69,7 +69,10 @@ describe("TC-041 调用面板超限禁用与调用中拦截", () => {
     await user.type(screen.getByLabelText(/提示/), "请分析日志");
     await user.click(screen.getByRole("button", { name: /发起调用/ }));
     expect(await screen.findByRole("button", { name: /调用中/ })).toBeDisabled();
-    expect(api.fetch.mock.calls.length).toBe(1);
+    const completions = api.fetch.mock.calls.filter(([input]) =>
+      String(input).includes("/ai/complete"),
+    );
+    expect(completions).toHaveLength(1);
     resolvePost?.(
       jsonResponse({
         callId: 17,

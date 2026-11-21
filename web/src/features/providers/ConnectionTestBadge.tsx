@@ -8,7 +8,9 @@ export type ConnectionTestState =
   | "auth-error"
   | "unreachable"
   | "timeout"
-  | "credential-unavailable";
+  | "credential-unavailable"
+  | "permission-denied"
+  | "stale";
 
 export interface ConnectionTestBadgeProps {
   state: ConnectionTestState;
@@ -20,6 +22,8 @@ export interface ConnectionTestBadgeProps {
   };
   onTest: () => void;
   disabled?: boolean;
+  /** 覆盖徽标文案；`stale` 用它显示「已失效（时间 · 结果）」。 */
+  label?: string;
 }
 
 const STATE_LABEL: Record<ConnectionTestState, string> = {
@@ -30,7 +34,9 @@ const STATE_LABEL: Record<ConnectionTestState, string> = {
   unreachable: "网络不可达",
   timeout: "超时",
   "credential-unavailable": "凭据不可用",
-};
+  "permission-denied": "权限不足",
+  stale: "已失效",
+}
 
 export function mapConnectionState(
   result: ConnectionTestBadgeProps["result"] | undefined,
@@ -55,11 +61,30 @@ export function mapConnectionState(
   }
 }
 
+function toneOf(
+  state: ConnectionTestState,
+): "neutral" | "success" | "danger" | "info" | "warning" {
+  if (state === "success") {
+    return "success";
+  }
+  if (state === "testing") {
+    return "info";
+  }
+  if (state === "permission-denied") {
+    return "warning";
+  }
+  if (state === "stale" || state === "idle") {
+    return "neutral";
+  }
+  return "danger";
+}
+
 export function ConnectionTestBadge({
   state,
   result,
   onTest,
   disabled,
+  label,
 }: ConnectionTestBadgeProps) {
   return (
     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -74,17 +99,12 @@ export function ConnectionTestBadge({
       {state !== "idle" ? (
         <Badge
           label={
-            state === "success" && result?.latencyMs != null
+            label ??
+            (state === "success" && result?.latencyMs != null
               ? `${STATE_LABEL[state]} ${result.latencyMs}ms`
-              : STATE_LABEL[state]
+              : STATE_LABEL[state])
           }
-          tone={
-            state === "success"
-              ? "success"
-              : state === "testing"
-                ? "info"
-                : "danger"
-          }
+          tone={toneOf(state)}
         />
       ) : null}
     </div>

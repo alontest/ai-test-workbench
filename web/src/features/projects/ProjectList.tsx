@@ -5,9 +5,16 @@ import type { Project } from "./types";
 export interface ProjectListProps {
   projects: Project[];
   onEdit: (project: Project) => void;
+  onSelect: (project: Project) => void;
+  selectedId: number | null;
 }
 
-export function ProjectList({ projects, onEdit }: ProjectListProps) {
+export function ProjectList({
+  projects,
+  onEdit,
+  onSelect,
+  selectedId,
+}: ProjectListProps) {
   if (projects.length === 0) {
     return <EmptyState title="还没有项目" description="创建一个项目上下文后再发起会话。" />;
   }
@@ -23,14 +30,30 @@ export function ProjectList({ projects, onEdit }: ProjectListProps) {
       </thead>
       <tbody>
         {projects.map((project) => (
-          <tr key={project.projectId}>
+          <tr
+            key={project.projectId}
+            data-selected={project.projectId === selectedId || undefined}
+          >
             <td>{project.name}</td>
             <td>{project.techStack ?? "—"}</td>
             <td>{project.updatedAt}</td>
             <td>
-              <Button type="button" variant="ghost" onClick={() => onEdit(project)}>
-                编辑
-              </Button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => onSelect(project)}
+                >
+                  {project.projectId === selectedId ? "已选择" : "仓库绑定"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => onEdit(project)}
+                >
+                  编辑
+                </Button>
+              </div>
             </td>
           </tr>
         ))}

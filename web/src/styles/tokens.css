@@ -60,6 +60,9 @@
   --sidebar-width: 248px;
   --topbar-height: 64px;
   --content-max-width: 1280px;
+  --color-overlay: rgba(0, 0, 0, 0.65);
+  --spacing-5: 20px;
+  --repo-drawer-width: 480px;
 }
 
 @media (prefers-color-scheme: light) {
@@ -86,6 +89,7 @@
     --color-warning: #b45309;
     --color-info: #0284c7;
     --color-ring: #1e293b;
+    --color-overlay: rgba(15, 23, 42, 0.45);
     --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.08);
     --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.12);
     --shadow-lg: 0 10px 15px rgba(15, 23, 42, 0.18);
@@ -115,6 +119,7 @@
   --color-warning: #b45309;
   --color-info: #0284c7;
   --color-ring: #1e293b;
+  --color-overlay: rgba(15, 23, 42, 0.45);
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.08);
   --shadow-md: 0 4px 6px rgba(15, 23, 42, 0.12);
   --shadow-lg: 0 10px 15px rgba(15, 23, 42, 0.18);
@@ -143,6 +148,7 @@
   --color-warning: #f59e0b;
   --color-info: #38bdf8;
   --color-ring: #22c55e;
+  --color-overlay: rgba(0, 0, 0, 0.65);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.6);
   --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.55);
   --shadow-lg: 0 16px 32px rgba(0, 0, 0, 0.6);
