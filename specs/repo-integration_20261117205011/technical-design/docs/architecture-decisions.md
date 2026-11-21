@@ -19,7 +19,7 @@
 | 部署 | docker-compose（app + mysql:8.4），支持外接 MySQL；默认绑定 `127.0.0.1` | 高（同上） |
 | 仓库集成模块 | 尚无任何代码与迁移；本 spec 新建四张表、15 个 `/api/v1` 端点、2 个前端入口（项目上下文页区块 + 独立浏览路由） | — |
 | 上游接口事实 | GitHub REST 与云效 Codeup 的鉴权、端点、分页头已联网核实；云效限流数值、单文件上限、GitHub PAT 过期头等仍未核实（见 `design.md`「未核实外部事实与处理口径」） | 高（已核实部分）/ 未知（未核实部分） |
-| AlonWorkflow packs | `.aw/install.json` 的 `packs` 为空，未安装任何 pack，未套用 pack 专属约定 | 高 |
+| AlonWorkflow packs | 产出时未安装任何 pack（该工作流已于 2026-11-19 移除） | 高 |
 | 本体切片 | 无 `ontology-slices/tech-arch.md`（项目尚无 `ontology-work/views/index.json`）；使用 `_shared/ontology/` 的 ENT-C12 ~ ENT-C15、BR-C21 ~ BR-C27、BP-C9 ~ BP-C11 | 高 |
 
 ## 已确认决策
@@ -184,7 +184,7 @@
 
 ### ADR-217：测试与门禁——36 AC / 11 EARS，双方言 + 假供应商 + 令牌泄漏断言
 
-- **决策**：pytest 用例名带 TC 编号（`test_tc017_1_...` / `TC-017-1`），映射 36 条 AC 与 11 条 EARS；后端在 SQLite 与 MySQL 两方言跑迁移与关键用例；供应商调用统一用 `httpx.MockTransport` + 录制 fixture，不连真实网络；前端用 Vitest + Testing Library 覆盖组件状态，关键流程（绑定 → 测试 → 同步 → 浏览 → 读文件 → 解绑）用 Playwright；每个涉及令牌的用例断言响应、错误体、日志与同步/读取记录中完整令牌出现次数为 0；门禁沿用 `.aw/config.json` 的 pytest preset 与 `python3 .aw/aw.py verify`。不新增 pack 专属测试约定。
+- **决策**：pytest 用例名带 TC 编号（`test_tc017_1_...` / `TC-017-1`），映射 36 条 AC 与 11 条 EARS；后端在 SQLite 与 MySQL 两方言跑迁移与关键用例；供应商调用统一用 `httpx.MockTransport` + 录制 fixture，不连真实网络；前端用 Vitest + Testing Library 覆盖组件状态，关键流程（绑定 → 测试 → 同步 → 浏览 → 读文件 → 解绑）用 Playwright；每个涉及令牌的用例断言响应、错误体、日志与同步/读取记录中完整令牌出现次数为 0；后端门禁沿用 `uv run pytest`（SQLite 默认，CI 另跑 MySQL）；新增 TC 必须同提交登记到 `test-verification/tc-map.json`。不新增 pack 专属测试约定。
 - **来源**：新增（依据 36 AC / 11 EARS；AGENTS.md 测试命名；core ADR-041 的双方言纪律）
 - **状态**：✅ 已锁定
 - **理由**：需求把令牌零明文、四类连通性结果、并发同步、失败保留、限流、truncated、1 MiB、二进制/非 UTF-8、路径穿越、令牌失效恢复与解绑后不再请求列为重点验证项；假供应商让错误映射与边界可重复回放，双方言避免迁移漂移（RISK-207）。
@@ -205,7 +205,7 @@
 - 跨域只读契约仅 `GET /repo-bindings/{bindingId}/baseline` 与 `/file`；其他业务域不得持有令牌或直连供应商（ADR-202 / ADR-212）。
 - `apiBaseUrl` 仅 https 公网 origin、仅 443、禁重定向；GitHub 固定 `https://api.github.com`；私网/回环/链路本地地址拒绝（ADR-213）。
 - 未核实外部事实（云效限流数值、云效单文件上限、云效权限文案、GitHub PAT 过期头、fine-grained PAT 映射、地域域名细节）不得写成硬编码数值或推测性 UI（`design.md`「未核实外部事实与处理口径」）。
-- 未安装任何 AlonWorkflow pack，未套用 pack 专属约定。
+- 产出时未安装任何 AlonWorkflow pack、未套用 pack 专属约定（该工作流已于 2026-11-19 整体移除）。
 
 ## 状态
 

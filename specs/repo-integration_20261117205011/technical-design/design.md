@@ -2,8 +2,9 @@
 
 > 阶段：tech-arch（步骤 1–3.5）。上游：`requirements-analysis/docs/context.md`（7 US / 36 AC / 11 EARS，已确认）、`interaction-design/docs/context.md`（已确认，2026-11-18 11:23:18）、`_handoff/from-workbench-core.md`（已联网核实的外部接口事实）。
 > 架构决策：`docs/architecture-decisions.md`（ADR-201 ~ ADR-217，architecture-locked）。技术栈不重新选型，完整继承 workbench-core；本 spec 只做仓库集成垂直模块。
+> 外部事实核实记录：2026-11-20（WebFetch / WebSearch，仅采信 GitHub Docs、GitHub Changelog、阿里云帮助中心官方页面）；5 项悬空事实的结论、来源链接与核实时间见「未核实外部事实与处理口径」，数值一律以官方原文为准，未核实项继续标「未核实」。
 > 本体：编排者未生成 `ontology-slices/tech-arch.md`（项目尚无 `ontology-work/views/index.json`），模块划分直接对照 `_shared/ontology/` 的 ENT-C12 ~ ENT-C15、BR-C21 ~ BR-C27、BP-C9 ~ BP-C11，不新增模块边界。
-> 未安装任何 AlonWorkflow pack（`.aw/install.json` 的 `packs` 为空），未套用 pack 专属约定。
+> 本阶段产出于 AlonWorkflow 时期，当时未安装任何 pack；该工作流已于 2026-11-19 整体移除，本说明仅作历史留痕。
 
 ## 技术选型
 
@@ -168,16 +169,22 @@ RepoProvider
 
 ### 未核实外部事实与处理口径
 
-| 项 | 状态 | 本方案处理 |
-|----|------|-----------|
-| 云效官方速率限制数值 | 未核实 | 不硬编码任何数值；只按 `429` / 响应头 / 限流信号判断，展示可重试时间（若有） |
-| 云效单文件大小上限 | 未核实 | 统一按本 spec 的 1 MiB 客户端上限拒绝；不假设云效上限，不据此放行 |
-| 云效令牌最小权限官方表述 | 未核实 | UI 只使用需求原文的「代码库读取」提示，不生成更细的权限映射 |
-| GitHub PAT 过期时间响应头名称与语义 | 未核实 | `tokenExpiresAt` 默认 `null`；只有 tech-design 核实到确定响应头后才读取；无数据不推测、不提示「即将过期」 |
-| GitHub fine-grained PAT 的 Contents / Metadata 精确映射 | 未核实 | UI 只复制需求建议文案，不做自动权限校验或推断 |
-| 云效地域版域名形态与路径差异 | 部分核实（仅知地域版路径不带 `organizations/{orgId}`） | `apiBaseUrl` 作为不透明 origin 存储；路径形态由适配器按「中心站/地域站」两种既定形态处理，不新增猜测 |
-| 五类适配器契约、错误映射、分页游标与限流读取 | 本阶段结论 | 见「供应商适配器契约」「错误分类映射」「分页、限流与重试」 |
-| 快照表结构、保留策略、`truncated` 表示、并发互斥 | 本阶段结论 | 见 ADR-203 / ADR-207 / ADR-209；`truncated` 与 `hasMore` 同时保留，供应商截断信号优先 |
+> 核实时间：2026-11-20。状态取值：已核实（官方文档原文）/ 部分核实 / 未核实。来源链接为官方页面，未采信第三方博客或社区推断的数值。
+
+| 项 | 状态 | 核实结论与来源 | 本方案处理 |
+|----|------|---------------|-----------|
+| 云效官方速率限制数值与响应头 | 未核实（官方仅确认 429，无数值/头） | 云效「API 相关错误码」仅列出 `429 / TooManyRequests / Too many requests / 发送了过多请求。`，未公布 QPS、每日配额、`Retry-After` 或 `X-RateLimit-*` 等响应头：https://help.aliyun.com/zh/yunxiao/developer-reference/error-code-center （2026-11-20） | 不硬编码任何数值；只按 `429`、状态码与响应头判断。无 `Retry-After` / `X-RateLimit-Reset` 时 `retryAfterAt=null`，只展示「供应商限流」，不猜时间 |
+| 云效单文件内容读取大小上限 | 未核实 | `GetFileBlobs` 官方文档只说明 `content`（默认 base64）、`size`（bytes）、`encoding ∈ {text, base64}`，未写大小上限、截断规则或「文件过大」专属错误码：https://help.aliyun.com/zh/yunxiao/developer-reference/getfileblobs （2026-11-20）。旧版接口支持 `from`/`to` 行区间，但不作为本期实现：https://help.aliyun.com/zh/yunxiao/developer-reference/api-devops-2021-06-25-getfileblobs | 统一按本 spec 的 1 MiB（1,048,576 字节）客户端上限拒绝；先读 `size` 再决定是否下载/解码，不假设云效上限，不据此放行 |
+| 云效分页参数与返回头语义 | 已核实 | `page`：默认从 1 开始，「一般不要超过 150 页」；`perPage`：默认 20，取值范围 [1, 100]。响应头：`x-page`（当前页）、`x-per-page`、`x-next-page`、`x-prev-page`、`x-total`（总数）、`x-total-pages`、`x-request-id`：https://help.aliyun.com/zh/yunxiao/developer-reference/listrepositories-query-code-base-list ；分支列表同样返回这些头：https://help.aliyun.com/zh/yunxiao/developer-reference/listbranches-query-the-list-of-branches （2026-11-20） | 适配器按 `page` 从 1 递增、`perPage=limit`（≤100）请求；终止条件用 `x-next-page` 与 `x-total-pages`，不用 `x-total` 推算页数；对外游标隐藏页码起点 |
+| 云效目录树分页 | 已核实（官方无分页） | `ListFiles` 只说明 `type=DIRECT`（默认，仅当前目录）/ `RECURSIVE`，返回 `id/isLFS/mode/name/path/type`，无 `page`/`perPage`、无 `truncated`、无分页头：https://help.aliyun.com/zh/yunxiao/developer-reference/listfiles （2026-11-20） | 云效目录树按「单次返回直接子项」处理：`hasMore=false`、`nextCursor=null`、`truncated=false`；若供应商实际截断，只能按返回条数与固定上限提示，不伪造分页。与 ADR-209 的「按 x-total 判断」存在偏差，见 change-spec「ADR 偏差」 |
+| 云效单文件读取端点形态 | 已核实（端点已更新） | 现行文档为 `GET {domain}/oapi/v1/codeup/organizations/{organizationId}/repositories/{repositoryId}/files/blobs`，地域版省略 `organizations/{organizationId}` 段；`filePath` 需 URL 编码、`ref` 必填。旧版为 `/repository/{repositoryId}/files/blobs`：https://help.aliyun.com/zh/yunxiao/developer-reference/getfileblobs （2026-11-20） | 适配器实现现行 `files/blobs`；端点路径只存在于适配器常量，服务层与前端不感知。与 `_handoff` 的 `/files/{filePath}` 不一致处按本行更新，不改 ADR |
+| 云效令牌最小权限官方表述 | 未核实 | 未取到云效官方「个人访问令牌最小权限」页面正文；官方 API 文档只标注资源与「只读」权限，未给出令牌勾选映射 | UI 只使用需求原文的「代码库读取」提示，不生成更细的权限映射 |
+| GitHub PAT 过期时间响应头 | 已核实（PAT 通用）；fine-grained 专项未单列 | 官方 Changelog：使用 personal access token 调用 GitHub API 时返回 `GitHub-Authentication-Token-Expiration`，内容为令牌过期日期：https://github.blog/changelog/2021-07-26-expiration-options-for-personal-access-tokens/ （2026-11-20）。fine-grained PAT 是否返回同名头未在现行官方文档单列 → fine-grained 专项标「部分核实」 | `tokenExpiresAt` 默认 `null`；按大小写不敏感读取该头，解析失败或缺失即 `null`，不推测、不提示「即将过期」；不实现令牌类型分支 |
+| GitHub fine-grained PAT 的 Contents / Metadata 映射 | 已核实 | 官方权限表：`GET /repos/{owner}/{repo}` → `Metadata` read；`GET /repos/{owner}/{repo}/branches`、`/commits`、`/contents/{path}` → `Contents` read：https://docs.github.com/en/rest/authentication/permissions-required-for-fine-grained-personal-access-tokens （2026-11-20）。官方另行说明令牌总是包含 public repository 只读访问：https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens | UI 文案固定为「Contents: read + Metadata: read」；系统不做自动权限校验或推断，401/403 由统一错误映射处理 |
+| GitHub REST 限流数值与响应头 | 已核实 | PAT 认证 5,000 请求/小时、未认证 60 请求/小时；响应头 `x-ratelimit-limit` / `x-ratelimit-remaining` / `x-ratelimit-used` / `x-ratelimit-reset`（UTC epoch 秒）；二级限流带 `retry-after`：https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api （2026-11-20） | 只读响应头，不硬编码 5,000；`remaining=0` 或 `retry-after` 即 `rate_limited`，`retryAfterAt` 取 `retry-after` 或 `x-ratelimit-reset` |
+| 云效地域版域名形态与路径差异 | 部分核实（仅知地域版路径不带 `organizations/{orgId}`） | 本轮复核 `getfileblobs` 仍为「地域版去掉 organizations 段」，未取到地域域名的完整列表：https://help.aliyun.com/zh/yunxiao/developer-reference/getfileblobs （2026-11-20） | `apiBaseUrl` 作为不透明 origin 存储；路径形态由适配器按「中心站/地域站」两种既定形态处理，不新增猜测 |
+| 五类适配器契约、错误映射、分页游标与限流读取 | 本阶段结论 | 见「供应商适配器契约」「错误分类映射」「分页、限流与重试」；tech-design 已展开到端点与 DTO | 按 ADR-205 / ADR-206 / ADR-208 / ADR-211 落地 |
+| 快照表结构、保留策略、`truncated` 表示、并发互斥 | 本阶段结论 | 见 ADR-203 / ADR-207 / ADR-209；`truncated` 与 `hasMore` 同时保留，供应商截断信号优先 | 四张表与迁移 `0008` 见 `technical-design/docs/database-schema.md` |
 
 > 涉及本体：ENT-C12 ~ ENT-C15、BR-C21 ~ BR-C27、BP-C9 ~ BP-C11、TERM-C14 ~ TERM-C16（来源 `_shared/ontology/`；无 `ontology-slices/tech-arch.md`）。模块划分沿用对象所属模块，不新增跨域依赖。
 
@@ -222,4 +229,4 @@ RepoProvider
 | 多用户 / 多副本 | 2–10 人 | 绑定归属接入账号权限；同步 claim 改为数据库行锁 + 租约；出站客户端加按绑定配额；文件内容可评估对象存储短期缓存（需重新评审数据边界） |
 | 代码索引 / 向量检索 | 后续独立需求 | 另立 spec；本 spec 的元数据与读取审计可作为输入，但不在本期建索引、不克隆仓库 |
 
-> 未安装任何 AlonWorkflow pack（`.aw/install.json` 的 `packs` 为空），未套用 pack 专属约定；如需 React/.NET 等 pack 约定，可 `alonwf pack add <pack>` 后重跑本阶段。
+> 本阶段产出于 AlonWorkflow 时期，当时未安装任何 pack、未套用 pack 专属约定；该工作流已于 2026-11-19 整体移除，本说明仅作历史留痕。
