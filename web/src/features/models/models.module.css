@@ -1,0 +1,66 @@
+/* 母版 C（过滤表格）：模型绑定页。全部颜色走 Token，兼容 Light/Dark。 */
+
+.page {
+  display: grid;
+  gap: var(--spacing-4);
+}
+
+.tableCard {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-card);
+  overflow-x: auto;
+}
+
+.tableCard table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tableCard > [role="status"] {
+  padding: var(--spacing-8);
+}
+
+.modelName {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+}
+
+.displayName {
+  font-weight: var(--font-weight-medium);
+}
+
+/* 模型参数用等宽胶囊，保证 temperature / max_tokens 行列对齐。 */
+.paramPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--spacing-2);
+  min-height: 22px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-muted);
+  color: var(--color-foreground);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.actions button {
+  min-height: 28px;
+  padding: 0 var(--spacing-2);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
+.emptyCard {
+  padding: var(--spacing-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-card);
+}

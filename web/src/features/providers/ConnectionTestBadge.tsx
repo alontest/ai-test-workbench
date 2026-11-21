@@ -1,5 +1,6 @@
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import styles from "./providers.module.css";
 
 export type ConnectionTestState =
   | "idle"
@@ -87,7 +88,7 @@ export function ConnectionTestBadge({
   label,
 }: ConnectionTestBadgeProps) {
   return (
-    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+    <div className={styles.connectionTest}>
       <Button
         type="button"
         variant="secondary"

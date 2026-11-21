@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import { FeatureKnowledge } from "../../../components/icons";
 import { Button } from "../../../components/ui/Button";
 import { ErrorState } from "../../../components/ui/Feedback";
+import { PageContainer, PageHeader } from "../../../components/ui/PageHeader";
 import { apiFetch } from "../../../lib/api/client";
 import { queryKeys } from "../../../lib/api/keys";
 import type { KnowledgeBaseSummary } from "../api/types";
@@ -49,18 +51,19 @@ export function KnowledgeBaseListPage() {
   }
 
   return (
-    <section className={styles.page}>
-      <div className={styles.pageHead}>
-        <div className={styles.stack}>
-          <h1 style={{ margin: 0 }}>知识库</h1>
-          <p className={styles.muted}>
-            项目级只读资产：导入后可在浏览页按编号查看，并在会话调用时注入。
-          </p>
-        </div>
-        <Button type="button" onClick={() => navigate("/knowledge-bases/import")}>
-          导入知识库
-        </Button>
-      </div>
+    <PageContainer tier="xl" className={styles.page}>
+      <PageHeader
+        title="知识库"
+        description="项目级只读资产：导入后可在浏览页按编号查看，并在会话调用时注入。"
+        actions={
+          <Button
+            type="button"
+            onClick={() => navigate("/knowledge-bases/import")}
+          >
+            导入知识库
+          </Button>
+        }
+      />
 
       <div className={styles.toolbar}>
         <KbProjectFilter
@@ -110,8 +113,11 @@ export function KnowledgeBaseListPage() {
         </div>
       ) : null}
 
-      <p className={styles.footerNote}>
-        只读导入：工作台不修改上传文件，也不在线编辑条目；同名重新导入会生成新版本，旧版本只读保留。
+      <p className={styles.footerTip}>
+        <FeatureKnowledge size={16} />
+        <span>
+          只读导入：工作台不修改上传文件，也不在线编辑条目；同名重新导入会生成新版本，旧版本只读保留。
+        </span>
       </p>
 
       <KbDeleteDialog
@@ -131,6 +137,6 @@ export function KnowledgeBaseListPage() {
           });
         }}
       />
-    </section>
+    </PageContainer>
   );
 }

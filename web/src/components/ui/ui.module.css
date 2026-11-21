@@ -11,11 +11,17 @@
   color: var(--color-on-primary);
   font-weight: var(--font-weight-bold);
   cursor: pointer;
-  transition: background var(--duration-fast) var(--easing-standard);
+  transition:
+    background var(--duration-fast) var(--easing-standard),
+    transform var(--duration-fast) var(--easing-standard);
 }
 
 .button:hover:not(:disabled) {
   background: var(--color-primary-hover);
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .button:disabled {
@@ -48,12 +54,17 @@
 .select,
 .textarea {
   width: 100%;
-  min-height: 36px;
+  min-height: 38px;
   padding: var(--spacing-2) var(--spacing-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-input);
   color: var(--color-foreground);
+}
+
+.input,
+.select {
+  height: 38px;
 }
 
 .textarea {
@@ -92,6 +103,8 @@
 .badge {
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
+  white-space: nowrap;
   padding: 0 var(--spacing-2);
   min-height: 22px;
   border-radius: var(--radius-full);
@@ -147,16 +160,20 @@
   transform: translateX(18px);
 }
 
+/* 全站层级表见 DESIGN.md §四.4：顶栏 20，移动端侧栏 25/26，
+   代码抽屉 30，模态 40/41。 */
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgb(0 0 0 / 0.55);
+  z-index: 40;
+  background: var(--color-overlay);
 }
 
 .content {
   position: fixed;
   top: 50%;
   left: 50%;
+  z-index: 41;
   transform: translate(-50%, -50%);
   width: min(520px, calc(100% - var(--spacing-8)));
   max-height: calc(100% - var(--spacing-16));
@@ -197,4 +214,38 @@
   height: 16px;
   border-radius: var(--radius-sm);
   background: var(--color-muted);
+}
+
+/* ── 母版 C 通用容器：表格卡片与筛选工具栏。UI-1/2/3 直接复用。 ── */
+
+.tableCard {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-card);
+  overflow-x: auto;
+}
+
+.tableCard table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--spacing-3);
+}
+
+.toolbarEnd {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  margin-left: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button:active:not(:disabled) {
+    transform: none;
+  }
 }

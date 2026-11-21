@@ -3,11 +3,13 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Button } from "../../components/ui/Button";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
+import { PageHeader } from "../../components/ui/PageHeader";
 import { apiFetch } from "../../lib/api/client";
 import { isApiError } from "../../lib/api/errors";
 import { queryKeys } from "../../lib/api/keys";
 import { StatusPill } from "./StatusPill";
 import type { SessionSummary } from "./types";
+import styles from "./SessionDetailPage.module.css";
 
 export interface SessionHeaderProps {
   session: SessionSummary;
@@ -143,22 +145,27 @@ export function SessionDeleteButton({
 
 export function SessionHeader({ session }: SessionHeaderProps) {
   return (
-    <header
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        gap: 12,
-      }}
-    >
-      <div>
-        <h1>{session.title}</h1>
-        <StatusPill status={session.status} />
-      </div>
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <SessionCompleteButton session={session} />
-        <SessionDeleteButton session={session} redirectToList />
-      </div>
-    </header>
+    <PageHeader
+      backLink={{ to: "/sessions", label: "返回会话列表" }}
+      title={session.title}
+      badge={<StatusPill status={session.status} />}
+      description={
+        <span className={styles.sessionMeta}>
+          <span className={styles.sessionMetaItem}>#{session.sessionId}</span>
+          <span className={styles.sessionMetaItem}>
+            {session.project.name}
+          </span>
+          <span className={styles.sessionMetaItem}>
+            {session.model.displayName} · {session.model.providerName}
+          </span>
+        </span>
+      }
+      actions={
+        <>
+          <SessionCompleteButton session={session} />
+          <SessionDeleteButton session={session} redirectToList />
+        </>
+      }
+    />
   );
 }

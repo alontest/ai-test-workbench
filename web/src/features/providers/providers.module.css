@@ -1,0 +1,103 @@
+/* 母版 C（过滤表格）：AI 提供商页。全部颜色走 Token，兼容 Light/Dark。 */
+
+.page {
+  display: grid;
+  gap: var(--spacing-4);
+}
+
+/* 表格卡容器：与 models / calls 一致，承载表格与区块级加载态。 */
+.tableCard {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-card);
+  overflow-x: auto;
+}
+
+.tableCard table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tableCard > [role="status"] {
+  padding: var(--spacing-8);
+}
+
+.nameCell {
+  font-weight: var(--font-weight-medium);
+}
+
+.protocolPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--spacing-2);
+  min-height: 22px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  color: var(--color-muted-foreground);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+}
+
+/* 掩码密钥：等宽 + 字距，保证列表内各行的掩码长度可对齐扫读。 */
+.maskedKey {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.04em;
+  color: var(--color-muted-foreground);
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.actions button {
+  min-height: 28px;
+  padding: 0 var(--spacing-2);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
+.linkButton {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 var(--spacing-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-foreground);
+  font-size: var(--font-size-xs);
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    border-color var(--duration-fast) var(--easing-standard),
+    background var(--duration-fast) var(--easing-standard);
+}
+
+.linkButton:hover,
+.linkButton:focus-visible {
+  border-color: var(--color-ring);
+  background: var(--color-muted);
+}
+
+.emptyCard {
+  padding: var(--spacing-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-card);
+}
+
+/* 连接测试：按钮 + 结果徽标同一行，结果徽标等宽不可换行。 */
+.connectionTest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.connectionTest > :last-child:not(button) {
+  font-family: var(--font-family-mono);
+  white-space: nowrap;
+}

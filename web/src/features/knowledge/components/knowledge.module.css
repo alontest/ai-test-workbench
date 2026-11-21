@@ -1,14 +1,202 @@
 .page {
   display: grid;
   gap: var(--spacing-4);
+  min-width: 0;
 }
 
-.pageHead {
+/* 表格卡片容器：表头弱化、行 hover、等宽数字列。 */
+.tableCard {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-card);
+  color: var(--color-card-foreground);
+  overflow: hidden;
+}
+
+.tableCard .tableWrap tbody tr {
+  transition: background var(--duration-fast) var(--easing-standard);
+}
+
+.tableCard .tableWrap tbody tr:hover {
+  background: var(--color-muted);
+}
+
+.tableCard .tableWrap tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.numCell {
+  font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.numHead {
+  text-align: right;
+}
+
+.versionGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.versionPill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 var(--spacing-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-muted);
+  color: var(--color-foreground);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.currentFlag {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-accent);
+}
+
+/* 底部只读提示条。 */
+.footerTip {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-2);
+  margin: 0;
+  padding: var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-muted);
+  color: var(--color-muted-foreground);
+  font-size: var(--font-size-sm);
+}
+
+.footerTip svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+/* 吸顶筛选栏：搜索 + 类型 Tab。 */
+.stickyBar {
+  position: sticky;
+  top: var(--topbar-height);
+  z-index: 10;
+  display: grid;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3) 0;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-background);
+}
+
+/* 琥珀色左边框告警（superseded 历史版本）。 */
+.bannerWarn {
+  margin: 0;
+  padding: var(--spacing-2) var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-warning);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-warning) 10%, var(--color-card));
+  color: var(--color-foreground);
+  font-size: var(--font-size-sm);
+}
+
+.bannerWarn a {
+  color: var(--color-warning);
+}
+
+/* 导入向导分步卡片。 */
+.stepCard {
+  display: grid;
+  gap: var(--spacing-3);
+  padding: var(--spacing-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-card);
+  color: var(--color-card-foreground);
+}
+
+.stepHead {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.stepIndex {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-muted);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.stepTitle {
+  margin: 0;
+  font-size: var(--font-size-md);
+}
+
+/* 导入成功报告头。 */
+.reportHero {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+}
+
+.reportHeroBody {
+  display: grid;
+  gap: var(--spacing-1);
+  min-width: 0;
+}
+
+.reportVersions {
+  margin: 0;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 条目详情：编号徽章与元数据网格。 */
+.entryCodeBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--spacing-3);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  color: var(--color-accent);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.02em;
+}
+
+.entryMeta {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--spacing-3);
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.proseBody {
+  margin: 0;
+  padding: var(--spacing-4);
+  border-radius: var(--radius-sm);
+  background: var(--color-muted);
+  color: var(--color-foreground);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-relaxed);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  tab-size: 2;
 }
 
 .muted {
@@ -179,12 +367,6 @@
 .bannerError {
   border-color: var(--color-destructive);
   color: var(--color-destructive);
-}
-
-.footerNote {
-  margin: 0;
-  color: var(--color-muted-foreground);
-  font-size: var(--font-size-sm);
 }
 
 .detailGrid {

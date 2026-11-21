@@ -45,6 +45,39 @@ a {
   outline-offset: 2px;
 }
 
+/* 通用表格默认视觉（母版 C）。模块内的 `.tableWrap th/td` 等
+   类选择器优先级更高，仍可覆盖这里的默认值。 */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+thead th {
+  padding: var(--spacing-2) var(--spacing-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-muted);
+  color: var(--color-muted-foreground);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  text-align: left;
+  white-space: nowrap;
+}
+
+tbody td {
+  padding: var(--spacing-2) var(--spacing-3);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+tbody tr:hover {
+  background: color-mix(in srgb, var(--color-muted) 55%, transparent);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

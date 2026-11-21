@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { Mascot, type MascotState } from "../../components/mascot/Mascot";
 import { Button } from "../../components/ui/Button";
 import { FormField } from "../../components/ui/FormField";
 import { Textarea } from "../../components/ui/Input";
@@ -23,6 +24,7 @@ import {
 } from "../composer/CharacterCounter";
 import type { SessionSummary } from "../sessions/types";
 import { AdvancedParams, type AdvancedParamsValue } from "./AdvancedParams";
+import styles from "./CallPanel.module.css";
 
 export interface CallPanelProps {
   session: SessionSummary;
@@ -136,6 +138,24 @@ export function CallPanel({
     mutation.isPending ||
     !prompt.trim();
 
+  // 鸮鸮随调用面板的真实状态换姿态，不用额外的假状态字段。
+  const mascotState: MascotState = mutation.isPending
+    ? "analyzing"
+    : exceeded || overLimit || submitError
+      ? "warning"
+      : prompt.trim()
+        ? "watching"
+        : "idle";
+  const assistantHint = mutation.isPending
+    ? "正在扫描模型返回，请稍候…"
+    : exceeded || overLimit
+      ? "字符预算已超限，先删减再发起。"
+      : submitError
+        ? "调用失败，核对错误码后重试。"
+        : prompt.trim()
+          ? "提示词已就位，随时可以发起调用。"
+          : "等待提示词，输入后即可发起调用。";
+
   function baseBody(): Record<string, unknown> {
     const body: Record<string, unknown> = { prompt };
     if (advancedOpen) {
@@ -175,12 +195,19 @@ export function CallPanel({
 
   return (
     <form
+      className={styles.form}
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit();
       }}
-      style={{ display: "grid", gap: "var(--spacing-3)" }}
     >
+      <div className={styles.assistant}>
+        <Mascot size={40} state={mascotState} label="鸮鸮" />
+        <div className={styles.assistantText}>
+          <strong className={styles.assistantTitle}>调用操控台</strong>
+          <span className={styles.assistantHint}>{assistantHint}</span>
+        </div>
+      </div>
       <FormField
         label="提示"
         required

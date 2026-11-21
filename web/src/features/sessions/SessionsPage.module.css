@@ -1,0 +1,52 @@
+/* 母版 C（过滤表格）：会话列表页。全部颜色走 Token，兼容 Light/Dark。 */
+
+.page {
+  display: grid;
+  gap: var(--spacing-4);
+}
+
+/* 筛选栏卡片与下方 .tableCard 同宽、同圆角、同边框。 */
+.filterCard {
+  display: grid;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3) var(--spacing-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-card);
+}
+
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--spacing-3);
+}
+
+.filterActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  margin-left: auto;
+}
+
+.activeHint {
+  margin: 0;
+  color: var(--color-muted-foreground);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+}
+
+/* 表格卡容器复用 components/ui 的 .tableCard，这里只补加载态留白。 */
+.statusCard {
+  padding: var(--spacing-8);
+}
+
+.sessionTitle {
+  font-weight: var(--font-weight-medium);
+}
+
+.modelCell {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-muted-foreground);
+}

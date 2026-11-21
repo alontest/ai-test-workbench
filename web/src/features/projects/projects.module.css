@@ -1,0 +1,129 @@
+/* 母版 D（非对称双栏）：项目上下文页。全部颜色走 Token，兼容 Light/Dark。 */
+
+.page {
+  display: grid;
+  gap: var(--spacing-4);
+}
+
+.workbench {
+  display: grid;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  gap: var(--spacing-4);
+  align-items: start;
+}
+
+.master,
+.detail {
+  min-width: 0;
+}
+
+@media (max-width: 960px) {
+  .workbench {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.stateCard {
+  display: grid;
+  place-items: center;
+  padding: var(--spacing-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-card);
+}
+
+.emptyCard {
+  padding: var(--spacing-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-card);
+}
+
+/* 360px 窄栏内的紧凑项目行，避免 4 列宽表横向溢出。 */
+.projectList {
+  list-style: none;
+  margin: 0;
+  padding: var(--spacing-2);
+  display: grid;
+  gap: var(--spacing-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-card);
+}
+
+.projectRow {
+  display: grid;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3);
+  border-left: 3px solid transparent;
+  border-radius: var(--radius-sm);
+  transition:
+    background var(--duration-fast) var(--easing-standard),
+    border-color var(--duration-fast) var(--easing-standard);
+}
+
+.projectRow:hover {
+  background: var(--color-muted);
+}
+
+.projectRow[data-selected] {
+  border-left-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.projectTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-2);
+  min-width: 0;
+}
+
+.projectName {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: var(--font-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.techPill {
+  flex: none;
+  max-width: 45%;
+  overflow: hidden;
+  padding: 0 var(--spacing-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  color: var(--color-muted-foreground);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projectBottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-2);
+}
+
+.updatedAt {
+  color: var(--color-muted-foreground);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+}
+
+.projectActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.projectActions button {
+  min-height: 28px;
+  padding: 0 var(--spacing-2);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}

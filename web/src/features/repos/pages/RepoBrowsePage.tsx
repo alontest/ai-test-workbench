@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ErrorState } from "../../../components/ui/Feedback";
 import { Spinner } from "../../../components/ui/Loading";
+import { PageContainer, PageHeader } from "../../../components/ui/PageHeader";
 import type { FileTarget } from "../components/FileViewerDrawer";
 import { FileViewerDrawer } from "../components/FileViewerDrawer";
 import { BranchPicker } from "../components/BranchPicker";
@@ -70,17 +71,42 @@ export function RepoBrowsePage() {
   const sync = useSyncRepo(Number.isFinite(projectId) ? projectId : undefined);
 
   if (!bindingId || !Number.isFinite(projectId)) {
-    return <ErrorState message="仓库绑定不存在" retryable={false} />;
+    return (
+      <PageContainer tier="xl" className={styles.page}>
+        <PageHeader
+          backLink={{ to: "/repos", label: "仓库浏览" }}
+          title="仓库浏览"
+          description="实时目录树、提交历史与按需文件查看。"
+        />
+        <ErrorState message="仓库绑定不存在" retryable={false} />
+      </PageContainer>
+    );
   }
   if (bindingQuery.isPending) {
-    return <Spinner label="加载仓库绑定" />;
+    return (
+      <PageContainer tier="xl" className={styles.page}>
+        <PageHeader
+          backLink={{ to: "/repos", label: "仓库浏览" }}
+          title="仓库浏览"
+          description="实时目录树、提交历史与按需文件查看。"
+        />
+        <Spinner label="加载仓库绑定" />
+      </PageContainer>
+    );
   }
   if (bindingQuery.isError || !binding) {
     return (
-      <ErrorState
-        message="无法加载仓库绑定"
-        onRetry={() => void bindingQuery.refetch()}
-      />
+      <PageContainer tier="xl" className={styles.page}>
+        <PageHeader
+          backLink={{ to: "/repos", label: "仓库浏览" }}
+          title="仓库浏览"
+          description="实时目录树、提交历史与按需文件查看。"
+        />
+        <ErrorState
+          message="无法加载仓库绑定"
+          onRetry={() => void bindingQuery.refetch()}
+        />
+      </PageContainer>
     );
   }
 
@@ -140,32 +166,36 @@ export function RepoBrowsePage() {
               <h2 className={styles.cardTitle}>目录树</h2>
               <span className={styles.muted}>逐级实时读取</span>
             </div>
-            <RepoTree
-              bindingId={bindingId}
-              repoId={activeRepoId}
-              ref={activeRef}
-              onOpenFile={(path) => {
-                if (!activeRef) {
-                  return;
-                }
-                setTarget({ repoId: activeRepoId, ref: activeRef, path });
-              }}
-            />
+            <div className={styles.paneScroll}>
+              <RepoTree
+                bindingId={bindingId}
+                repoId={activeRepoId}
+                ref={activeRef}
+                onOpenFile={(path) => {
+                  if (!activeRef) {
+                    return;
+                  }
+                  setTarget({ repoId: activeRepoId, ref: activeRef, path });
+                }}
+              />
+            </div>
           </section>
           <section className={styles.card} aria-label="提交">
             <div className={styles.sectionHead}>
               <h2 className={styles.cardTitle}>提交</h2>
               <span className={styles.muted}>按时间倒序 · 实时分页</span>
             </div>
-            <CommitList
-              items={commits}
-              loading={commitsQuery.isPending}
-              error={commitsQuery.isError}
-              hasMore={Boolean(commitsQuery.hasNextPage)}
-              loadingMore={commitsQuery.isFetchingNextPage}
-              onLoadMore={() => void commitsQuery.fetchNextPage()}
-              onRetry={() => void commitsQuery.refetch()}
-            />
+            <div className={styles.paneScroll}>
+              <CommitList
+                items={commits}
+                loading={commitsQuery.isPending}
+                error={commitsQuery.isError}
+                hasMore={Boolean(commitsQuery.hasNextPage)}
+                loadingMore={commitsQuery.isFetchingNextPage}
+                onLoadMore={() => void commitsQuery.fetchNextPage()}
+                onRetry={() => void commitsQuery.refetch()}
+              />
+            </div>
           </section>
         </div>
       </>
@@ -196,13 +226,15 @@ export function RepoBrowsePage() {
             <div className={styles.sectionHead}>
               <h2 className={styles.cardTitle}>目录树</h2>
             </div>
-            <RepoTree
-              bindingId={bindingId}
-              repoId={binding?.repoId ?? null}
-              ref={binding?.defaultBranch ?? null}
-              disabled
-              onOpenFile={() => undefined}
-            />
+            <div className={styles.paneScroll}>
+              <RepoTree
+                bindingId={bindingId}
+                repoId={binding?.repoId ?? null}
+                ref={binding?.defaultBranch ?? null}
+                disabled
+                onOpenFile={() => undefined}
+              />
+            </div>
           </section>
           {baselineQuery.data ? (
             <RepoBaselineSnapshot document={baselineQuery.data} />
@@ -213,7 +245,7 @@ export function RepoBrowsePage() {
   }
 
   return (
-    <section className={styles.page}>
+    <PageContainer tier="xl" className={styles.page}>
       <RepoBrowseHeader
         binding={binding}
         onRefresh={refresh}
@@ -234,6 +266,6 @@ export function RepoBrowsePage() {
         disabled={revoked}
         onClose={() => setTarget(null)}
       />
-    </section>
+    </PageContainer>
   );
 }

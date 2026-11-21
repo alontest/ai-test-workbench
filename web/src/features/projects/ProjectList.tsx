@@ -1,5 +1,6 @@
 import { Button } from "../../components/ui/Button";
 import { EmptyState } from "../../components/ui/Feedback";
+import styles from "./projects.module.css";
 import type { Project } from "./types";
 
 export interface ProjectListProps {
@@ -9,6 +10,17 @@ export interface ProjectListProps {
   selectedId: number | null;
 }
 
+function formatUpdatedAt(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat("zh-CN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
 export function ProjectList({
   projects,
   onEdit,
@@ -16,35 +28,42 @@ export function ProjectList({
   selectedId,
 }: ProjectListProps) {
   if (projects.length === 0) {
-    return <EmptyState title="还没有项目" description="创建一个项目上下文后再发起会话。" />;
+    return (
+      <div className={styles.emptyCard}>
+        <EmptyState
+          title="还没有项目"
+          description="创建一个项目上下文后再发起会话。"
+        />
+      </div>
+    );
   }
   return (
-    <table>
-      <thead>
-        <tr>
-          <th>名称</th>
-          <th>技术栈</th>
-          <th>更新时间</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        {projects.map((project) => (
-          <tr
+    <ul className={styles.projectList}>
+      {projects.map((project) => {
+        const selected = project.projectId === selectedId;
+        return (
+          <li
             key={project.projectId}
-            data-selected={project.projectId === selectedId || undefined}
+            className={styles.projectRow}
+            data-selected={selected || undefined}
           >
-            <td>{project.name}</td>
-            <td>{project.techStack ?? "—"}</td>
-            <td>{project.updatedAt}</td>
-            <td>
-              <div style={{ display: "flex", gap: 8 }}>
+            <div className={styles.projectTop}>
+              <span className={styles.projectName}>{project.name}</span>
+              <span className={styles.techPill}>
+                {project.techStack ?? "未填技术栈"}
+              </span>
+            </div>
+            <div className={styles.projectBottom}>
+              <span className={styles.updatedAt}>
+                更新 {formatUpdatedAt(project.updatedAt)}
+              </span>
+              <div className={styles.projectActions}>
                 <Button
                   type="button"
                   variant="ghost"
                   onClick={() => onSelect(project)}
                 >
-                  {project.projectId === selectedId ? "已选择" : "仓库绑定"}
+                  {selected ? "已选择" : "仓库绑定"}
                 </Button>
                 <Button
                   type="button"
@@ -54,10 +73,10 @@ export function ProjectList({
                   编辑
                 </Button>
               </div>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

@@ -31,63 +31,78 @@ export function KnowledgeBaseTable({
     );
   }
   return (
-    <div className={styles.tableWrap}>
-      <table>
-        <thead>
-          <tr>
-            <th>名称</th>
-            <th>项目</th>
-            <th>版本</th>
-            <th>生成时间</th>
-            <th>条目</th>
-            <th>状态</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item) => (
-            <tr key={item.kbId}>
-              <td>
-                <span className={styles.mono}>{item.name}</span>
-                {item.supersededCount > 0 ? (
-                  <p className={styles.muted}>
-                    另有 {item.supersededCount} 个旧版本（只读）
-                  </p>
-                ) : null}
-              </td>
-              <td>{item.project?.name ?? "—"}</td>
-              <td>v{item.version}</td>
-              <td>{formatTimestamp(item.generatedAt)}</td>
-              <td>{item.entryCount.toLocaleString("zh-CN")}</td>
-              <td>
-                {item.current ? (
-                  <Badge label="就绪" tone="success" />
-                ) : (
-                  <Badge label="旧版本" />
-                )}
-              </td>
-              <td>
-                <div className={styles.row}>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => onBrowse(item.latestKbId)}
-                  >
-                    浏览
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => onDelete(item)}
-                  >
-                    删除
-                  </Button>
-                </div>
-              </td>
+    <div className={styles.tableCard}>
+      <div className={styles.tableWrap}>
+        <table>
+          <thead>
+            <tr>
+              <th>名称</th>
+              <th>项目</th>
+              <th>版本</th>
+              <th>生成时间</th>
+              <th className={styles.numHead}>条目</th>
+              <th>状态</th>
+              <th>操作</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr key={item.kbId}>
+                <td>
+                  <span className={styles.mono}>{item.name}</span>
+                  {item.supersededCount > 0 ? (
+                    <p className={styles.muted}>
+                      另有 {item.supersededCount} 个旧版本（只读）
+                    </p>
+                  ) : null}
+                </td>
+                <td>{item.project?.name ?? "—"}</td>
+                <td>
+                  <span className={styles.versionGroup}>
+                    <span className={styles.versionPill}>v{item.version}</span>
+                    {item.current ? (
+                      <span className={styles.currentFlag}>current</span>
+                    ) : null}
+                  </span>
+                </td>
+                <td>
+                  <span className={styles.mono}>
+                    {formatTimestamp(item.generatedAt)}
+                  </span>
+                </td>
+                <td className={styles.numCell}>
+                  {item.entryCount.toLocaleString("zh-CN")}
+                </td>
+                <td>
+                  {item.current ? (
+                    <Badge label="就绪" tone="success" />
+                  ) : (
+                    <Badge label="旧版本" />
+                  )}
+                </td>
+                <td>
+                  <div className={styles.row}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => onBrowse(item.latestKbId)}
+                    >
+                      浏览
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => onDelete(item)}
+                    >
+                      删除
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

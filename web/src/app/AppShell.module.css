@@ -1,12 +1,17 @@
 .shell {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: var(--sidebar-width) 1fr;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   grid-template-rows: var(--topbar-height) 1fr;
+  background: var(--color-background);
 }
 
+/* 侧边栏：品牌区固定，导航可滚动。 */
 .sidebar {
   grid-row: 1 / span 2;
+  position: sticky;
+  top: 0;
+  height: 100vh;
   width: var(--sidebar-width);
   background: var(--color-card);
   border-right: 1px solid var(--color-border);
@@ -14,47 +19,184 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-6);
+  overflow-y: auto;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: 0 var(--spacing-2);
+}
+
+.brandMark {
+  flex: none;
+}
+
+.brandText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.brandName {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  color: var(--color-foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.brandTagline {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-tight);
+  letter-spacing: 0.08em;
+  color: var(--color-muted-foreground);
 }
 
 .topbar {
   height: var(--topbar-height);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--spacing-4);
+  gap: var(--spacing-3);
+  padding: 0 var(--spacing-6);
   border-bottom: 1px solid var(--color-border);
-  background: var(--color-card);
+  background: var(--color-background);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.breadcrumb {
+  flex: 1;
+  min-width: 0;
+}
+
+.crumbList {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+}
+
+.crumbItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  min-width: 0;
+}
+
+.crumb {
+  font-size: var(--font-size-sm);
+  color: var(--color-muted-foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.crumb[aria-current="page"] {
+  color: var(--color-foreground);
+  font-weight: var(--font-weight-medium);
+}
+
+.crumbSeparator {
+  color: color-mix(in srgb, var(--color-muted-foreground) 60%, transparent);
 }
 
 .content {
+  min-width: 0;
   max-width: var(--content-max-width);
   width: 100%;
-  padding: var(--spacing-6);
+  padding: var(--spacing-6) var(--spacing-8);
+  margin: 0 auto;
 }
 
 .navGroup {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-2);
+  gap: 2px;
 }
 
 .navGroup h2 {
-  margin: 0;
+  margin: 0 0 var(--spacing-1);
+  padding: 0 var(--spacing-2);
+  font-family: var(--font-family-base);
   font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.02em;
   color: var(--color-muted-foreground);
 }
 
 .navGroup a {
-  text-decoration: none;
-  padding: var(--spacing-2);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-3);
   border-radius: var(--radius-sm);
+  font-size: var(--font-size-base);
+  color: var(--color-foreground);
+  text-decoration: none;
+  transition: background var(--duration-fast) var(--easing-standard);
 }
 
-.navGroup a[aria-current="page"] {
+.navIcon {
+  flex: none;
+  color: var(--color-muted-foreground);
+  transition: color var(--duration-fast) var(--easing-standard);
+}
+
+.navGroup a:hover {
   background: var(--color-muted);
 }
 
+.navGroup a:hover .navIcon {
+  color: var(--color-foreground);
+}
+
+/* Active 态：muted 背景 + 左侧 3px 翡翠绿竖条 + 字重 500。 */
+.navGroup a[aria-current="page"] {
+  background: var(--color-muted);
+  font-weight: var(--font-weight-medium);
+}
+
+.navGroup a[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 20px;
+  transform: translateY(-50%);
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+}
+
+.navGroup a[aria-current="page"] .navIcon {
+  color: var(--color-accent);
+}
+
+/* 「均在规划中」贴在分组标题后：一条信息说清六项状态，
+   不给六个链接各挂一枚徽标（那是六份噪音）。 */
+.navTagInline {
+  margin-left: var(--spacing-2);
+  font-weight: var(--font-weight-normal);
+  color: var(--color-muted-foreground);
+  opacity: 0.8;
+}
+
 .menuButton {
+  display: none;
+}
+
+.sidebarOverlay {
   display: none;
 }
 
@@ -67,14 +209,30 @@
     display: inline-flex;
   }
 
+  .sidebarOverlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    padding: 0;
+    border: 0;
+    background: var(--color-overlay);
+    cursor: pointer;
+  }
+
   .sidebar {
     position: fixed;
     inset: 0 auto 0 0;
     transform: translateX(-100%);
-    z-index: 20;
+    z-index: 26;
+    transition: transform var(--duration-base) var(--easing-standard);
   }
 
   .sidebarOpen {
     transform: translateX(0);
+  }
+
+  .content {
+    padding: var(--spacing-4);
   }
 }

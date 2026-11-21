@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { PageContainer, PageHeader } from "../../components/ui/PageHeader";
 import { apiFetch, queryString } from "../../lib/api/client";
 import { queryKeys } from "../../lib/api/keys";
 import type { Project } from "../projects/types";
@@ -51,8 +52,11 @@ export function CallsPage() {
   );
 
   return (
-    <section className={styles.page}>
-      <h1>调用记录</h1>
+    <PageContainer tier="xl" className={styles.page}>
+      <PageHeader
+        title="调用记录"
+        description="按项目、会话、状态与时间范围核对每次模型调用的输入摘要、耗时与知识注入；记录只读留痕，不保存密钥。"
+      />
       <CallFilters
         value={filters}
         onChange={setFilters}
@@ -66,6 +70,6 @@ export function CallsPage() {
         onRetry={() => void callsQuery.refetch()}
         filtered={filtered}
       />
-    </section>
+    </PageContainer>
   );
 }

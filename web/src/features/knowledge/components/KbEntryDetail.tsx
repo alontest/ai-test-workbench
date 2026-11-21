@@ -16,21 +16,14 @@ export function KbEntryDetail({ entry }: KbEntryDetailProps) {
   return (
     <div className={styles.detailGrid}>
       <div className={styles.stack}>
-        <header className={styles.stack}>
-          <div className={styles.row}>
-            <span className={`${styles.code} ${styles.mono}`}>{entry.code}</span>
-            <Badge label={ENTRY_TYPE_LABELS[entry.type]} />
-            <KbFreshnessBadge
-              state={entry.freshness.state}
-              at={entry.freshness.at}
-            />
-            {entry.kb.superseded ? <Badge label="旧版本" /> : null}
-          </div>
-          <h1 style={{ margin: 0 }}>{entry.title || entry.code}</h1>
-        </header>
+        <div className={styles.entryMeta}>
+          <Badge label={ENTRY_TYPE_LABELS[entry.type]} />
+          <KbFreshnessBadge state={entry.freshness.state} at={entry.freshness.at} />
+          {entry.kb.superseded ? <Badge label="旧版本" /> : null}
+        </div>
 
         {entry.kb.superseded ? (
-          <p className={styles.banner}>
+          <p className={styles.bannerWarn} role="status">
             当前条目属于旧版本，已被新版本取代。
             <Link to={`/knowledge-bases/${entry.kb.latestKbId}`}>
               查看最新版
@@ -51,7 +44,7 @@ export function KbEntryDetail({ entry }: KbEntryDetailProps) {
             ) : null}
           </h2>
           {entry.body ? (
-            <div className={styles.bodyText}>{entry.body}</div>
+            <div className={styles.proseBody}>{entry.body}</div>
           ) : (
             <p className={styles.bodyText}>{entry.summary ?? "—"}</p>
           )}
@@ -67,8 +60,7 @@ export function KbEntryDetail({ entry }: KbEntryDetailProps) {
               ) : (
                 fields.map(([key, value]) => (
                   <div key={key}>
-                    <span className={styles.mono}>{key}</span>:{" "}
-                    {String(value)}
+                    <span className={styles.mono}>{key}</span>: {String(value)}
                   </div>
                 ))
               )}
@@ -121,6 +113,8 @@ export function KbEntryDetail({ entry }: KbEntryDetailProps) {
         <section className={styles.card}>
           <h2 style={{ marginTop: 0 }}>来源与版本</h2>
           <dl className={styles.kv}>
+            <dt>编号</dt>
+            <dd className={styles.mono}>{entry.code}</dd>
             <dt>知识库</dt>
             <dd>
               <Link to={`/knowledge-bases/${entry.kb.kbId}`}>

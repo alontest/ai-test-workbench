@@ -1,7 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
+import {
+  IconChevronRight,
+  ProviderBrand,
+} from "../../../components/icons";
 import { ErrorState } from "../../../components/ui/Feedback";
 import { Spinner } from "../../../components/ui/Loading";
+import { PageContainer, PageHeader } from "../../../components/ui/PageHeader";
 import { apiFetch } from "../../../lib/api/client";
 import { queryKeys } from "../../../lib/api/keys";
 import type { Project } from "../../projects/types";
@@ -29,7 +34,12 @@ function ProjectBindings({
 
   return (
     <section className={styles.card} aria-label={`${name} 的仓库绑定`}>
-      <h2 className={styles.cardTitle}>{name}</h2>
+      <div className={styles.sectionHead}>
+        <h2 className={styles.cardTitle}>{name}</h2>
+        {bindings.length > 0 ? (
+          <span className={styles.muted}>{bindings.length} 个仓库</span>
+        ) : null}
+      </div>
       {query.isPending ? (
         <Spinner label="加载绑定" />
       ) : query.isError ? (
@@ -39,17 +49,32 @@ function ProjectBindings({
           还没有绑定仓库。<Link to="/projects">去项目上下文添加</Link>
         </p>
       ) : (
-        <ul className={styles.linkList}>
+        <ul className={styles.repoBindingList}>
           {bindings.map((binding) => (
             <li key={binding.bindingId}>
-              <Link to={`/projects/${projectId}/repos/${binding.bindingId}`}>
-                <span className={styles.mono}>{binding.repoName}</span>
+              <Link
+                className={styles.repoBindingRow}
+                to={`/projects/${projectId}/repos/${binding.bindingId}`}
+              >
+                <ProviderBrand provider={binding.provider} size={20} />
+                <span className={styles.repoBindingMain}>
+                  <span className={styles.repoBindingName}>
+                    {binding.repoName}
+                  </span>
+                  <span className={styles.muted}>
+                    {PROVIDER_LABELS[binding.provider]}
+                  </span>
+                </span>
+                <span className={styles.monoPill}>
+                  {binding.defaultBranch ?? "无默认分支"}
+                </span>
+                <span
+                  className={styles.statusDot}
+                  data-status={binding.status}
+                  aria-hidden="true"
+                />
+                <IconChevronRight size={16} className={styles.chevron} />
               </Link>
-              <span className={styles.muted}>
-                {" "}
-                · {PROVIDER_LABELS[binding.provider]} ·{" "}
-                {binding.defaultBranch ?? "无默认分支"}
-              </span>
             </li>
           ))}
         </ul>
@@ -64,33 +89,28 @@ export function RepoBrowseIndexPage() {
     queryFn: () => apiFetch<ProjectPage>("/projects"),
   });
 
-  if (projectsQuery.isPending) {
-    return <Spinner label="加载项目" />;
-  }
-  if (projectsQuery.isError) {
-    return (
-      <ErrorState
-        message="无法加载项目列表"
-        onRetry={() => void projectsQuery.refetch()}
-      />
-    );
-  }
+  const projects = projectsQuery.data?.items ?? [];
 
-  const projects = projectsQuery.data.items;
   return (
-    <section className={styles.page}>
-      <div className={styles.stack}>
-        <h1 className={styles.pageTitle}>仓库浏览</h1>
-        <p className={styles.muted}>
-          从项目上下文选择一个仓库绑定，进入实时目录树、提交与按需文件查看。
-        </p>
-      </div>
-      {projects.length === 0 ? (
+    <PageContainer tier="lg" className={styles.page}>
+      <PageHeader
+        title="仓库浏览"
+        description="从项目上下文选择一个仓库绑定，进入实时目录树、提交与按需文件查看。"
+      />
+
+      {projectsQuery.isPending ? (
+        <Spinner label="加载项目" />
+      ) : projectsQuery.isError ? (
+        <ErrorState
+          message="无法加载项目列表"
+          onRetry={() => void projectsQuery.refetch()}
+        />
+      ) : projects.length === 0 ? (
         <p className={styles.muted}>
           还没有项目。<Link to="/projects">先创建项目上下文</Link>
         </p>
       ) : (
-        <div className={styles.stack}>
+        <div className={styles.projectGrid}>
           {projects.map((project) => (
             <ProjectBindings
               key={project.projectId}
@@ -100,6 +120,6 @@ export function RepoBrowseIndexPage() {
           ))}
         </div>
       )}
-    </section>
+    </PageContainer>
   );
 }

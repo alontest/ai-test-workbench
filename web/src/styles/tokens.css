@@ -60,6 +60,9 @@
   --sidebar-width: 248px;
   --topbar-height: 64px;
   --content-max-width: 1280px;
+  --content-width-lg: 1120px;
+  --content-width-md: 880px;
+  --content-width-sm: 720px;
   --color-overlay: rgba(0, 0, 0, 0.65);
   --spacing-5: 20px;
   --repo-drawer-width: 480px;

@@ -24,6 +24,13 @@ const STATUS_TONE: Record<CallStatus, "success" | "danger" | "warning" | "info">
     running: "info",
   };
 
+const ROW_CLASS: Record<CallStatus, string> = {
+  success: styles.rowSuccess,
+  failed: styles.rowFailed,
+  timeout: styles.rowTimeout,
+  running: styles.rowRunning,
+};
+
 export interface CallRecordRowProps {
   call: CallRecord;
 }
@@ -40,8 +47,8 @@ export function CallRecordRow({ call }: CallRecordRowProps) {
 
   return (
     <>
-      <tr>
-        <td>{call.model.displayName}</td>
+      <tr className={[styles.row, ROW_CLASS[call.status]].join(" ")}>
+        <td className={styles.modelCell}>{call.model.displayName}</td>
         <td>
           <Badge
             label={STATUS_LABEL[call.status]}
@@ -62,7 +69,7 @@ export function CallRecordRow({ call }: CallRecordRowProps) {
         </td>
       </tr>
       {expanded ? (
-        <tr>
+        <tr className={styles.detailRow}>
           <td colSpan={6}>
             {detailQuery.isPending ? (
               <Spinner label="加载调用详情" />
@@ -86,14 +93,24 @@ export function CallRecordRow({ call }: CallRecordRowProps) {
                   <pre className={styles.preview}>{detail.resultText}</pre>
                 ) : null}
                 {injection && injection.length > 0 ? (
-                  <ul>
-                    {injection.map((item) => (
-                      <li key={item.kbId}>
-                        {item.kbName} v{item.kbVersion}
-                        {item.kbDeleted ? " 知识库已删除" : ""}
-                      </li>
-                    ))}
-                  </ul>
+                  <div className={styles.injection}>
+                    <p>知识注入</p>
+                    <ul>
+                      {injection.map((item) => (
+                        <li key={item.kbId}>
+                          <span>
+                            {item.kbName} v{item.kbVersion}
+                          </span>
+                          {item.entryCodes.length > 0 ? (
+                            <code>{item.entryCodes.join(", ")}</code>
+                          ) : null}
+                          {item.kbDeleted ? (
+                            <span className={styles.deleted}>知识库已删除</span>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 ) : null}
               </div>
             )}

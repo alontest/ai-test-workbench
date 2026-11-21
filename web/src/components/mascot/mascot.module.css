@@ -1,0 +1,212 @@
+/* 吉祥物角色动效：
+   克制但有生命力——每个状态只驱动最能表达当前系统事实的部位，
+   绝不散乱抖动。所有动画在 prefers-reduced-motion 下优雅降级为静态姿态。 */
+
+.mascot {
+  display: block;
+  flex: none;
+  overflow: visible;
+  user-select: none;
+}
+
+.character {
+  transform-origin: 60px 64px;
+  transition: transform var(--duration-base, 180ms)
+    var(--easing-standard, cubic-bezier(0.2, 0, 0, 1));
+}
+
+.compact .character {
+  transform-origin: 24px 24px;
+}
+
+.shadow {
+  transform-origin: 60px 108px;
+}
+
+/* ── idle：6s 平稳呼吸悬浮，地影随高度反向微缩 ── */
+.idle .character {
+  animation: floatBreathe 6s ease-in-out infinite;
+}
+
+.idle .shadow {
+  animation: shadowBreathe 6s ease-in-out infinite;
+}
+
+.idle .coreGem {
+  animation: gemPulse 4s ease-in-out infinite;
+}
+
+@keyframes floatBreathe {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-2.5px) scale(1.015);
+  }
+}
+
+@keyframes shadowBreathe {
+  0%,
+  100% {
+    transform: scaleX(1);
+    opacity: 0.45;
+  }
+  50% {
+    transform: scaleX(0.9);
+    opacity: 0.32;
+  }
+}
+
+@keyframes gemPulse {
+  0%,
+  100% {
+    opacity: 0.78;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ── watching：身体微前倾锁定目标，雷达波轻闪 ── */
+.watching .character {
+  transform: translateY(-1px) rotate(1.5deg);
+}
+
+.watching .propWatching {
+  animation: radarBlink 2.2s ease-in-out infinite;
+}
+
+@keyframes radarBlink {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ── analyzing：护目镜 HUD 准星匀速旋转，代码卡片微浮 ── */
+.analyzing .scanRingLeft {
+  animation: spinCw 2.4s linear infinite;
+}
+
+.analyzing .scanRingRight {
+  animation: spinCcw 2.4s linear infinite;
+}
+
+.analyzing .propAnalyzing {
+  animation: floatCard 2s ease-in-out infinite;
+}
+
+@keyframes spinCw {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spinCcw {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@keyframes floatCard {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+/* ── warning：警觉脉冲 + 告警信标闪烁 ── */
+.warning .character {
+  animation: alertPulse 1.8s ease-in-out infinite;
+}
+
+.warning .propWarning {
+  animation: beaconFlash 1.2s ease-in-out infinite;
+}
+
+@keyframes alertPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.035);
+  }
+}
+
+@keyframes beaconFlash {
+  0%,
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 0.6;
+    transform: translateY(-1.5px);
+  }
+}
+
+/* ── success：PASS 徽章轻盈弹出后停稳 ── */
+.success .propSuccess {
+  transform-origin: 98px 28px;
+  animation: badgePop 360ms cubic-bezier(0.2, 0.9, 0.25, 1.1) both;
+}
+
+@keyframes badgePop {
+  from {
+    opacity: 0;
+    transform: scale(0.75) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ── sleeping：深沉慢呼吸（8s），Zzz 缓缓浮动 ── */
+.sleeping .character {
+  opacity: 0.82;
+  animation: deepSleep 8s ease-in-out infinite;
+}
+
+.sleeping .propSleeping {
+  animation: zzzDrift 4s ease-in-out infinite;
+}
+
+@keyframes deepSleep {
+  0%,
+  100% {
+    transform: translateY(1px) scaleY(0.985);
+  }
+  50% {
+    transform: translateY(0) scaleY(1.01);
+  }
+}
+
+@keyframes zzzDrift {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: translateY(1px);
+  }
+  50% {
+    opacity: 0.95;
+    transform: translateY(-2px);
+  }
+}
+
+/* 尊重系统的「减少动态效果」：关闭所有位移与旋转，保留全部表情、道具和状态色 */
+@media (prefers-reduced-motion: reduce) {
+  .mascot,
+  .mascot * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

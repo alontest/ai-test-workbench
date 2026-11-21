@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { Button } from "../../../components/ui/Button";
+import { PageContainer, PageHeader } from "../../../components/ui/PageHeader";
 import { Select } from "../../../components/ui/Select";
 import { apiFetch } from "../../../lib/api/client";
 import { isApiError } from "../../../lib/api/errors";
@@ -67,20 +68,19 @@ export function KnowledgeImportPage() {
   }
 
   return (
-    <section className={styles.page}>
-      <div className={styles.stack}>
-        <Link to="/knowledge-bases">← 知识库</Link>
-        <h1 style={{ margin: 0 }}>导入知识库</h1>
-        <p className={styles.muted}>
-          同名重新导入会生成新版本，旧版本只读保留。
-        </p>
-      </div>
+    <PageContainer tier="sm" className={styles.page}>
+      <PageHeader
+        backLink={{ to: "/knowledge-bases", label: "知识库" }}
+        title="导入知识库"
+        description="同名重新导入会生成新版本，旧版本只读保留。"
+      />
 
       {result ? (
         <div className={styles.stack}>
           <KbImportReport
             report={result.importReport}
             kbName={result.kb.name}
+            version={result.kb.version}
             versionBumped={result.importReport.versionBumped ?? false}
             previousVersion={result.importReport.previousVersion ?? null}
           />
@@ -98,32 +98,49 @@ export function KnowledgeImportPage() {
         </div>
       ) : (
         <div className={styles.stack}>
-          <label className={styles.stack}>
-            <span>项目</span>
-            <Select
-              aria-label="项目"
-              value={projectId}
-              placeholder="请选择项目"
-              options={(projectsQuery.data?.items ?? []).map((project) => ({
-                value: String(project.projectId),
-                label: project.name,
-              }))}
-              onChange={setProjectId}
+          <section className={styles.stepCard}>
+            <div className={styles.stepHead}>
+              <span className={styles.stepIndex} aria-hidden="true">
+                1
+              </span>
+              <h2 className={styles.stepTitle}>选择项目</h2>
+            </div>
+            <label className={styles.stack}>
+              <span>项目</span>
+              <Select
+                aria-label="项目"
+                value={projectId}
+                placeholder="请选择项目"
+                options={(projectsQuery.data?.items ?? []).map((project) => ({
+                  value: String(project.projectId),
+                  label: project.name,
+                }))}
+                onChange={setProjectId}
+              />
+            </label>
+          </section>
+
+          <section className={styles.stepCard}>
+            <div className={styles.stepHead}>
+              <span className={styles.stepIndex} aria-hidden="true">
+                2
+              </span>
+              <h2 className={styles.stepTitle}>选择文件并导入</h2>
+            </div>
+            <KbImportPanel
+              files={files}
+              validation={validation}
+              name={name}
+              submitting={mutation.isPending}
+              submitError={submitError}
+              onNameChange={setName}
+              onFilesChange={setFiles}
+              onSubmit={submit}
+              onCancel={() => setFiles([])}
             />
-          </label>
-          <KbImportPanel
-            files={files}
-            validation={validation}
-            name={name}
-            submitting={mutation.isPending}
-            submitError={submitError}
-            onNameChange={setName}
-            onFilesChange={setFiles}
-            onSubmit={submit}
-            onCancel={() => setFiles([])}
-          />
+          </section>
         </div>
       )}
-    </section>
+    </PageContainer>
   );
 }

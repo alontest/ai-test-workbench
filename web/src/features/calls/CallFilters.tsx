@@ -109,13 +109,15 @@ export function CallFilters({
           onChange={(event) => onChange({ ...value, to: event.target.value })}
         />
       </FormField>
-      <Button
-        type="button"
-        variant="ghost"
-        onClick={() => onChange(defaultCallFilters())}
-      >
-        清除筛选
-      </Button>
+      <div className={styles.filterActions}>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => onChange(defaultCallFilters())}
+        >
+          清除筛选
+        </Button>
+      </div>
     </div>
   );
 }

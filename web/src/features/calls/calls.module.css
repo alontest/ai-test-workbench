@@ -1,26 +1,133 @@
+/* 母版 C（审计表格）：调用记录页。全部颜色走 Token，兼容 Light/Dark。 */
+
 .page {
   display: grid;
   gap: var(--spacing-4);
 }
 
+/* 4 维筛选（项目 / 会话 / 状态 / 时间）收敛为紧凑卡片网格。 */
 .filters {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: var(--spacing-3);
+  align-items: end;
+  padding: var(--spacing-3) var(--spacing-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-card);
+}
+
+.filterActions {
+  display: flex;
   align-items: flex-end;
 }
 
+.tableCard {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-card);
+  overflow-x: auto;
+}
+
+.tableCard table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tableCard > [role="status"] {
+  padding: var(--spacing-8);
+}
+
+.emptyCard {
+  padding: var(--spacing-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-card);
+}
+
+/* 行首 3px 语义边框：成功绿 / 失败红，其余状态沿用警示色阶。 */
+.row td:first-child {
+  border-left: 3px solid transparent;
+}
+
+.rowSuccess td:first-child {
+  border-left-color: var(--color-accent);
+}
+
+.rowFailed td:first-child {
+  border-left-color: var(--color-destructive);
+}
+
+.rowTimeout td:first-child {
+  border-left-color: var(--color-warning);
+}
+
+.rowRunning td:first-child {
+  border-left-color: var(--color-info);
+}
+
+.modelCell {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+}
+
+.detailRow > td {
+  padding: 0;
+  background: var(--color-background);
+}
+
+/* 展开详情：等宽审计面板，提示词与知识注入编号逐行对齐。 */
 .detail {
   display: grid;
   gap: var(--spacing-2);
   padding: var(--spacing-3);
-  background: var(--color-muted);
-  border-radius: var(--radius-sm);
   color: var(--color-foreground);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+}
+
+.detail p {
+  margin: 0;
 }
 
 .preview {
   margin: 0;
+  padding: var(--spacing-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-muted);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.injection {
+  display: grid;
+  gap: var(--spacing-1);
+}
+
+.injection ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--spacing-1);
+}
+
+.injection li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--spacing-2);
+}
+
+.injection code {
+  color: var(--color-accent);
+  font-family: var(--font-family-mono);
+  overflow-wrap: anywhere;
+}
+
+.deleted {
+  color: var(--color-warning);
 }

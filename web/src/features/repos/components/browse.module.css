@@ -16,34 +16,6 @@
   min-width: 0;
 }
 
-.headerMain {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--spacing-3);
-  min-width: 0;
-}
-
-.breadcrumb {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--spacing-2);
-  font-size: var(--font-size-sm);
-  color: var(--color-muted-foreground);
-}
-
-.breadcrumb a {
-  color: var(--color-info);
-}
-
-.pageTitle {
-  margin: 0;
-  font-size: var(--font-size-xl);
-  overflow-wrap: anywhere;
-}
-
 .rowMeta {
   display: flex;
   flex-wrap: wrap;
@@ -306,6 +278,140 @@
   color: var(--color-info);
 }
 
+/* 仓库浏览索引：项目卡片网格与可点击仓库行。 */
+.projectGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: var(--spacing-4);
+  align-items: start;
+}
+
+.repoBindingList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--spacing-2);
+}
+
+.repoBindingRow {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  color: var(--color-foreground);
+  text-decoration: none;
+  transition:
+    transform var(--duration-fast) var(--easing-standard),
+    border-color var(--duration-fast) var(--easing-standard),
+    background var(--duration-fast) var(--easing-standard);
+}
+
+.repoBindingRow:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--color-accent) 55%, var(--color-border));
+  background: var(--color-muted);
+}
+
+.repoBindingMain {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.repoBindingName {
+  font-family: var(--font-family-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monoPill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 var(--spacing-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-muted);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
+.statusDot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-muted-foreground);
+}
+
+.statusDot[data-status="connected"] {
+  background: var(--color-success);
+}
+
+.statusDot[data-status="token_invalid"] {
+  background: var(--color-destructive);
+}
+
+.statusDot[data-status="unverified"] {
+  background: var(--color-warning);
+}
+
+.chevron {
+  flex: none;
+  color: var(--color-muted-foreground);
+}
+
+/* 仓库浏览页顶栏。 */
+.repoTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.repoTitle svg {
+  flex: none;
+  color: var(--color-muted-foreground);
+}
+
+.headerMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-sm);
+}
+
+.revokedHint {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-2) var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-warning);
+  border-radius: var(--radius-sm);
+  background: var(--color-muted);
+  color: var(--color-foreground);
+  font-size: var(--font-size-sm);
+}
+
+/* 桌面端双栏固定高度内滚；窄屏自然展开。 */
+.paneScroll {
+  min-width: 0;
+}
+
+.paneScroll .commitList {
+  max-height: none;
+}
+
 .drawerOverlay {
   position: fixed;
   inset: 0;
@@ -353,9 +459,38 @@
 
 .fileContent {
   margin: 0;
+  padding: var(--spacing-2) 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-muted);
   font-family: var(--font-family-mono);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-relaxed);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  tab-size: 2;
+}
+
+.codeLine {
+  display: grid;
+  grid-template-columns: 4ch minmax(0, 1fr);
+  gap: var(--spacing-3);
+  padding: 0 var(--spacing-3);
+}
+
+.codeLine:hover {
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+
+.lineNo {
+  color: var(--color-muted-foreground);
+  text-align: right;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+
+.lineText {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -379,8 +514,26 @@
   font-size: var(--font-size-xs);
 }
 
+@media (min-width: 1181px) {
+  .browseGrid {
+    align-items: stretch;
+  }
+
+  .paneScroll {
+    height: clamp(340px, calc(100vh - 400px), 760px);
+    overflow-y: auto;
+    padding-right: var(--spacing-1);
+  }
+}
+
 @media (max-width: 1180px) {
   .browseGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 860px) {
+  .projectGrid {
     grid-template-columns: minmax(0, 1fr);
   }
 }

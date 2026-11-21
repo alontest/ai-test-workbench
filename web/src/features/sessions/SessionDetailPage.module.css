@@ -1,3 +1,5 @@
+/* 母版 D：非对称双栏工作台。左时间线 60%，右粘性操控台 400px。 */
+
 .page {
   display: grid;
   gap: var(--spacing-6);
@@ -5,12 +7,15 @@
 
 .layout {
   display: grid;
-  grid-template-columns: 1fr 380px;
+  grid-template-columns: minmax(0, 1fr) 400px;
   gap: var(--spacing-6);
   align-items: start;
 }
 
 .panel {
+  position: sticky;
+  top: calc(var(--topbar-height) + var(--spacing-4));
+  align-self: start;
   display: grid;
   gap: var(--spacing-4);
   border: 1px solid var(--color-border);
@@ -21,31 +26,91 @@
 
 .banner {
   margin: 0;
+  padding: var(--spacing-2) var(--spacing-3);
+  border-left: 3px solid var(--color-warning);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-warning) 10%, transparent);
   color: var(--color-warning);
   font-size: var(--font-size-sm);
 }
 
 .tabList {
   display: flex;
-  gap: var(--spacing-2);
+  gap: var(--spacing-1);
+  margin-bottom: var(--spacing-3);
+  padding: var(--spacing-1);
+  border-radius: var(--radius-sm);
+  background: var(--color-muted);
   flex-wrap: wrap;
 }
 
 .tab {
-  min-height: 36px;
+  flex: 1;
+  min-height: 32px;
+  padding: 0 var(--spacing-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-muted-foreground);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
 }
 
 .tab[data-state="active"] {
-  background: var(--color-muted);
+  background: var(--color-card);
+  color: var(--color-foreground);
+  font-weight: var(--font-weight-bold);
+  box-shadow: var(--shadow-sm);
 }
 
-.tabPanel {
+.tabContent {
   display: grid;
   gap: var(--spacing-4);
 }
 
-@media (max-width: 768px) {
+/* forceMount 的非激活面板只做视觉隐藏，DOM 与草稿保留。
+   不用 display:none：既有无障碍用例仍要在非激活面板内读取控件语义
+   （如「发起调用」按钮的禁用态），裁剪隐藏让面板留在无障碍树中。 */
+.tabContent[data-state="inactive"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 会话头元信息：编号、所属项目、绑定模型用等宽字体对齐。 */
+.sessionMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.sessionMetaItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) var(--spacing-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-muted-foreground);
+}
+
+@media (max-width: 960px) {
   .layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .panel {
+    position: static;
+    top: auto;
   }
 }

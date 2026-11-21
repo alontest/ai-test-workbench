@@ -1,7 +1,9 @@
 import { Link } from "react-router";
 import { EmptyState } from "../../components/ui/Feedback";
+import uiStyles from "../../components/ui/ui.module.css";
 import { SessionDeleteButton } from "./SessionHeader";
 import { StatusPill } from "./StatusPill";
+import styles from "./SessionsPage.module.css";
 import type { SessionSummary } from "./types";
 
 export interface SessionTableProps {
@@ -45,33 +47,37 @@ export function SessionTable({
     );
   }
   return (
-    <table>
-      <thead>
-        <tr>
-          <th>标题</th>
-          <th>项目</th>
-          <th>状态</th>
-          <th>模型</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        {sessions.map((session) => (
-          <tr key={session.sessionId}>
-            <td>
-              <Link to={`/sessions/${session.sessionId}`}>{session.title}</Link>
-            </td>
-            <td>{session.project.name}</td>
-            <td>
-              <StatusPill status={session.status} />
-            </td>
-            <td>{session.model.displayName}</td>
-            <td>
-              <SessionDeleteButton session={session} />
-            </td>
+    <div className={uiStyles.tableCard}>
+      <table>
+        <thead>
+          <tr>
+            <th>标题</th>
+            <th>项目</th>
+            <th>状态</th>
+            <th>模型</th>
+            <th>操作</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {sessions.map((session) => (
+            <tr key={session.sessionId}>
+              <td>
+                <Link className={styles.sessionTitle} to={`/sessions/${session.sessionId}`}>
+                  {session.title}
+                </Link>
+              </td>
+              <td>{session.project.name}</td>
+              <td>
+                <StatusPill status={session.status} />
+              </td>
+              <td className={styles.modelCell}>{session.model.displayName}</td>
+              <td>
+                <SessionDeleteButton session={session} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

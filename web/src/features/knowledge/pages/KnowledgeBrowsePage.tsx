@@ -2,6 +2,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router";
 import { Button } from "../../../components/ui/Button";
 import { EmptyState, ErrorState } from "../../../components/ui/Feedback";
 import { Spinner } from "../../../components/ui/Loading";
+import { PageContainer } from "../../../components/ui/PageHeader";
 import { ENTRY_TYPES, type EntryType } from "../api/types";
 import { KbBrowseLayout } from "../components/KbBrowseLayout";
 import { KbEntryList } from "../components/KbEntryList";
@@ -43,88 +44,107 @@ export function KnowledgeBrowsePage() {
     setSearchParams(next, { replace: true });
   }
 
-  if (!kbId) {
-    return <ErrorState message="知识库不存在" retryable={false} />;
-  }
-  if (detailQuery.isPending) {
-    return <Spinner label="加载知识库" />;
-  }
-  if (detailQuery.isError || !detailQuery.data) {
-    return (
-      <ErrorState
-        message="无法加载知识库"
-        onRetry={() => void detailQuery.refetch()}
-      />
-    );
-  }
-
   const detail = detailQuery.data;
   const items = entriesQuery.data?.pages.flatMap((page) => page.items) ?? [];
   const counts = entriesQuery.data?.pages[0]?.countsByType;
   const total = entriesQuery.data?.pages[0]?.total ?? 0;
 
-  return (
-    <KbBrowseLayout
-      title={detail.kb.name}
-      version={detail.kb.version}
-      generatedAt={detail.kb.generatedAt}
-      superseded={detail.kb.status === "superseded"}
-      currentKbId={detail.kb.kbId}
-      latestKbId={detail.latestKbId}
-      versions={detail.versions}
-      onSelectVersion={(nextKbId) => {
-        const query = searchParams.toString();
-        navigate(`/knowledge-bases/${nextKbId}${query ? `?${query}` : ""}`);
-      }}
-      toolbar={
-        <div className={styles.stack}>
-          <div className={styles.toolbar}>
-            <KbSearchBox
-              value={q}
-              onChange={(next) => setParam("q", next || null)}
-            />
-            <span className={styles.muted}>共 {total} 条</span>
-          </div>
-          <KbTypeTabs
-            value={type}
-            counts={counts}
-            onChange={(next) => setParam("type", next)}
-          />
-        </div>
-      }
-    >
-      {entriesQuery.isError ? (
+  function renderBody() {
+    if (!kbId) {
+      return <ErrorState message="知识库不存在" retryable={false} />;
+    }
+    if (detailQuery.isPending) {
+      return <Spinner label="加载知识库" />;
+    }
+    if (detailQuery.isError || !detail) {
+      return (
+        <ErrorState
+          message="无法加载知识库"
+          onRetry={() => void detailQuery.refetch()}
+        />
+      );
+    }
+    if (entriesQuery.isError) {
+      return (
         <ErrorState
           message="无法加载条目"
           onRetry={() => void entriesQuery.refetch()}
         />
-      ) : entriesQuery.isPending ? (
-        <Spinner label="加载条目" />
-      ) : items.length === 0 ? (
+      );
+    }
+    if (entriesQuery.isPending) {
+      return <Spinner label="加载条目" />;
+    }
+    if (items.length === 0) {
+      return (
         <EmptyState
           title="没有符合条件的条目"
           description="试试更换编号前缀、关键词或类型筛选。"
           action={
-            <Button type="button" onClick={() => setSearchParams({}, { replace: true })}>
+            <Button
+              type="button"
+              onClick={() => setSearchParams({}, { replace: true })}
+            >
               清除筛选
             </Button>
           }
         />
-      ) : (
+      );
+    }
+    return (
+      <>
         <KbEntryList items={items} showLibrary />
-      )}
-      {entriesQuery.hasNextPage ? (
-        <div className={styles.actions}>
-          <Button
-            type="button"
-            variant="secondary"
-            loading={entriesQuery.isFetchingNextPage}
-            onClick={() => void entriesQuery.fetchNextPage()}
-          >
-            加载更多
-          </Button>
-        </div>
-      ) : null}
-    </KbBrowseLayout>
+        {entriesQuery.hasNextPage ? (
+          <div className={styles.actions}>
+            <Button
+              type="button"
+              variant="secondary"
+              loading={entriesQuery.isFetchingNextPage}
+              onClick={() => void entriesQuery.fetchNextPage()}
+            >
+              加载更多
+            </Button>
+          </div>
+        ) : null}
+      </>
+    );
+  }
+
+  return (
+    <PageContainer tier="xl" className={styles.page}>
+      <KbBrowseLayout
+        title={detail?.kb.name ?? "知识库浏览"}
+        version={detail?.kb.version ?? null}
+        generatedAt={detail?.kb.generatedAt ?? null}
+        superseded={detail?.kb.status === "superseded"}
+        currentKbId={detail?.kb.kbId ?? kbId}
+        latestKbId={detail?.latestKbId ?? kbId}
+        versions={detail?.versions ?? []}
+        onSelectVersion={(nextKbId) => {
+          const query = searchParams.toString();
+          navigate(`/knowledge-bases/${nextKbId}${query ? `?${query}` : ""}`);
+        }}
+        toolbar={
+          detail ? (
+            <div className={styles.stickyBar}>
+              <div className={styles.toolbar}>
+                <KbSearchBox
+                  value={q}
+                  onChange={(next) => setParam("q", next || null)}
+                />
+                <span className={styles.muted}>共 {total} 条</span>
+              </div>
+              <KbTypeTabs
+                value={type}
+                counts={counts}
+                onChange={(next) => setParam("type", next)}
+              />
+            </div>
+          ) : undefined
+        }
+      >
+        {renderBody()}
+      </KbBrowseLayout>
+    </PageContainer>
   );
 }

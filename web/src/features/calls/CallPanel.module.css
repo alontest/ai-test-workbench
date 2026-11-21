@@ -1,0 +1,35 @@
+/* 会话右栏调用操控台。只补 UI-1 需要的两块：
+   鸮鸮状态行与表单节奏，其余控件沿用 ui.module.css。 */
+
+.form {
+  display: grid;
+  gap: var(--spacing-3);
+}
+
+.assistant {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-2) var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-muted);
+}
+
+.assistantText {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.assistantTitle {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-sm);
+  color: var(--color-foreground);
+}
+
+.assistantHint {
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-base);
+  color: var(--color-muted-foreground);
+}

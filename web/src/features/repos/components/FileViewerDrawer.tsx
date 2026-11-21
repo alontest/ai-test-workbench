@@ -140,7 +140,14 @@ export function FileViewerDrawer({
             </div>
           ) : (
             <pre className={styles.fileContent} data-testid="file-content">
-              {query.data?.content ?? ""}
+              {(query.data?.content ?? "").split("\n").map((line, index) => (
+                <span className={styles.codeLine} key={index}>
+                  <span className={styles.lineNo} aria-hidden="true">
+                    {index + 1}
+                  </span>
+                  <span className={styles.lineText}>{line}</span>
+                </span>
+              ))}
             </pre>
           )}
         </div>

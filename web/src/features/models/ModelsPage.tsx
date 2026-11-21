@@ -1,14 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
+import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { ErrorState } from "../../components/ui/Feedback";
 import { Spinner } from "../../components/ui/Loading";
+import { PageContainer, PageHeader } from "../../components/ui/PageHeader";
 import { apiFetch } from "../../lib/api/client";
 import { queryKeys } from "../../lib/api/keys";
 import type { Provider } from "../providers/types";
 import { ModelDialog } from "./ModelDialog";
 import { ModelTable } from "./ModelTable";
+import styles from "./models.module.css";
 import type { ModelBinding } from "./types";
 
 interface PageResponse {
@@ -71,29 +74,40 @@ export function ModelsPage() {
     },
   });
 
-  if (query.isPending || providerQuery.isPending) {
-    return <Spinner label="加载模型" />;
-  }
-  if (query.isError) {
-    return <ErrorState message="无法加载模型" onRetry={() => void query.refetch()} />;
-  }
-
   return (
-    <section>
-      <p>
-        <Link to="/providers">返回提供商</Link>
-      </p>
-      <header style={{ display: "flex", justifyContent: "space-between" }}>
-        <h1>{providerQuery.data?.name ?? "模型"} </h1>
-        <Button type="button" onClick={() => setCreating(true)}>
-          新建模型
-        </Button>
-      </header>
-      <ModelTable
-        models={query.data.items}
-        onEdit={setEditing}
-        onToggle={(model, enabled) => toggle.mutate({ id: model.modelId, enabled })}
+    <PageContainer tier="xl" className={styles.page}>
+      <PageHeader
+        backLink={{ to: "/providers", label: "返回 AI 提供商" }}
+        title="模型绑定"
+        badge={
+          providerQuery.data ? (
+            <Badge label={providerQuery.data.name} tone="info" />
+          ) : undefined
+        }
+        description="为该提供商登记模型与默认参数；停用后不再出现在新建会话的可选列表。"
+        actions={
+          <Button type="button" onClick={() => setCreating(true)}>
+            新建模型
+          </Button>
+        }
       />
+      {query.isPending || providerQuery.isPending ? (
+        <div className={styles.tableCard}>
+          <Spinner label="加载模型" />
+        </div>
+      ) : query.isError ? (
+        <div className={styles.tableCard}>
+          <ErrorState message="无法加载模型" onRetry={() => void query.refetch()} />
+        </div>
+      ) : (
+        <ModelTable
+          models={query.data.items}
+          onEdit={setEditing}
+          onToggle={(model, enabled) =>
+            toggle.mutate({ id: model.modelId, enabled })
+          }
+        />
+      )}
       {creating || editing ? (
         <ModelDialog
           open
@@ -110,6 +124,6 @@ export function ModelsPage() {
           }}
         />
       ) : null}
-    </section>
+    </PageContainer>
   );
 }
