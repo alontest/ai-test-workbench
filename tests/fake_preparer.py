@@ -21,6 +21,8 @@ from workbench.services.errors import (
     PromptBudgetExceededError,
 )
 
+KB_ID = "3f2504e04f8911d39a0c0305e82c3301"
+
 
 class ScriptedInjectionPreparer:
     def __init__(self) -> None:
@@ -31,7 +33,7 @@ class ScriptedInjectionPreparer:
         self.snapshot = InjectionSnapshot(
             items=(
                 InjectionItem(
-                    kb_id=5,
+                    kb_id=KB_ID,
                     kb_name="支付中心知识库",
                     kb_version=2,
                     entry_codes=("ENT-012", "BR-003"),

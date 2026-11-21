@@ -138,7 +138,7 @@ def _as_knowledge_ref(item: Any) -> KnowledgeRef:
     else:
         kb_id = item.kb_id
         codes = item.entry_codes
-    return KnowledgeRef(kb_id=int(kb_id), entry_codes=tuple(codes or ()))
+    return KnowledgeRef(kb_id=str(kb_id), entry_codes=tuple(codes or ()))
 
 
 def _as_invalid_code(item: Any) -> InvalidCodeRef:
@@ -150,7 +150,7 @@ def _as_invalid_code(item: Any) -> InvalidCodeRef:
     else:
         kb_id = item.kb_id
         code = item.code
-    return InvalidCodeRef(kb_id=int(kb_id), code=str(code))
+    return InvalidCodeRef(kb_id=str(kb_id), code=str(code))
 
 
 def _parse_rfc3339(value: str, field: str) -> datetime:

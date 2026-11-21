@@ -9,7 +9,7 @@ from typing import Protocol
 
 @dataclass(frozen=True)
 class InjectionItem:
-    kb_id: int
+    kb_id: str
     kb_name: str
     kb_version: int
     entry_codes: tuple[str, ...]
@@ -27,13 +27,13 @@ class InjectionSnapshot:
 
 @dataclass(frozen=True)
 class KnowledgeRef:
-    kb_id: int
+    kb_id: str
     entry_codes: tuple[str, ...]
 
 
 @dataclass(frozen=True)
 class InvalidCodeRef:
-    kb_id: int
+    kb_id: str
     code: str
 
 

@@ -14,10 +14,11 @@ from helpers import (
     seed_provider,
     seed_session,
 )
-from workbench.db.models import AnalysisSession
+from workbench.db.models import AnalysisSession, KnowledgeBase
 
 ADMIN = "test-admin-secret"
 ORIGIN = {"origin": "http://testserver"}
+KB_ID = "3f2504e04f8911d39a0c0305e82c3301"
 
 
 @pytest.fixture
@@ -325,7 +326,7 @@ async def test_tc070_knowledge_injection_timeline_payload(client, database) -> N
     session_id = await seed_session(sm, project_id=project_id, model_id=model_id)
     items = [
         {
-            "kbId": 5,
+            "kbId": KB_ID,
             "kbName": "支付中心知识库",
             "kbVersion": 2,
             "entryCodes": ["ENT-012", "BR-003"],
@@ -387,7 +388,7 @@ async def test_tc070_knowledge_injection_timeline_payload(client, database) -> N
     assert payload["injectedChars"] == 3
     assert payload["totalChars"] == 8
     assert payload["excludedCodes"] == ["ENT-009"]
-    assert payload["items"][0]["kbId"] == 5
+    assert payload["items"][0]["kbId"] == KB_ID
     assert payload["items"][0]["kbDeleted"] is True
     assert "body" not in payload
     assert "text" not in payload
@@ -398,8 +399,20 @@ async def test_tc070_knowledge_injection_timeline_payload(client, database) -> N
     assert detail.json()["knowledgeInjection"][0]["kbName"] == "支付中心知识库"
 
     async with sm() as db:
-        await db.execute(text("CREATE TABLE knowledge_base (kb_id INTEGER PRIMARY KEY)"))
-        await db.execute(text("INSERT INTO knowledge_base (kb_id) VALUES (5)"))
+        # knowledge_base 由迁移 0007 创建；这里只验证「行存在 / 不存在」。
+        db.add(
+            KnowledgeBase(
+                kb_id=KB_ID,
+                project_id=project_id,
+                name="支付中心知识库",
+                name_key="支付中心知识库",
+                version=2,
+                current_flag="1",
+                status="ready",
+                source_index_sha256="0" * 64,
+                storage_dir=f"knowledge-bases/{KB_ID}",
+            )
+        )
         await db.commit()
 
     present_events = await client.get(f"/api/v1/sessions/{session_id}/events")
@@ -413,7 +426,10 @@ async def test_tc070_knowledge_injection_timeline_payload(client, database) -> N
     assert present_detail.json()["knowledgeInjection"][0]["kbDeleted"] is False
 
     async with sm() as db:
-        await db.execute(text("DELETE FROM knowledge_base WHERE kb_id = 5"))
+        await db.execute(
+            text("DELETE FROM knowledge_base WHERE kb_id = :kb_id"),
+            {"kb_id": KB_ID},
+        )
         await db.commit()
     deleted_events = await client.get(f"/api/v1/sessions/{session_id}/events")
     deleted_payload = next(

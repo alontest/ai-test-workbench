@@ -337,8 +337,8 @@
   "prompt": "请分析以下日志…",
   "temperature": 0.2,
   "maxTokens": 2048,
-  "knowledgeRefs": [{"kbId": 5, "entryCodes": ["ENT-012", "BR-003"]}],
-  "confirmInvalidCodes": [{"kbId": 5, "code": "ENT-009"}]
+  "knowledgeRefs": [{"kbId": "3f2504e04f8911d39a0c0305e82c3301", "entryCodes": ["ENT-012", "BR-003"]}],
+  "confirmInvalidCodes": [{"kbId": "3f2504e04f8911d39a0c0305e82c3301", "code": "ENT-009"}]
 }
 ```
 
@@ -348,7 +348,7 @@
 ```json
 {"callId":17,"sessionId":42,"status":"success","resultText":"…","latencyMs":2140,"retryCount":0,
  "model":{"modelId":3,"displayName":"GPT-4.1","modelName":"gpt-4.1","providerId":1,"providerName":"OpenAI"},
- "knowledgeInjection":[{"kbId":5,"kbName":"支付中心知识库","kbVersion":2,"entryCodes":["ENT-012","BR-003"],"injectedChars":1840,"kbDeleted":false}],
+ "knowledgeInjection":[{"kbId":"3f2504e04f8911d39a0c0305e82c3301","kbName":"支付中心知识库","kbVersion":2,"entryCodes":["ENT-012","BR-003"],"injectedChars":1840,"kbDeleted":false}],
  "createdAt":"…","finishedAt":"…"}
 ```
 
@@ -364,7 +364,7 @@
   - 409 `knowledge_unavailable`：请求携带 `knowledgeRefs` 但本部署未安装 knowledge-base 的进程内服务；
   - 400 `prompt_budget_exceeded`：`details = {promptChars, injectedChars, totalChars, limit}`（上限 `AW_PROMPT_MAX_CHARS=200000`）。
 - 并发：进程内信号量默认 4；排队等待不计入 `latencyMs`。
-- 说明：本路径取代早期草案的 `POST /sessions/{sessionId}/calls`（未实现）；按 ADR-103 B 不新增 `/knowledge-injection/calls`。
+- 说明：`kbId` 为字符串（knowledge-base 的 `CHAR(32)` uuid4 hex，ADR-103）；本路径取代早期草案的 `POST /sessions/{sessionId}/calls`（未实现）；按 ADR-103 B 不新增 `/knowledge-injection/calls`。
 
 ##### GET /calls
 
@@ -373,7 +373,7 @@
 - 200：
 
 ```json
-{"items":[{"callId":17,"sessionId":42,"project":{"projectId":1,"name":"支付中心"},"model":{"modelId":3,"displayName":"GPT-4.1","providerName":"OpenAI"},"status":"failed","promptPreview":"请分析以下日志…","promptCharCount":1820,"knowledgeInjection":[{"kbId":5,"kbName":"支付中心知识库","kbVersion":2,"entryCodes":["ENT-012"],"injectedChars":1840,"kbDeleted":false}],"latencyMs":120000,"retryCount":1,"errorCode":"timeout","errorMessage":"upstream request timed out","createdAt":"…","finishedAt":"…"}],"nextCursor":null}
+{"items":[{"callId":17,"sessionId":42,"project":{"projectId":1,"name":"支付中心"},"model":{"modelId":3,"displayName":"GPT-4.1","providerName":"OpenAI"},"status":"failed","promptPreview":"请分析以下日志…","promptCharCount":1820,"knowledgeInjection":[{"kbId":"3f2504e04f8911d39a0c0305e82c3301","kbName":"支付中心知识库","kbVersion":2,"entryCodes":["ENT-012"],"injectedChars":1840,"kbDeleted":false}],"latencyMs":120000,"retryCount":1,"errorCode":"timeout","errorMessage":"upstream request timed out","createdAt":"…","finishedAt":"…"}],"nextCursor":null}
 ```
 
 - 无匹配返回空 `items` 与 `nextCursor:null`（AC-010-3），不报错。

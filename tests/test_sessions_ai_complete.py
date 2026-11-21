@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import func, select
 
-from fake_preparer import ScriptedInjectionPreparer
+from fake_preparer import KB_ID, ScriptedInjectionPreparer
 from helpers import (
     build_client,
     make_app,
@@ -22,7 +22,7 @@ from workbench.services.ai_gateway import AiGateway
 ADMIN = "test-admin-secret"
 ORIGIN = {"origin": "http://testserver"}
 
-INVALID_ITEM = {"kbId": 5, "code": "ENT-009", "reason": "superseded"}
+INVALID_ITEM = {"kbId": KB_ID, "code": "ENT-009", "reason": "superseded"}
 
 
 class FakeAI:
@@ -85,7 +85,7 @@ async def test_tc068_invalid_entries_require_confirmation(settings, database) ->
         project_id, _model_id, session_id = await _session(database)
         payload = {
             "prompt": "请分析",
-            "knowledgeRefs": [{"kbId": 5, "entryCodes": ["ENT-012", "BR-003"]}],
+            "knowledgeRefs": [{"kbId": KB_ID, "entryCodes": ["ENT-012", "BR-003"]}],
         }
         response = await client.post(
             f"/api/v1/sessions/{session_id}/ai/complete",
@@ -106,7 +106,7 @@ async def test_tc068_invalid_entries_require_confirmation(settings, database) ->
             f"/api/v1/sessions/{session_id}/ai/complete",
             json={
                 **payload,
-                "confirmInvalidCodes": [{"kbId": 5, "code": "ENT-000"}],
+                "confirmInvalidCodes": [{"kbId": KB_ID, "code": "ENT-000"}],
             },
             headers=ORIGIN,
         )
@@ -130,8 +130,8 @@ async def test_tc069_confirmed_injection_and_limits(settings, database) -> None:
         _project_id, _model_id, session_id = await _session(database)
         payload = {
             "prompt": "请分析",
-            "knowledgeRefs": [{"kbId": 5, "entryCodes": ["ENT-012", "BR-003"]}],
-            "confirmInvalidCodes": [{"kbId": 5, "code": "ENT-009"}],
+            "knowledgeRefs": [{"kbId": KB_ID, "entryCodes": ["ENT-012", "BR-003"]}],
+            "confirmInvalidCodes": [{"kbId": KB_ID, "code": "ENT-009"}],
         }
         response = await client.post(
             f"/api/v1/sessions/{session_id}/ai/complete",
@@ -141,7 +141,7 @@ async def test_tc069_confirmed_injection_and_limits(settings, database) -> None:
         assert response.status_code == 200
         body = response.json()
         assert body["knowledgeInjection"]
-        assert body["knowledgeInjection"][0]["kbId"] == 5
+        assert body["knowledgeInjection"][0]["kbId"] == KB_ID
         assert body["knowledgeInjection"][0]["kbName"] == "支付中心知识库"
         assert "kbDeleted" in body["knowledgeInjection"][0]
         assert fake.calls[0]["prepared"] == preparer.prepared
@@ -172,7 +172,7 @@ async def test_tc069_empty_set_and_budget_and_unavailable(settings, database) ->
     client = await _client(settings, database, fake, preparer)
     try:
         _project_id, _model_id, session_id = await _session(database)
-        refs = {"knowledgeRefs": [{"kbId": 5, "entryCodes": ["ENT-012"]}]}
+        refs = {"knowledgeRefs": [{"kbId": KB_ID, "entryCodes": ["ENT-012"]}]}
         empty = await client.post(
             f"/api/v1/sessions/{session_id}/ai/complete",
             json={"prompt": "请分析", **refs},
@@ -216,7 +216,7 @@ async def test_tc069_empty_set_and_budget_and_unavailable(settings, database) ->
             f"/api/v1/sessions/{session_id}/ai/complete",
             json={
                 "prompt": "请分析",
-                "knowledgeRefs": [{"kbId": 5, "entryCodes": ["ENT-012"]}],
+                "knowledgeRefs": [{"kbId": KB_ID, "entryCodes": ["ENT-012"]}],
             },
             headers=ORIGIN,
         )

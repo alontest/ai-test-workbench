@@ -2,8 +2,23 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from typing import Annotated
+
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
+
+_KB_ID_MAX_LENGTH = 32
+
+
+def _check_kb_id(value: str) -> str:
+    if not value.strip():
+        raise ValueError("知识库标识不能为空。")
+    if len(value) > _KB_ID_MAX_LENGTH:
+        raise ValueError(f"知识库标识长度不能超过 {_KB_ID_MAX_LENGTH}。")
+    return value
+
+
+_KbId = Annotated[str, AfterValidator(_check_kb_id)]
 
 
 class _CamelModel(BaseModel):
@@ -11,12 +26,12 @@ class _CamelModel(BaseModel):
 
 
 class KnowledgeRefBody(_CamelModel):
-    kb_id: int
+    kb_id: _KbId
     entry_codes: list[str] = Field(default_factory=list)
 
 
 class InvalidCodeBody(_CamelModel):
-    kb_id: int
+    kb_id: _KbId
     code: str
 
 

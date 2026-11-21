@@ -24,6 +24,7 @@ from workbench.services.errors import DomainError
 
 ADMIN = "test-admin-secret"
 ORIGIN = {"origin": "http://testserver"}
+KB_ID = "3f2504e04f8911d39a0c0305e82c3301"
 
 
 class FakeAI:
@@ -345,7 +346,7 @@ async def test_tc067_knowledge_injection_serialization(settings, database) -> No
 
     from workbench.core.redaction import redact
     from workbench.db.base import utcnow
-    from workbench.db.models import ModelBinding
+    from workbench.db.models import KnowledgeBase, ModelBinding
 
     fake = FakeAI()
     client = await _make(settings, database, fake)
@@ -353,7 +354,7 @@ async def test_tc067_knowledge_injection_serialization(settings, database) -> No
         project_id, model_id, session_id = await _session(database)
         items = [
             {
-                "kbId": 5,
+                "kbId": KB_ID,
                 "kbName": "支付中心知识库",
                 "kbVersion": 2,
                 "entryCodes": ["ENT-012", "BR-003"],
@@ -412,7 +413,7 @@ async def test_tc067_knowledge_injection_serialization(settings, database) -> No
         assert by_id[plain_id]["knowledgeInjection"] is None
         assert "resultText" not in by_id[plain_id]
         snapshot = by_id[injected_id]["knowledgeInjection"]
-        assert snapshot[0]["kbId"] == 5
+        assert snapshot[0]["kbId"] == KB_ID
         assert snapshot[0]["kbName"] == "支付中心知识库"
         assert snapshot[0]["kbVersion"] == 2
         assert snapshot[0]["entryCodes"] == ["ENT-012", "BR-003"]
@@ -427,10 +428,20 @@ async def test_tc067_knowledge_injection_serialization(settings, database) -> No
         assert detail.json()["knowledgeInjection"][0]["kbName"] == "支付中心知识库"
 
         async with database.sessionmaker() as db:
-            await db.execute(
-                text("CREATE TABLE knowledge_base (kb_id INTEGER PRIMARY KEY)")
+            # knowledge_base 由迁移 0007 创建；这里只验证「行存在 / 不存在」。
+            db.add(
+                KnowledgeBase(
+                    kb_id=KB_ID,
+                    project_id=project_id,
+                    name="支付中心知识库",
+                    name_key="支付中心知识库",
+                    version=2,
+                    current_flag="1",
+                    status="ready",
+                    source_index_sha256="0" * 64,
+                    storage_dir=f"knowledge-bases/{KB_ID}",
+                )
             )
-            await db.execute(text("INSERT INTO knowledge_base (kb_id) VALUES (5)"))
             await db.commit()
 
         present = await client.get(f"/api/v1/calls/{injected_id}")
@@ -438,7 +449,10 @@ async def test_tc067_knowledge_injection_serialization(settings, database) -> No
         assert present.json()["knowledgeInjection"][0]["kbName"] == "支付中心知识库"
 
         async with database.sessionmaker() as db:
-            await db.execute(text("DELETE FROM knowledge_base WHERE kb_id = 5"))
+            await db.execute(
+                text("DELETE FROM knowledge_base WHERE kb_id = :kb_id"),
+                {"kb_id": KB_ID},
+            )
             await db.commit()
         deleted = await client.get(f"/api/v1/calls/{injected_id}")
         assert deleted.json()["knowledgeInjection"][0]["kbDeleted"] is True

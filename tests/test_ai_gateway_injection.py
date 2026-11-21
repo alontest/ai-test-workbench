@@ -18,6 +18,8 @@ from workbench.services.ai_gateway import (
 )
 from workbench.services.errors import DomainError
 
+KB_ID = "3f2504e04f8911d39a0c0305e82c3301"
+
 
 class FakeAdapter:
     def __init__(
@@ -48,7 +50,7 @@ def _snapshot(
 ) -> tuple[InjectionSnapshot, str]:
     prepared = injected + prompt
     item = InjectionItem(
-        kb_id=5,
+        kb_id=KB_ID,
         kb_name="支付中心知识库",
         kb_version=2,
         entry_codes=("ENT-012", "BR-003"),
@@ -155,7 +157,7 @@ async def test_tc066_injection_persisted_and_survives_failure(database, settings
         assert isinstance(record.knowledge_injection, list)
         assert record.knowledge_injection == [
             {
-                "kbId": 5,
+                "kbId": KB_ID,
                 "kbName": "支付中心知识库",
                 "kbVersion": 2,
                 "entryCodes": ["ENT-012", "BR-003"],
@@ -224,7 +226,7 @@ async def test_tc066_mismatch_rejects_without_record_or_request(database, settin
     adapter = FakeAdapter()
     gateway = AiGateway(adapter=adapter)
     item = InjectionItem(
-        kb_id=5,
+        kb_id=KB_ID,
         kb_name="支付中心知识库",
         kb_version=2,
         entry_codes=("ENT-012",),
