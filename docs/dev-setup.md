@@ -56,7 +56,6 @@ uv run uvicorn workbench.main:create_app --factory --host 127.0.0.1 --port 8000
 
 ```bash
 uv run pytest                                   # 默认 SQLite
-python3 .aw/aw.py verify specs/ai-test-workbench_20261117184149
 AW_TEST_DATABASE_URL='mysql+asyncmy://...?charset=utf8mb4' uv run pytest
 cd web && npm run test -- --run                 # Vitest，CI 必过
 ```
@@ -167,7 +166,7 @@ docker rm -f aw-drill-mysql
 
 - [ ] `.env` 已从 example 复制，口令与加密密钥不是占位 `change-me`
 - [ ] `uv lock` / `package-lock.json` 与运行环境一致
-- [ ] `uv run pytest`（SQLite）绿，且 `python3 .aw/aw.py verify specs/ai-test-workbench_20261117184149` 能识别 TC
+- [ ] `uv run pytest`（SQLite）绿
 - [ ] CI 或本地 `AW_TEST_DATABASE_URL` 下 MySQL 用例绿（**SQLite 绿不够**）
 - [ ] `cd web && npm run test -- --run` 绿
 - [ ] `docker compose up --build` 后受保护接口 401，登录页可登录

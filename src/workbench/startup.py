@@ -26,7 +26,7 @@ from workbench.services.sessions import append_event_in_db
 
 logger = logging.getLogger(__name__)
 
-HEAD_REVISION = "0006"
+HEAD_REVISION = "0008"
 DATABASE_CONNECT_TIMEOUT_SECONDS = 30
 DATABASE_CONNECT_RETRY_INTERVAL_SECONDS = 1.0
 

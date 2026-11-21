@@ -51,7 +51,7 @@ Python 3.12+ / FastAPI 0.163.2 / Uvicorn 0.54 / Pydantic 2.14 / pydantic-setting
 - 70 个 TC：功能 AC 42 条全覆盖（TC-001 ~ TC-056），AC-TECH 6 条全覆盖（TC-057 ~ TC-063），跨 spec 扩展 TC-064 ~ TC-070（A101 ~ A103）。
 - 测试框架：pytest + pytest-asyncio + httpx `ASGITransport`；用例名带 `test_tcNNN_*`。
 - TC 与实现：70 个 TC 全部由 pytest 给出权威结果（含 TC-064 ~ TC-070）；前端 Vitest 用例复用**同一 TC 编号**作为 UI 层第二实现（如 `TC-026 创建会话缺模型时禁用提交`），不产生专属 TC，也不存在只由 Vitest 提供结果的 TC。知识库自身逻辑的用例属 knowledge-base spec。
-- 结果可见性：`aw.py verify` / `aw close` 只解析 pytest，Vitest 结果**不进入** `.aw` 证据；UI 用例的通过与失败只能从 CI 必过 job 3（`frontend-tests`）及其测试报告看到，靠分支保护兜底。评审必须同时看 CI 三个 job 全绿 + `aw verify` 绿。
+- 结果可见性：后端结果以 `uv run pytest` 为准，Vitest 结果不进入后端证据；UI 用例的通过与失败只能从 CI 必过 job 3（`frontend-tests`）及其测试报告看到，靠分支保护兜底。合并前必须同时看 CI 三个 job 全绿。
 - MySQL 覆盖：`tests/test_db_migrations.py` 在 `AW_TEST_DATABASE_URL` 存在时复跑；CI job 2（`mysql-tests`）必须绿，不新增 TC。
 - Playwright E2E 不进必过门禁。
 

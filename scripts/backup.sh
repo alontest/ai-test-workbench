@@ -23,7 +23,10 @@ usage() {
 恢复（手工）:
   1. 保管 AW_ENCRYPTION_KEY，不要放进备份包。
   2. 先导入 SQL，再解压制品到 AW_DATA_DIR。
-  3. 启动自检，核对应 alembic_version 与制品数量。
+     制品包整体包含 knowledge-bases/，并已排除 .trash/ 与 .tmp/。
+  3. 逐个 knowledge-bases/<kbId>/manifest.json，按 files[].sha256
+     核对恢复后的文件（storageName 与 size 亦应一致）。
+  4. 启动自检，核对应 alembic_version 与制品数量。
 EOF
 }
 

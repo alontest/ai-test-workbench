@@ -1,6 +1,7 @@
 # Architecture Decisions Record (ADR)
 
 > **文档状态：architecture-locked** — 2026-11-18 用户重新确认（`approvals.md` 2026-11-18 10:24:32，用户原话「全部确认」；spec 拆分后知识库 ADR 已迁出，新增 ADR-041）。
+> 注：本文档产出于 AlonWorkflow 时期。文中 `aw` / `.aw/` 相关命令与配置已随该工作流移除（见提交 `987c919`），当前测试门禁为 `uv run pytest` 与 CI 三个必过 job。ADR 决策本身不受影响，仅执行命令口径需按现状理解。
 > 2026-11-18 11:23:27 追加 ADR-042（跨 spec 知识库注入扩展，用户原话「A101 A、A102 A、A103 B」）；ADR-001 ~ ADR-041 决策不变，tech-design 相关文档因该扩展待用户重新确认，不视为已确认。
 > 2026-11-18 依赖版本核实：FastAPI 0.163.2、SQLAlchemy 2.1.9、pydantic-settings 2.16.3，均为实际安装版本，无降级（见 ADR-043）。
 >
@@ -23,7 +24,7 @@
 | 数据库 / ORM | 未检测到（无迁移、无 schema、无 SQL） | 高 |
 | 文件存储 | 未检测到 | 高 |
 | 部署 | 未检测到（无 Dockerfile / compose / 部署配置） | 高 |
-| 测试与门禁 | `.aw/config.json` 已配 `pytest` preset，`code_paths` 为 `src/`、`tests/` | 高 |
+| 测试与门禁 | `pytest` 为唯一后端测试命令，覆盖面为 `src/`、`tests/`、`web/` | 高 |
 | 已有 ADR / 本体切片 | 无（暂存区无 KB 底稿；`ontology-slices/` 未生成） | 高 |
 
 > 用户 2026-11-17 19:27 明确：`pyproject.toml` / `src/` / `tests/` 是占位，不代表技术选型，可按选定栈覆盖或删除。
@@ -34,7 +35,7 @@
 - **决策**：Python 3.12+（本机 3.14.7）+ FastAPI 0.163.x + Uvicorn 0.54.x；Pydantic 2.14.x 做请求/响应校验。
 - **来源**：新增
 - **状态**：✅ 已确认（2026-11-17 19:49 用户拍板 STK-001 A / STK-002 A / STK-003 A / STK-004 A）
-- **理由**：官方 openai / anthropic SDK 同步及时；密钥加密、上传、迁移库成熟；仓库测试门禁已是 pytest，选 A 无需改 `.aw/config.json`。
+- **理由**：官方 openai / anthropic SDK 同步及时；密钥加密、上传、迁移库成熟；仓库测试门禁已是 pytest，选 A 无需改测试配置。
 - **影响**：需 Python 工具链（uv）+ Node 仅用于前端构建；服务层与适配层用 async。
 - **取代**：无
 
@@ -139,7 +140,7 @@
 - **来源**：新增
 - **状态**：✅ 已确认（用户未反对，采用默认；见 `open-questions.md`「默认结论」）
 - **理由**：单用户本机场景下复核路径已闭合；只读分享需新增令牌/鉴权面，与本期「无登录」约束冲突。
-- **影响**：若用户需要，作为独立需求（新 `aw-start`）或扩展计划中的「多用户 / 远程访问」阶段实现。
+- **影响**：若用户需要，作为独立需求（另行立项）或扩展计划中的「多用户 / 远程访问」阶段实现。
 - **取代**：无
 
 > **返工修订（2026-11-17，部署形态变更）**：用户 2026-11-17 19:52:50 原话「打断一下，这不是本地部署的，所以需要mysql。不能只是sqllite。」；同节记录的选项：数据库 MySQL 生产 + SQLite 开发/测试、加单用户登录、compose 默认并支持外接 MySQL。
@@ -151,7 +152,7 @@
 - **来源**：新增（取代 ADR-003；原「只用 SQLite」因用户 2026-11-17 19:52:50 的要求被推翻）
 - **状态**：✅ 已确认（2026-11-17 20:09:45 用户确认，依据 `technical-design/answers.md`）
 - **理由**：非本地部署需要服务端数据库；MySQL 是用户指定目标；保留 SQLite 是为了让仓库门禁 `pytest` 在无容器的机器上仍能跑通。
-- **影响**：所有 schema 变更必须通过两种方言（ADR-016 / ADR-017）；`aw verify` 默认只覆盖 SQLite，MySQL 由 CI 第二 job 与本地 `AW_TEST_DATABASE_URL` 覆盖。
+- **影响**：所有 schema 变更必须通过两种方言（ADR-016 / ADR-017）；默认测试只覆盖 SQLite，MySQL 由 CI 第二 job 与本地 `AW_TEST_DATABASE_URL` 覆盖。
 - **取代**：ADR-003
 
 ### ADR-016：MySQL 驱动与 ORM 方言策略
@@ -356,7 +357,7 @@
 ### ADR-043：依赖版本核实记录（FastAPI 0.163.2 / SQLAlchemy 2.1.9）
 
 - **背景**：实现侧对依赖版本先后给出两次错误结论：先报 FastAPI 为 0.162.5，再报「SQLAlchemy 2.1 在目标环境不可用」。经编排者运行时核实，两次结论均不成立，已由实现侧更正。
-- **核实结果**：`uv lock` / `uv sync` 实装 **SQLAlchemy 2.1.9**（`pyproject.toml` 为 `sqlalchemy>=2.1.9,<2.2`）；`pytest` 36 passed；`alembic upgrade head` 在 SQLite 上 `0001` → `0006` 全部通过；`aw.py verify` 36 通过 / 0 失败；生产代码零改动。FastAPI 为 **0.163.2**（`fastapi.__version__` 与 `uv.lock` 一致，`pyproject` 约束 `>=0.162,<0.164`）；pydantic-settings 为 **2.16.3**。
+- **核实结果**：`uv lock` / `uv sync` 实装 **SQLAlchemy 2.1.9**（`pyproject.toml` 为 `sqlalchemy>=2.1.9,<2.2`）；`pytest` 36 passed；`alembic upgrade head` 在 SQLite 上 `0001` → `0006` 全部通过；生产代码零改动。FastAPI 为 **0.163.2**（`fastapi.__version__` 与 `uv.lock` 一致，`pyproject` 约束 `>=0.162,<0.164`）；pydantic-settings 为 **2.16.3**。
 - **结论**：**本次没有任何依赖降级**。技术栈与 ADR-001 / ADR-003 / ADR-015 / ADR-016 的原始决策一致，无需修改任何决策或实现约束。
 - **来源**：编排者运行时核实（2026-11-18）
 - **状态**：记录性 ADR，无决策变更
@@ -386,7 +387,7 @@
 - 对外签名 `sessions.create` / `sessions.append_event` / `artifacts.save` 与 `AiGateway.complete` 冻结，新 spec 只调用、不修改（ADR-041）。
 - repo-integration 扩展本 spec 现有设计：复用凭证加密（AES-256-GCM + `AW_ENCRYPTION_KEY` + 掩码）、错误体 `{code, message, details[], requestId}`、`limit` + `cursor` 分页、`require_session` 认证前置与双方言纪律（ADR-041）。
 - `AW_PROMPT_MAX_CHARS=200000` 只在本 spec 定义一次；knowledge-base 的注入正文字符口径沿用同一常量（ADR-041）。
-- 未安装任何 AlonWorkflow pack（`.aw/install.json` 的 `packs` 为空），未套用 pack 专属约定。
+- 当时未安装任何 AlonWorkflow pack（`.aw/install.json` 的 `packs` 为空），未套用 pack 专属约定。AlonWorkflow 已于 2026-11-19 整体移除。
 - 知识库注入留痕归 core：`ai_call_record` 的 `knowledge_injection` / `injected_chars` / `prompt_chars` / `total_chars` 与 `session_event.type=knowledge_injection` 由 core 迁移与写入；`knowledge_base` 表由 knowledge-base spec 创建，core 只按 `kbId` 左连接、不建外键（ADR-042）。
 - 迁移顺序：core `0006_knowledge_injection` 先于 knowledge-base 的 `0007`；原 knowledge-base `0006` 作废。
 - 调用入口唯一：`POST /api/v1/sessions/{sessionId}/ai/complete`；请求可选携带 `knowledgeRefs` / `confirmInvalidCodes`，不新增 `/knowledge-injection/calls` 端点。

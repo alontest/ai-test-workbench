@@ -16,6 +16,7 @@ from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ENCRYPTION_KEY_ENV = "AW_" + "DGSGDVJWV" + "N_LYG"
+REPO_TOKEN_KEY_ENV = "AW_REPO_TOKEN_KEY"
 
 _COOKIE_SECURE_VALUES = ("auto", "true", "false")
 
@@ -35,6 +36,9 @@ class Settings(BaseSettings):
         default=None, validation_alias="AW_ADMIN_PASSWORD"
     )
     encryption_key: SecretStr | None = Field(default=None, validation_alias=ENCRYPTION_KEY_ENV)
+    repo_token_key: SecretStr | None = Field(
+        default=None, validation_alias=REPO_TOKEN_KEY_ENV
+    )
     database_url: str | None = None
     data_dir: str = "./data"
     public_origin: str = "http://127.0.0.1:8000"
@@ -78,6 +82,17 @@ class Settings(BaseSettings):
             raise SettingsError(f"{ENCRYPTION_KEY_ENV} 必须是 32 字节的 base64 编码") from exc
         if len(key) != 32:
             raise SettingsError(f"{ENCRYPTION_KEY_ENV} 必须是 32 字节的 base64 编码")
+        if self.repo_token_key is None:
+            raise SettingsError(f"{REPO_TOKEN_KEY_ENV} 必须设置")
+        raw_repo = self.repo_token_key.get_secret_value()
+        try:
+            repo_key = base64.b64decode(raw_repo, validate=True)
+        except (binascii.Error, ValueError) as exc:
+            raise SettingsError(
+                f"{REPO_TOKEN_KEY_ENV} 必须是 32 字节的 base64 编码"
+            ) from exc
+        if len(repo_key) != 32:
+            raise SettingsError(f"{REPO_TOKEN_KEY_ENV} 必须是 32 字节的 base64 编码")
 
     @property
     def admin_password_value(self) -> str:
@@ -88,6 +103,13 @@ class Settings(BaseSettings):
     def encryption_key_bytes(self) -> bytes:
         assert self.encryption_key is not None
         return base64.b64decode(self.encryption_key.get_secret_value(), validate=True)
+
+    @property
+    def repo_token_key_bytes(self) -> bytes:
+        assert self.repo_token_key is not None
+        return base64.b64decode(
+            self.repo_token_key.get_secret_value(), validate=True
+        )
 
     @property
     def public_origins(self) -> tuple[str, ...]:

@@ -42,7 +42,7 @@ EXPECTED_TABLES = {
     "ai_call_record",
 }
 
-HEAD = "0006"
+HEAD = "0008"
 
 # CHECK/唯一/FK 违反在 SQLite 与 MySQL 上的异常类型不一致：
 # SQLite 抛 IntegrityError，MySQL 的 CHECK 违反（3819）抛 OperationalError。
@@ -283,19 +283,19 @@ def test_tc059_constraints_on_test_database(tmp_path) -> None:
     asyncio.run(_constraint_scenario(url))
 
 
-def test_tc064_migration_order_and_no_knowledge_table(tmp_path) -> None:
+def test_tc064_migration_order_and_knowledge_tables(tmp_path) -> None:
     url = _url(tmp_path)
     _upgrade(url)
     if not url.startswith("sqlite"):  # pragma: no cover - 仅 CI job 2
         return
     con = sqlite3.connect(tmp_path / "migrated.db")
     version = con.execute("SELECT version_num FROM alembic_version").fetchone()[0]
-    assert version == "0006"
+    assert version == HEAD
     tables = {
         row[0]
         for row in con.execute("SELECT name FROM sqlite_master WHERE type='table'")
     }
-    assert "knowledge_base" not in tables
+    assert {"knowledge_base", "knowledge_entry"} <= tables
     con.close()
 
 
@@ -326,7 +326,6 @@ def test_tc064_migration_0006_injection_columns(tmp_path) -> None:
     versions = Path("migrations/versions")
     names = {path.name for path in versions.glob("*.py") if path.name != "__init__.py"}
     assert any(name.startswith("0006") for name in names)
-    assert not any(name.startswith("0007") for name in names)
 
     url = _url(tmp_path)
     _upgrade(url)
@@ -413,6 +412,6 @@ async def _assert_injection_check(url: str) -> None:
             tables = set(
                 await connection.run_sync(lambda sync: inspect(sync).get_table_names())
             )
-        assert "knowledge_base" not in tables
+        assert "knowledge_base" in tables
     finally:
         await database.dispose()

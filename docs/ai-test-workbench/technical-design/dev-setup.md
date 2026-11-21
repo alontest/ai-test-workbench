@@ -1,6 +1,8 @@
 # Dev Setup — ai-test-workbench（workbench-core）
 
-> 阶段：tech-tasks（步骤 8）。适用于本地开发、`aw verify` 与 CI。生产部署见同目录 `file-structure.md` 的部署工件与 `scripts/backup.sh` 说明。
+> 阶段：tech-tasks（步骤 8）。适用于本地开发、测试门禁与 CI。生产部署见同目录 `file-structure.md` 的部署工件与 `scripts/backup.sh` 说明。
+>
+> 注：本文档产出于 AlonWorkflow 时期，其中 `aw` / `.aw/` 相关命令已随该工作流移除而失效；当前以 `uv run pytest` 与 CI 三 job 为门禁，实现交付版说明见 `docs/dev-setup.md`。
 
 ## 1. 运行时与工具
 
@@ -13,7 +15,7 @@
 | Docker + Compose | 可选 | MySQL 8.4 与容器化验收 |
 | MySQL | 8.4 LTS（`mysql:8.4`） | 生产库与 CI 第二 job；账号需 DDL 权限 |
 
-- `.aw/config.json` 的 `test` 保持 `pytest` preset，`code_paths` 为 `src/`、`tests/`，本阶段不修改。
+- 测试门禁：`uv run pytest`（`code_paths` 为 `src/`、`tests/`、`web/`）。
 
 ## 2. 环境变量
 
@@ -61,9 +63,8 @@ npm run build      # 产物 web/dist，由后端同源托管
 ## 5. 测试与门禁
 
 ```bash
-pytest                                   # 默认 SQLite，等价 aw verify 的测试命令
-python3 .aw/aw.py verify                 # 跑 .aw/config.json 的 pytest 并解析 TC
-AW_TEST_DATABASE_URL='mysql+asyncmy://...?charset=utf8mb4' pytest tests/test_db_migrations.py
+uv run pytest                            # 默认 SQLite
+AW_TEST_DATABASE_URL='mysql+asyncmy://...?charset=utf8mb4' uv run pytest tests/test_db_migrations.py
 cd web && npm run test -- --run          # Vitest 组件单测（必过）
 ```
 
@@ -84,9 +85,9 @@ docker compose up --build
 
 ## 7. CI
 
-- 当前仓库无 CI（`.aw/install.json` 的 `ci: null`）；TASK-TD-018 新增 `.github/workflows/ci.yml`。平台已确认 GitHub Actions，仓库将建成 GitHub 公开仓库并 push（OQ-TT-01）。
-- job 1：SQLite 跑 pytest；job 2：`mysql:8.4` service + `AW_TEST_DATABASE_URL`，先迁移后跑同一套用例；job 3：`cd web && npm ci && npm run test -- --run`（Vitest，OQ-TT-03）。三个 job 都是必过；Playwright E2E 不进必过门禁。
-- `python3 .aw/aw.py ci` 从零重跑测试，与 job 1 等价。
+- CI 由 TASK-TD-018 落地为 `.github/workflows/ci.yml`（GitHub Actions，OQ-TT-01）。
+- job 1：SQLite 跑 `uv run pytest`；job 2：`mysql:8.4` service + `AW_TEST_DATABASE_URL`，先迁移后跑同一套用例；job 3：`cd web && npm ci && npm run test -- --run`（Vitest，OQ-TT-03）。三个 job 都是必过；Playwright E2E 不进必过门禁。
+- 从零重跑测试与 job 1 等价：`uv run pytest -q`。
 
 ## 8. 常见问题
 

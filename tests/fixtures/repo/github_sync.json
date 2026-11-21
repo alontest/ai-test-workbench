@@ -1,0 +1,33 @@
+{
+  "repo": {
+    "full_name": "pay/checkout",
+    "name": "checkout",
+    "default_branch": "main",
+    "html_url": "https://github.com/pay/checkout"
+  },
+  "branch_pages": [
+    [
+      {"name": "main", "commit": {"sha": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678"}},
+      {"name": "dev", "commit": {"sha": "b1b2c3d4e5f60718293a4b5c6d7e8f9012345678"}}
+    ],
+    [
+      {"name": "release", "commit": {"sha": "c1b2c3d4e5f60718293a4b5c6d7e8f9012345678"}}
+    ]
+  ],
+  "commits": [
+    {
+      "sha": "c1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+      "commit": {
+        "message": "fix(pay): 回调签名校验顺序调整\n\nbody",
+        "author": {"name": "lin.t", "date": "2026-11-20T01:21:00Z"}
+      }
+    },
+    {
+      "sha": "d1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+      "commit": {
+        "message": "feat(pay): 增加对账入口",
+        "author": {"name": "bo.w", "date": "2026-11-19T08:00:00Z"}
+      }
+    }
+  ]
+}

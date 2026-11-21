@@ -42,6 +42,12 @@ def test_tc058_models_match_schema_metadata() -> None:
         "session_event",
         "artifact",
         "ai_call_record",
+        "knowledge_base",
+        "knowledge_entry",
+        "repo_binding",
+        "repo_sync_record",
+        "repo_metadata_snapshot",
+        "repo_file_read_record",
     }
     assert {
         "knowledge_injection",

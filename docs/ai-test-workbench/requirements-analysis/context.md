@@ -51,12 +51,12 @@ specs/ai-test-workbench_20261117184149/
 
 ### Out of Scope
 
-- `test-case` / `diagnosis` / `regression-list` / `test-report` 业务能力：独立域，单独 `aw-start`（依据 answers.md：「4,按照建议首个域为 workbench-core」）
+- `test-case` / `diagnosis` / `regression-list` / `test-report` 业务能力：独立域，单独立项（依据 answers.md：「4,按照建议首个域为 workbench-core」）
 - 多用户账号体系、注册 / 口令找回与角色权限：本期只做单用户登录（AMB-004 原「无登录」已被用户于 2026-11-17 19:52:50 推翻）；owner 字段保留但不参与鉴权
 - 流式输出、提示词模板库：本期 Won't Have（见 `design.md`）
 - 仓库整库克隆、代码索引 / 向量检索 / 代码搜索、Webhook 与定时同步、仓库写操作：已随仓库集成迁出至 `specs/repo-integration_20261117205011`
 - 自动过期清理、归档与压缩：会话与制品永久保留，仅手动删除（AMB-009 已确认）
-- 本体生成（`ontology-builder-native` 内嵌、人工确认对话框）：独立域 `ontology-builder`，另行 `aw-start`；其产出的知识库文件由 `knowledge-base` spec 导入消费（answers.md 2026-11-17 20:06:58；2026-11-17 20:50:31 拆 spec 后）
+- 本体生成（`ontology-builder-native` 内嵌、人工确认对话框）：独立域 `ontology-builder`，另行立项；其产出的知识库文件由 `knowledge-base` spec 导入消费（answers.md 2026-11-17 20:06:58；2026-11-17 20:50:31 拆 spec 后）
 - 知识库服务端路径引用、在线编辑条目、代码级新鲜度校验、向量检索 / RAG：已随知识库迁出至 `specs/knowledge-base_20261117205011`
 
 ## 用户故事摘要

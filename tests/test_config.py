@@ -8,15 +8,22 @@ import os
 import pytest
 from pydantic import ValidationError
 
-from workbench.config import ENCRYPTION_KEY_ENV, Settings, SettingsError
+from workbench.config import (
+    ENCRYPTION_KEY_ENV,
+    REPO_TOKEN_KEY_ENV,
+    Settings,
+    SettingsError,
+)
 
 TEST_KEY = base64.b64encode(bytes(range(32))).decode()
+TEST_REPO_KEY = base64.b64encode(bytes(range(32, 64))).decode()
 
 
 def _env(monkeypatch: pytest.MonkeyPatch, **overrides: str | None) -> None:
     for name in (
         "AW_ADMIN_PASSWORD",
         ENCRYPTION_KEY_ENV,
+        REPO_TOKEN_KEY_ENV,
         "AW_DATABASE_URL",
         "AW_DATA_DIR",
         "AW_PUBLIC_ORIGIN",
@@ -30,6 +37,7 @@ def _env(monkeypatch: pytest.MonkeyPatch, **overrides: str | None) -> None:
     base = {
         "AW_ADMIN_PASSWORD": "test-admin-pass",
         ENCRYPTION_KEY_ENV: TEST_KEY,
+        REPO_TOKEN_KEY_ENV: TEST_REPO_KEY,
     }
     base.update(overrides)
     for name, value in base.items():
