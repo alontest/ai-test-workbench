@@ -35,9 +35,11 @@ SQLite 绿 ≠ MySQL 绿。CI 有独立 MySQL job。
 - 新建表直接声明 CHECK，不用 `batch_alter_table` 改历史迁移
 - JSON 列用 `sa.JSON`，不建索引
 
-## 仓库不变量（有测试兜底，本地与 CI 都跑）
+## 仓库不变量
 
-| 规则 | 保证方式 |
+这两条以前靠提交前记得去改，现在由测试兜底，本地 `pytest` 和 CI 都会跑：
+
+| 规则 | 由什么保证 |
 | --- | --- |
 | 迁移与模型必须能渲染成 MySQL 8 可执行 DDL，CHECK 不得引用自增列 | `tests/test_mysql_ddl_rules.py` |
 | 用例名里的 TC 编号必须登记在 `specs/<spec>/test-verification/tc-map.json` | `tests/test_spec_tc_sync.py` |
