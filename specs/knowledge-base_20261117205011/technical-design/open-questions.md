@@ -96,3 +96,32 @@ ADR-113 写 `frontend/src/knowledge/`，core 既有前端根是 `web/src/`、页
 - **A（默认，已执行）**：`limit` 默认 50 / 上限 200 + `cursor`，并支持 `q` / `type` 过滤与 `countsByType`，与条目浏览同一实现。
 - **B**：只返回前 200 条、不提供翻页——会静默隐藏条目，不推荐。
 
+### OQ-TD-04：跨 spec 的 `kbId` 类型冲突 — ✅ 已拍板 A（2026-11-20 15:41）
+
+**结论**：**A** —— core 侧改为 `str`，knowledge-base 保持 `CHAR(32)`（uuid4 hex）与已确认的 API 契约不变。用户原话「1、A」（2026-11-20 15:41:46，Asia/Shanghai）。
+
+**core 落地清单**（由 core 承担，本 spec 不改 core 表、不改 `0006` 迁移）：
+
+| 文件 | 改动 |
+|------|------|
+| `src/workbench/core/ports.py` | `InjectionItem.kb_id` / `KnowledgeRef.kb_id` / `InvalidCodeRef.kb_id` 改为 `str` |
+| `src/workbench/api/schemas/call.py` | `KnowledgeRefBody.kb_id` / `InvalidCodeBody.kb_id` 改为 `str` |
+| `src/workbench/services/calls.py` | `_as_knowledge_ref` / `_as_invalid_ref` 的 `int(kb_id)` 改为 `str(kb_id)` |
+| `docs/ai-test-workbench/technical-design/api-spec.md` | 示例 `{"kbId": 5}` → 字符串形态 |
+| `tests/` | `tests/fake_preparer.py`、`test_sessions_api.py`、`test_calls_api.py`、`test_knowledge_contract.py` 的整数断言改字符串 |
+
+**不变**：`services/injection_snapshot.py` 已按字符串比较，无需改动；`ai_call_record.knowledge_injection` 的 JSON 结构不变。
+
+**背景**（拍板前的冲突事实，保留作留痕）：
+
+- knowledge-base 侧：`database-schema.md` 定义 `kb_id CHAR(32)`（uuid4 hex），`api-spec.md` 明确 `kbId` 为 JSON string；ADR-103 已锁定。
+- core 侧（改前）：`docs/api-spec.md` 示例写 `{"kbId": 5, "entryCodes": [...]}`；`src/workbench/core/ports.py` 的 `InjectionItem.kb_id` / `KnowledgeRef.kb_id` / `InvalidCodeRef.kb_id` 均为 `int`，`src/workbench/api/schemas/call.py` 的 `kb_id` 为 `int`，`src/workbench/services/calls.py::_as_knowledge_ref` 执行 `int(kb_id)`。
+- 后果：若 knowledge-base 继续用 `CHAR(32)`，core 的请求校验会拒绝 hex 字符串，`_as_knowledge_ref` 也会抛 `ValueError`；批次 D 的 `/ai/complete` 联调与 AC-014-2 ~ AC-014-5 全部阻塞。
+
+**未采纳选项**
+
+- **B**：knowledge-base 改为整数主键 —— 需改 ADR-103、`database-schema.md`、`api-spec.md` 的 `kb_id` / `kbId` 类型与所有引用，范围大且与已确认文档冲突。
+- **C**：在 core 入口做 `int↔str` 互转 —— uuid4 hex 为 128 bit，无法无损转 64 位整数，不可行。
+
+**落地**：core 的类型改动合入后，再启动 `TASK-KB-013` 的联调；`TASK-KB-009` 的 `kbId` 输出、`TASK-KB-012` 的 `refs` 校验按 A 一并落地。
+

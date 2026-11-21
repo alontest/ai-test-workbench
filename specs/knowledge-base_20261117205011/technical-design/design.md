@@ -131,4 +131,4 @@
 | 知识库自动化 | 上游工具直连 | `ontology-builder` 通过进程内接口推送 `index.json` + `.md`，替代手工上传；复用同一解析/版本/报告契约；新增鉴权与幂等键 |
 | 多用户 / 多副本 | 2–10 人 | 知识库归属与删除审计接入账号体系；文件存储转对象存储；导入改为后台任务队列，避免长请求占用 |
 
-> 未安装任何 AlonWorkflow pack（`.aw/install.json` 的 `packs` 为空），未套用 pack 专属约定；如需 React/.NET 等 pack 约定，可 `alonwf pack add <pack>` 后重跑本阶段。
+> 本阶段产出于 AlonWorkflow 时期，当时未安装任何 pack、未套用 pack 专属约定；该工作流已于 2026-11-19 整体移除，本说明仅作历史留痕。

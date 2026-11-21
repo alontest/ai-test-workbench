@@ -1,7 +1,7 @@
 # Test Strategy — knowledge-base
 
 > 阶段：tech-design（补充产出：测试策略与 TC 编号）。依据 ADR-118、`docs/architecture-decisions.md` 约束、`docs/api-spec.md`、`docs/database-schema.md`。
-> **编号规则**：core 占 TC-001 ~ TC-070，repo-integration 计划 TC-201 起；本 spec 使用 **TC-101 ~ TC-150**（50 条），用例名统一 `test_tcNNN_<行为>`（如 `test_tc101_rejects_index_without_entries`）。后续新增用例从 TC-151 顺延，不复用编号。
+> **编号规则**：core 占 TC-001 ~ TC-071，repo-integration 计划 TC-201 起；本 spec 使用 **TC-101 ~ TC-150**（50 条），用例名统一 `test_tcNNN_<行为>`（如 `test_tc101_rejects_index_without_entries`）。后续新增用例从 TC-151 顺延，不复用编号。
 
 ## 1. 测试分层与基础设施
 
@@ -114,7 +114,7 @@
 
 ## 4. 门禁与执行
 
-- `python3 .aw/aw.py verify` 跑 `.aw/config.json` 的测试命令；测试报告需逐条出现 TC 编号。
+- 后端门禁 `uv run pytest -q`；测试报告需逐条出现 TC 编号，且新增 TC 必须同提交登记到 `test-verification/tc-map.json`（由 `tests/test_spec_tc_sync.py` 断言）。
 - 默认套件（SQLite）必须全绿；CI 额外启动 MySQL 8.4 容器跑同一套用例（至少 `test_kb_migrations.py` 与全部 API 用例）。
 - 前端 Vitest 与 Playwright 为 P1 可选，不进入本阶段门禁；`KbCharBudget` 与 `KbInvalidEntryDialog` 的关键行为由服务端 TC-129 / TC-131 / TC-132 兜底。
 - 失败处理：先修实现；确认用例本身写错才改用例，并在提交说明里写明原因。
