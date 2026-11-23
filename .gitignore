@@ -27,6 +27,9 @@ logs/
 playwright-report/
 test-results/
 
+# 验证脚手架产物（verify-* 技能）
+.verify/
+
 # 前端构建与覆盖率产物
 web/node_modules/
 web/dist/
