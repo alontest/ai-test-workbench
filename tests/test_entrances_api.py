@@ -23,11 +23,11 @@ ADMIN = "test-admin-secret"
 ORIGIN = {"origin": "http://testserver"}
 EXPECTED_KEYS = (
     "case-library",
+    "regression-list",
+    "test-report",
     "bug-analysis",
     "log-triage",
     "sql-analysis",
-    "regression-list",
-    "test-report",
 )
 
 
@@ -67,7 +67,8 @@ async def test_tc051_api_entrances_six(client) -> None:
         assert item["name"]
         assert item["description"]
         assert item["domain"]
-        assert item["status"] == "planned"
+        expected_status = "live" if item["key"] == "case-library" else "planned"
+        assert item["status"] == expected_status
         assert "生成测试用例" not in item["name"]
         assert "生成测试用例" not in item["description"]
     keys = [item["key"] for item in items]
@@ -173,7 +174,7 @@ async def test_tc054_placeholder_metadata(client) -> None:
         assert body["key"] == item["key"]
         assert body["name"] == item["name"]
         assert body["domain"]
-        assert body["status"] == "planned"
+        assert body["status"] == item["status"]
         assert body["description"]
 
 
@@ -208,21 +209,23 @@ async def test_tc055_placeholder_has_no_side_effects(
 
 @pytest.mark.asyncio
 async def test_tc056_entrance_status_switch(client, monkeypatch) -> None:
-    live = replace(ENTRANCES[1], status="live")
-    patched = tuple(live if item.key == "bug-analysis" else item for item in ENTRANCES)
+    patched = tuple(
+        replace(item, status="live") if item.key == "bug-analysis" else item
+        for item in ENTRANCES
+    )
     monkeypatch.setattr("workbench.core.entrances.ENTRANCES", patched)
 
     listed = await client.get("/api/v1/entrances")
     by_key = {item["key"]: item for item in listed.json()["items"]}
     assert by_key["bug-analysis"]["status"] == "live"
-    assert by_key["case-library"]["status"] == "planned"
+    assert by_key["test-report"]["status"] == "planned"
 
     detail = await client.get("/api/v1/entrances/bug-analysis")
     assert detail.json()["status"] == "live"
 
     illegal = Entrance(
         key="bug-analysis",
-        name="分析 bug",
+        name="分析 Bug",
         description="x",
         domain="diagnosis",
         status="beta",  # type: ignore[arg-type]

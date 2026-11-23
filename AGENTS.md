@@ -4,7 +4,7 @@
 
 ## 项目
 
-单用户自托管 AI 测试工作台。后端 Python 3.12 + FastAPI + SQLAlchemy 2.1 + Alembic；前端 React 19 + TS + Vite + React Router 8 + TanStack Query 5 + CSS Modules/Radix。生产 MySQL 8.4，开发/测试 SQLite。`web/dist` 由后端同源托管。
+**Vigil · 鸮巡**（单用户自托管 AI 测试工作台）。后端 Python 3.12 + FastAPI + SQLAlchemy 2.1 + Alembic；前端 React 19 + TS + Vite + React Router 8 + TanStack Query 5 + CSS Modules/Radix。生产 MySQL 8.4，开发/测试 SQLite。`web/dist` 由后端同源托管。
 
 ## 常用命令
 

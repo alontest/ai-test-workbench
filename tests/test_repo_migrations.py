@@ -76,7 +76,7 @@ async def _reset(url: str) -> None:
 
 def _upgrade(url: str) -> None:
     asyncio.run(_reset(url))
-    command.upgrade(_config(url), "head")
+    command.upgrade(_config(url), "0008")
 
 
 async def _snapshot(url: str) -> dict[str, Any]:
@@ -250,7 +250,7 @@ def test_tc247_migration_0008_on_both_dialects(tmp_path) -> None:  # noqa: ANN00
     url = _url(tmp_path)
     _upgrade(url)
 
-    assert ScriptDirectory.from_config(_config(url)).get_heads() == ["0008"]
+    assert ScriptDirectory.from_config(_config(url)).get_heads() == ["0009"]
 
     up = asyncio.run(_snapshot(url))
     assert up["version"] == "0008"
@@ -324,5 +324,5 @@ def test_tc247_migration_0008_on_both_dialects(tmp_path) -> None:  # noqa: ANN00
 
     command.upgrade(_config(url), "head")
     again = asyncio.run(_snapshot(url))
-    assert again["version"] == "0008"
+    assert again["version"] == "0009"
     assert REPO_TABLES <= again["tables"]

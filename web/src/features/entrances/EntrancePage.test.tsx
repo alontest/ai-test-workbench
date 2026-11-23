@@ -30,8 +30,8 @@ const ITEMS = [
   },
   {
     key: "bug-analysis",
-    name: "分析 bug",
-    description: "结合缺陷描述与项目上下文定位根因。",
+    name: "分析 Bug",
+    description: "联动报错信息、仓库源码与业务规则，按「假设 → 证据 → 结论」定位缺陷根因。",
     domain: "diagnosis",
     status: "live" as const,
   },

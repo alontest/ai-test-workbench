@@ -42,7 +42,7 @@ EXPECTED_TABLES = {
     "ai_call_record",
 }
 
-HEAD = "0008"
+HEAD = "0009"
 
 # CHECK/唯一/FK 违反在 SQLite 与 MySQL 上的异常类型不一致：
 # SQLite 抛 IntegrityError，MySQL 的 CHECK 违反（3819）抛 OperationalError。

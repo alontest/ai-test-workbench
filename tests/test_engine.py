@@ -48,6 +48,11 @@ def test_tc058_models_match_schema_metadata() -> None:
         "repo_sync_record",
         "repo_metadata_snapshot",
         "repo_file_read_record",
+        "qa_skill",
+        "qa_skill_version",
+        "approval_request",
+        "test_case_design_plan",
+        "test_case",
     }
     assert {
         "knowledge_injection",

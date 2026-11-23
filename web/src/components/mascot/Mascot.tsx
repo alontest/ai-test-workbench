@@ -2,7 +2,7 @@ import { useId } from "react";
 import styles from "./mascot.module.css";
 
 /**
- * AI 测试工作台吉祥物组件：夜巡猫头鹰探长「鸮鸮 (Inspector Hoot)」。
+ * Vigil · 鸮巡吉祥物组件：夜巡猫头鹰探长「鸮鸮 (Inspector Hoot)」。
  *
  * 响应式细节分层（Adaptive LOD）：
  * - `size <= 36`（24px/28px/32px 品牌位、内联徽章位）：自动渲染高对比「头像剪影态」，砍掉细碎肢体，放大护目镜与眼神

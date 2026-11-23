@@ -1,8 +1,9 @@
-"""16 张表的 ORM 模型（导入即注册到 Base.metadata）。"""
+"""21 张表的 ORM 模型（导入即注册到 Base.metadata）。"""
 
 from workbench.db.models.admin_credential import AdminCredential
 from workbench.db.models.ai_call_record import AiCallRecord
 from workbench.db.models.analysis_session import AnalysisSession
+from workbench.db.models.approval_request import ApprovalRequest
 from workbench.db.models.artifact import Artifact
 from workbench.db.models.knowledge_base import KnowledgeBase
 from workbench.db.models.knowledge_entry import KnowledgeEntry
@@ -11,16 +12,21 @@ from workbench.db.models.login_session import LoginSession
 from workbench.db.models.model_binding import ModelBinding
 from workbench.db.models.project_context import ProjectContext
 from workbench.db.models.provider_config import ProviderConfig
+from workbench.db.models.qa_skill import QaSkill
+from workbench.db.models.qa_skill_version import QaSkillVersion
 from workbench.db.models.repo_binding import RepoBinding
 from workbench.db.models.repo_file_read_record import RepoFileReadRecord
 from workbench.db.models.repo_metadata_snapshot import RepoMetadataSnapshot
 from workbench.db.models.repo_sync_record import RepoSyncRecord
 from workbench.db.models.session_event import SessionEvent
+from workbench.db.models.test_case import TestCase
+from workbench.db.models.test_case_design_plan import TestCaseDesignPlan
 
 __all__ = [
     "AdminCredential",
     "AiCallRecord",
     "AnalysisSession",
+    "ApprovalRequest",
     "Artifact",
     "KnowledgeBase",
     "KnowledgeEntry",
@@ -29,9 +35,13 @@ __all__ = [
     "ModelBinding",
     "ProjectContext",
     "ProviderConfig",
+    "QaSkill",
+    "QaSkillVersion",
     "RepoBinding",
     "RepoFileReadRecord",
     "RepoMetadataSnapshot",
     "RepoSyncRecord",
     "SessionEvent",
+    "TestCase",
+    "TestCaseDesignPlan",
 ]

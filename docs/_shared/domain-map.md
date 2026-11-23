@@ -87,3 +87,15 @@ graph LR
 | module-name | 状态 | spec | 关闭时间 |
 |---|---|---|---|
 | `workbench-core` | ✅ 已完成 | `ai-test-workbench_20261117184149` | 2026-11-18 16:42 |
+
+## 待立项的平台级支撑能力（横切规划）
+
+以下 4 项能力于 2026-11-21 纳入中长期规划，不单独打乱当前主线排期，随下游业务域分期立项并继承全部基座不变量（详细设计、排除项与红线见 `docs/platform-capabilities.md`）：
+
+| 能力标识 | 名称 | 核心职责与关键约束 | 计划接入时机 |
+|---|---|---|---|
+| `qa-skills` | QA 技能库 | Markdown + YAML frontmatter 方法论模板；**v0 由人类编写/导入，后续通过会话 Chat 由 Agent 提 Diff 提案、经审批落盘**；支持 `global` + `projectId` 两层作用域 | 随 `test-case` 域起步 |
+| `mcp-registry` | MCP 工具源 | HTTP/SSE MCP Server 受控注册与工具清单；按 `projectId` 隔离、认证凭证由 `workbench-core` 加密托管并掩码回显、默认只读 | 随 `diagnosis` 域落地 |
+| `approvals` | 审批中心 | 统一的人工确认闸门（`pending / approved / executed / failed / rejected`），覆盖 Agent 资产变更 Diff 与外部系统写操作 | 轻量版随 `test-case`，完整版随外部回写 / `ontology-builder` |
+| `asset-history` | 变更审计 | 资产变更流水、Unified Diff 预览与一键 Rollback（与 `AiCallRecord` / `SessionEvent` 互补，回滚记录追加不抹除历史） | 与 `approvals` 同步分期 |
+

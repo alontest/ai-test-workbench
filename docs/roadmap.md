@@ -1,4 +1,4 @@
-# 项目进度与排期
+# Vigil · 鸮巡 — 项目进度与排期
 
 > 基线：2026-11-20 15:00（Asia/Shanghai），分支 `feat/batch-b-backend` @ `987c919`。
 > 本文是接手时的现状快照与排期判断，不替代 `specs/` 下的阶段产物。所有估算都是人日口径（1 人日 ≈ 8h），依据是 core 已交付任务的实际密度。
@@ -169,3 +169,52 @@ core 类型修正 ──┐
                  ├──► KB 批次 D 联调
 KB 批次 A~C ────┘
 ```
+
+## 六、平台级扩展能力规划（2026-11-21 决策）
+
+结合 Billing Agent 产品调研与 Vigil 架构边界，确定在后续业务域推进过程中**按需分期引入 4 项平台级横切能力**（完整设计与红线见 `docs/platform-capabilities.md`）：
+
+| 能力 | 定位与核心闭环 | 计划落地阶段 | 前端占位路由 |
+|---|---|---|---|
+| **QA 技能库**（`qa-skills`） | 人类编写/导入初版（v0），后续通过会话 Chat 让 Agent 协助修改并生成结构化 Diff 提案，**经审批后落盘**，禁止静默新建/覆写 | 随 `test-case` 域起步 | `/extensions/skills` |
+| **MCP 工具源**（`mcp-registry`） | 受控接入外部日志、只读数据库、工单、本体服务；按 `projectId` 隔离，凭证走基座 AES-256-GCM 加密与掩码回显，默认只读 | 随 `diagnosis` 域落地 | `/extensions/mcp` |
+| **审批中心**（`approvals`） | `pending → approved → executed / failed` 与 `rejected` 统一状态机；承接 Agent 资产 Diff 提案与外部写操作的人工确认 | 轻量版随 `test-case`，完整版随外部回写 / `ontology-builder` | `/extensions/approvals` |
+| **变更审计**（`asset-history`） | 补齐 `AiCallRecord` 之外的资产变更流水、Unified Diff 预览与一键 `Rollback`（回滚不抹除历史） | 与 `approvals` 同步分期 | `/extensions/history` |
+
+**明确排除**（不引入）：Agent 运行时自写 Python 工具（`create_tool`）、动态 UI 组件/画布编排/定时任务、插件市场（改用 Git 导入 Markdown Skill 轻入口）、无 `projectId` 隔离的单空间平铺模型。
+
+## 七、底座完工基线与下游业务域方向校准（2026-11-21 更新）
+
+### 1. 三大底座最新状态
+
+| 底座域 | 状态 | 备注 |
+|---|---|---|
+| `workbench-core` | ✅ 已完成 | 含 `kbId: str` 统一、SPA `/api/**` 404 守卫、4 个平台扩展占位路由 |
+| `knowledge-base` | ✅ 已完成（迁移 `0007`） | A~E 全部批次落地（解析、导入覆盖、浏览检索、一跳邻居、`/ai/complete` 注入联调） |
+| `repo-integration` | ✅ 已完成（迁移 `0008`） | A~E 全部批次落地 + 云效 Codeup 真实仓库 API 契约修复与端到端 HTTP/DB 实测通过 |
+
+### 2. 基于市场调研与竞品分析的 5 项方向优化
+
+完整调研报告见 `docs/market-and-competitor-analysis.md`（对标 MeterSphere v3、Qase/TestRail AI、Qodo、HolmesGPT、Sentry Seer 与 Billing Agent）：
+
+1. **底座黄金三角自动推荐（Context Recommender）**：在会话输入需求、报错堆栈或选定代码文件时，先做零 LLM 成本的确定性匹配，自动推荐本项目的 `KnowledgeEntry`（含一跳邻居）与 `RepoMetadataSnapshot` 文件供用户一键勾选注入。
+2. **`test-case`（用例库）**：「两阶段生成（先确认测试设计检查点矩阵，再展开结构化用例）」+ 强制绑定溯源锚点（`linkedKbCodes` + `linkedCodePaths`，支持本体/代码变更时的失效用例标红）+ 表格/层级树双视图与 CSV/Markdown/XMind 互操作导出。
+3. **`diagnosis`（Bug / 日志 / SQL 三合一诊断）**：统一为 `Hypothesis → Evidence → Finding` 结构化收敛引擎，自动结合报错堆栈调用 `repo-integration.read_file` 拉源码、结合 `KB` 拉 `ENT-` 表定义与 `BR-` 业务规则；SQL 诊断专项支持 `SQL + EXPLAIN + DDL/ENT-` 联合分析。
+4. **`regression-list`（生成回归清单）**：拒绝黑盒盲猜，采用**「Git Commit 变更路径 → KB `codePaths` 与一跳邻居 → 近期 `Finding` 影响面」三路确定性爆炸半径召回** + LLM 风险分级（P0/P1/P2）+ 漏测盲区提醒（Coverage Gap Alert）。
+5. **双工作流节奏**：同时支持**模式 A（人在场单人交互深潜）**与**模式 B（少确认批处理流转，结果一次性汇入 `Approvals` 终审）**。
+
+### 3. 下游立项推荐顺序（机会评分排序）
+
+```
+1. test-case + qa-skills 最小闭环（得分 4.9）
+     ↓
+2. diagnosis 三合一诊断引擎（得分 4.8，V1 先用制品 + Repo + KB，V1.5 接 mcp-registry）
+     ↓
+3. regression-list 确定性爆炸半径召回 + 风险排序（得分 4.6）
+     ↓
+4. test-report 全链路可溯源报告（得分 4.5）
+     ↓
+5. ontology-builder 可视化本体扫描与确认（得分 3.9，压轴）
+```
+
+

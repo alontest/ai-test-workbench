@@ -186,6 +186,52 @@ export function FeatureHome(props: IconProps) {
   );
 }
 
+/* ─────────────────────────── 平台扩展（规划中） ─────────────────────────── */
+
+/** QA 技能库：带星芒标的方法论手册。 */
+export function FeatureSkill(props: IconProps) {
+  return (
+    <FeatureSvg {...props}>
+      <rect x="4" y="3.5" width="16" height="17" rx="2" />
+      <path d="M8 8.5h8M8 12.5h5" />
+      <path d="M15.5 14v4M13.5 16h4" />
+    </FeatureSvg>
+  );
+}
+
+/** MCP 工具源：插头与协议节点。 */
+export function FeatureMcp(props: IconProps) {
+  return (
+    <FeatureSvg {...props}>
+      <circle cx="5.5" cy="12" r="2.5" />
+      <circle cx="18.5" cy="6.5" r="2.5" />
+      <circle cx="18.5" cy="17.5" r="2.5" />
+      <path d="M8 11l8-3.5M8 13l8 3.5" />
+    </FeatureSvg>
+  );
+}
+
+/** 审批中心：带对勾的盾牌。 */
+export function FeatureApproval(props: IconProps) {
+  return (
+    <FeatureSvg {...props}>
+      <path d="M12 3 5 6v5.5c0 4.4 3 8 7 9.5 4-1.5 7-5.1 7-9.5V6l-7-3Z" />
+      <path d="m9 12 2 2 4-4" />
+    </FeatureSvg>
+  );
+}
+
+/** 变更审计：逆时针回溯与时间轴。 */
+export function FeatureHistory(props: IconProps) {
+  return (
+    <FeatureSvg {...props}>
+      <path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3L4.5 9" />
+      <path d="M4.5 4.5V9H9" />
+      <path d="M12 8.5V12l2.5 1.5" />
+    </FeatureSvg>
+  );
+}
+
 /* ─────────────────────── 通用功能图标 ─────────────────────── */
 
 export function IconCheck(props: IconProps) {

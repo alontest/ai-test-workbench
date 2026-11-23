@@ -12,4 +12,9 @@ export const queryKeys = {
   sessionEvents: (id: number) => ["sessions", id, "events"] as const,
   artifact: (id: number) => ["artifacts", id] as const,
   calls: ["calls"] as const,
+  skills: (projectId?: number) => ["skills", projectId] as const,
+  skill: (skillId: string) => ["skills", "detail", skillId] as const,
+  approvals: (status?: string) => ["approvals", status] as const,
+  testCases: (projectId: number, filters?: Record<string, unknown>) =>
+    ["test-cases", projectId, filters] as const,
 };

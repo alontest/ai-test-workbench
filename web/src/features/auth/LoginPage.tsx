@@ -130,9 +130,9 @@ export function LoginPage() {
         <form className={styles.card} onSubmit={onSubmit}>
           <div className={styles.brand}>
             <span className={styles.mark} aria-hidden="true">
-              AW
+              V
             </span>
-            <span className={styles.brandName}>AI Test Workbench</span>
+            <span className={styles.brandName}>Vigil · 鸮巡</span>
           </div>
 
           <div className={styles.intro}>

@@ -8,11 +8,11 @@ from workbench.core.entrances import ENTRANCES, get_entrance
 
 EXPECTED_KEYS = (
     "case-library",
+    "regression-list",
+    "test-report",
     "bug-analysis",
     "log-triage",
     "sql-analysis",
-    "regression-list",
-    "test-report",
 )
 
 
@@ -27,7 +27,10 @@ def test_tc051_entrances_has_six_items() -> None:
 
 
 def test_tc056_entrance_status_is_config_driven() -> None:
-    assert {item.status for item in ENTRANCES} == {"planned"}
+    assert get_entrance("case-library").status == "live"
+    assert {
+        item.status for item in ENTRANCES if item.key != "case-library"
+    } == {"planned"}
     assert get_entrance("unknown-key") is None
     with pytest.raises(IndexError):
         ENTRANCES[99]

@@ -2,7 +2,7 @@
 # 使用前：cp .env.example .env 并填写占位口令 / 32 字节 base64 加密密钥。
 # 外接 MySQL：docker compose up app --no-deps，并把 AW_DATABASE_URL 指向现有实例（需 DDL 权限）。
 
-name: ai-test-workbench
+name: vigil-workbench
 
 services:
   db:

@@ -5,6 +5,7 @@ import { CallsPage } from "./features/calls/CallsPage";
 import { LoginPage } from "./features/auth/LoginPage";
 import { EntrancePage } from "./features/entrances/EntrancePage";
 import { HomePage } from "./features/entrances/HomePage";
+import { extensionRoutes } from "./features/extensions/routes";
 import { knowledgeRoutes } from "./features/knowledge/routes";
 import { ModelsPage } from "./features/models/ModelsPage";
 import { ProjectsPage } from "./features/projects/ProjectsPage";
@@ -31,6 +32,7 @@ export const router = createBrowserRouter([
           { path: "/calls", element: <CallsPage /> },
           ...knowledgeRoutes,
           ...repoRoutes,
+          ...extensionRoutes,
         ],
       },
     ],

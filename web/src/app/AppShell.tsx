@@ -1,17 +1,21 @@
 import { useState, type ComponentType } from "react";
 import { NavLink, Outlet, useLocation } from "react-router";
 import {
+  FeatureApproval,
   FeatureBugAnalysis,
   FeatureCalls,
   FeatureCaseLibrary,
+  FeatureHistory,
   FeatureHome,
   FeatureKnowledge,
   FeatureLogTriage,
+  FeatureMcp,
   FeatureProject,
   FeatureProvider,
   FeatureRegressionList,
   FeatureRepo,
   FeatureSession,
+  FeatureSkill,
   FeatureSqlAnalysis,
   FeatureTestReport,
   type IconProps,
@@ -30,11 +34,18 @@ interface EntranceItem {
 
 const ENTRANCES: readonly EntranceItem[] = [
   { key: "case-library", name: "用例库", icon: FeatureCaseLibrary },
-  { key: "bug-analysis", name: "分析 bug", icon: FeatureBugAnalysis },
-  { key: "log-triage", name: "排查日志", icon: FeatureLogTriage },
-  { key: "sql-analysis", name: "分析 SQL", icon: FeatureSqlAnalysis },
   { key: "regression-list", name: "生成回归清单", icon: FeatureRegressionList },
   { key: "test-report", name: "生成测试报告", icon: FeatureTestReport },
+  { key: "bug-analysis", name: "分析 Bug", icon: FeatureBugAnalysis },
+  { key: "log-triage", name: "排查日志", icon: FeatureLogTriage },
+  { key: "sql-analysis", name: "分析 SQL", icon: FeatureSqlAnalysis },
+];
+
+const EXTENSIONS: readonly EntranceItem[] = [
+  { key: "skills", name: "QA 技能库", icon: FeatureSkill },
+  { key: "mcp", name: "MCP 工具源", icon: FeatureMcp },
+  { key: "approvals", name: "审批中心", icon: FeatureApproval },
+  { key: "history", name: "变更审计", icon: FeatureHistory },
 ];
 
 interface NavItem {
@@ -59,8 +70,7 @@ const NAV_GROUPS: readonly NavGroup[] = [
     ],
   },
   {
-    title: "六大入口",
-    note: "均在规划中",
+    title: "测试与诊断",
     items: ENTRANCES.map((item) => ({
       to: `/entrances/${item.key}`,
       label: item.name,
@@ -68,13 +78,22 @@ const NAV_GROUPS: readonly NavGroup[] = [
     })),
   },
   {
-    title: "基座管理",
+    title: "上下文与资产",
     items: [
       { to: "/projects", label: "项目上下文", icon: FeatureProject },
-      { to: "/providers", label: "AI 提供商与模型", icon: FeatureProvider },
-      { to: "/calls", label: "调用记录", icon: FeatureCalls },
       { to: "/knowledge-bases", label: "知识库", icon: FeatureKnowledge },
-      { to: "/repos", label: "仓库浏览", icon: FeatureRepo },
+      { to: "/repos", label: "代码仓库", icon: FeatureRepo },
+      { to: "/extensions/skills", label: "QA 技能库", icon: FeatureSkill },
+      { to: "/extensions/mcp", label: "MCP 工具源", icon: FeatureMcp },
+    ],
+  },
+  {
+    title: "治理与系统",
+    items: [
+      { to: "/extensions/approvals", label: "审批中心", icon: FeatureApproval },
+      { to: "/extensions/history", label: "变更审计", icon: FeatureHistory },
+      { to: "/calls", label: "调用记录", icon: FeatureCalls },
+      { to: "/providers", label: "AI 提供商与模型", icon: FeatureProvider },
     ],
   },
 ];
@@ -84,7 +103,16 @@ function resolveBreadcrumb(pathname: string): string[] {
   const entranceKey = /^\/entrances\/([^/]+)\/?$/.exec(pathname)?.[1];
   if (entranceKey) {
     const name = ENTRANCES.find((item) => item.key === entranceKey)?.name;
-    return ["六大入口", name ?? "入口"];
+    return ["测试与诊断", name ?? "入口"];
+  }
+  const extensionKey = /^\/extensions\/([^/]+)\/?$/.exec(pathname)?.[1];
+  if (extensionKey) {
+    const name = EXTENSIONS.find((item) => item.key === extensionKey)?.name;
+    const group =
+      extensionKey === "skills" || extensionKey === "mcp"
+        ? "上下文与资产"
+        : "治理与系统";
+    return [group, name ?? "扩展能力"];
   }
   if (pathname === "/") {
     return ["工作台", "首页"];
@@ -96,34 +124,34 @@ function resolveBreadcrumb(pathname: string): string[] {
     return ["工作台", "分析会话", "会话详情"];
   }
   if (pathname === "/providers") {
-    return ["基座管理", "AI 提供商"];
+    return ["治理与系统", "AI 提供商"];
   }
   if (/^\/providers\/[^/]+\/models\/?$/.test(pathname)) {
-    return ["基座管理", "AI 提供商", "模型绑定"];
+    return ["治理与系统", "AI 提供商", "模型绑定"];
   }
   if (pathname === "/projects") {
-    return ["基座管理", "项目上下文"];
+    return ["上下文与资产", "项目上下文"];
   }
   if (/^\/projects\/[^/]+\/repos\/[^/]+\/?$/.test(pathname)) {
-    return ["基座管理", "项目上下文", "仓库浏览"];
+    return ["上下文与资产", "项目上下文", "代码仓库"];
   }
   if (pathname === "/calls") {
-    return ["基座管理", "调用记录"];
+    return ["治理与系统", "调用记录"];
   }
   if (pathname === "/repos") {
-    return ["基座管理", "仓库浏览"];
+    return ["上下文与资产", "代码仓库"];
   }
   if (pathname === "/knowledge-bases") {
-    return ["基座管理", "知识库"];
+    return ["上下文与资产", "知识库"];
   }
   if (pathname === "/knowledge-bases/import") {
-    return ["基座管理", "知识库", "导入"];
+    return ["上下文与资产", "知识库", "导入"];
   }
   if (/^\/knowledge-bases\/[^/]+\/entries\/[^/]+\/?$/.test(pathname)) {
-    return ["基座管理", "知识库", "条目详情"];
+    return ["上下文与资产", "知识库", "条目详情"];
   }
   if (/^\/knowledge-bases\/[^/]+\/?$/.test(pathname)) {
-    return ["基座管理", "知识库", "知识库详情"];
+    return ["上下文与资产", "知识库", "知识库详情"];
   }
   return ["工作台"];
 }
@@ -146,7 +174,7 @@ export function AppShell() {
         <div className={styles.brand}>
           <Mascot size={28} state="idle" className={styles.brandMark} />
           <span className={styles.brandText}>
-            <span className={styles.brandName}>AI Test Workbench</span>
+            <span className={styles.brandName}>Vigil · 鸮巡</span>
             <span className={styles.brandTagline}>LOCAL INSPECTOR</span>
           </span>
         </div>

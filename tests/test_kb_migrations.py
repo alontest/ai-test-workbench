@@ -216,5 +216,5 @@ def test_tc144_migration_0007_on_both_dialects(tmp_path) -> None:
 
     command.upgrade(_config(url), "head")
     again = asyncio.run(_snapshot(url))
-    assert again["version"] == "0008"
+    assert again["version"] == "0009"
     assert KB_TABLES <= again["tables"]

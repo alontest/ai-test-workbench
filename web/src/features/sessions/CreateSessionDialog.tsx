@@ -13,11 +13,11 @@ import type { EnabledModel } from "./types";
 
 const ENTRANCES = [
   { value: "case-library", label: "用例库" },
-  { value: "bug-analysis", label: "分析 bug" },
-  { value: "log-triage", label: "排查日志" },
-  { value: "sql-analysis", label: "分析 SQL" },
   { value: "regression-list", label: "生成回归清单" },
   { value: "test-report", label: "生成测试报告" },
+  { value: "bug-analysis", label: "分析 Bug" },
+  { value: "log-triage", label: "排查日志" },
+  { value: "sql-analysis", label: "分析 SQL" },
 ];
 
 interface Page<T> {

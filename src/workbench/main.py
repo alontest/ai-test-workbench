@@ -69,7 +69,7 @@ def create_app(
             if owned_database is not None:
                 await owned_database.dispose()
 
-    app = FastAPI(title="AI 测试工作台", lifespan=lifespan)
+    app = FastAPI(title="Vigil · 鸮巡", lifespan=lifespan)
     app.state.settings = resolved_settings
     app.state.database = database
     if ai_gateway is not None:

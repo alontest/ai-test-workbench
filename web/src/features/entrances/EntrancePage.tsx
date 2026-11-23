@@ -6,6 +6,7 @@ import { Spinner } from "../../components/ui/Loading";
 import { PageContainer, PageHeader } from "../../components/ui/PageHeader";
 import { apiFetch } from "../../lib/api/client";
 import { queryKeys } from "../../lib/api/keys";
+import { CaseLibraryPage } from "../test-cases/CaseLibraryPage";
 import { PlaceholderPanel } from "./PlaceholderPanel";
 import styles from "./entrances.module.css";
 import type { Entrance } from "./types";
@@ -62,7 +63,10 @@ export function EntrancePage() {
   }
 
   return (
-    <PageContainer tier="md" className={styles.section}>
+    <PageContainer
+      tier={entrance.key === "case-library" ? "xl" : "md"}
+      className={styles.section}
+    >
       <PageHeader
         backLink={BACK_LINK}
         title={entrance.name}
@@ -77,7 +81,7 @@ export function EntrancePage() {
           data-testid="entrance-live"
           data-entrance={entrance.key}
         >
-          入口已启用。
+          {entrance.key === "case-library" ? <CaseLibraryPage /> : "入口已启用。"}
         </div>
       )}
     </PageContainer>
