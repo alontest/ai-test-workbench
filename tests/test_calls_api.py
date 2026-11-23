@@ -17,10 +17,10 @@ from helpers import (
     seed_session,
     seed_session_graph,
 )
-from workbench.adapters.ai.base import AdapterError
-from workbench.db.models import AiCallRecord, SessionEvent
-from workbench.services.ai_gateway import AiGateway
-from workbench.services.errors import DomainError
+from vigil_workbench.adapters.ai.base import AdapterError
+from vigil_workbench.db.models import AiCallRecord, SessionEvent
+from vigil_workbench.services.ai_gateway import AiGateway
+from vigil_workbench.services.errors import DomainError
 
 ADMIN = "test-admin-secret"
 ORIGIN = {"origin": "http://testserver"}
@@ -49,7 +49,7 @@ class FakeAI:
 
 
 async def _make(settings, database, fake: FakeAI, *, attempt_timeout: float = 120):
-    from workbench.db.models import AdminCredential
+    from vigil_workbench.db.models import AdminCredential
 
     async with database.sessionmaker() as db:
         exists = await db.get(AdminCredential, 1) is not None
@@ -344,9 +344,9 @@ async def test_tc067_knowledge_injection_serialization(settings, database) -> No
 
     from sqlalchemy import text
 
-    from workbench.core.redaction import redact
-    from workbench.db.base import utcnow
-    from workbench.db.models import KnowledgeBase, ModelBinding
+    from vigil_workbench.core.redaction import redact
+    from vigil_workbench.db.base import utcnow
+    from vigil_workbench.db.models import KnowledgeBase, ModelBinding
 
     fake = FakeAI()
     client = await _make(settings, database, fake)

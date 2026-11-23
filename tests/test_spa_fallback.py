@@ -18,7 +18,7 @@ import httpx
 import pytest
 
 from helpers import seed_admin
-from workbench.main import WEB_DIST, create_app
+from vigil_workbench.main import WEB_DIST, create_app
 
 pytestmark = pytest.mark.asyncio
 

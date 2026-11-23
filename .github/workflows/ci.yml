@@ -31,7 +31,7 @@ jobs:
         image: mysql:8.4
         env:
           MYSQL_ROOT_PASSWORD: ci-root
-          MYSQL_DATABASE: workbench_test
+          MYSQL_DATABASE: vigil_test
         ports:
           - 3306:3306
         options: >-
@@ -40,7 +40,7 @@ jobs:
           --health-timeout=5s
           --health-retries=20
     env:
-      AW_TEST_DATABASE_URL: mysql+asyncmy://root:ci-root@127.0.0.1:3306/workbench_test?charset=utf8mb4
+      VIGIL_TEST_DATABASE_URL: mysql+asyncmy://root:ci-root@127.0.0.1:3306/vigil_test?charset=utf8mb4
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -50,7 +50,7 @@ jobs:
       - name: alembic upgrade head
         run: uv run alembic upgrade head
         env:
-          AW_DATABASE_URL: mysql+asyncmy://root:ci-root@127.0.0.1:3306/workbench_test?charset=utf8mb4
+          VIGIL_DATABASE_URL: mysql+asyncmy://root:ci-root@127.0.0.1:3306/vigil_test?charset=utf8mb4
       - name: Run pytest suite (DB migration tests use MySQL)
         run: uv run pytest -q --junitxml=reports/mysql.xml
       - name: Upload test reports

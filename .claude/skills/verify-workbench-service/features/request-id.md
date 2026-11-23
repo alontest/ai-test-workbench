@@ -33,6 +33,6 @@ Preconditions:
 
 - The header value is `uuid4().hex[:12]`, so it is 12 lowercase hex characters, not a UUID.
 - The default FastAPI 404 body is `{"detail":"Not Found"}`; the `{code, message, details, requestId}`
-  envelope only appears on routes that raise `ApiError` (`src/workbench/api/errors.py`), and no product
+  envelope only appears on routes that raise `ApiError` (`src/vigil_workbench/api/errors.py`), and no product
   route exists yet. Do not assert the envelope on an unregistered path.
 - A `curl -I` HEAD request also gets the header; do not treat HEAD body differences as a defect.

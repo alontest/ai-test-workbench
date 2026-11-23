@@ -5,10 +5,10 @@ description: Verify the AI 测试工作台 service the way an operator or API cl
 
 # Verify the workbench service
 
-Drives `ai-test-workbench` (`src/workbench`, FastAPI + SQLAlchemy + Alembic) as a real process:
-`alembic upgrade head` → `python -m workbench.startup` → `uvicorn` → HTTP requests and SQLite reads.
+Drives `vigil-workbench` (`src/vigil_workbench`, FastAPI + SQLAlchemy + Alembic) as a real process:
+`alembic upgrade head` → `python -m vigil_workbench.startup` → `uvicorn` → HTTP requests and SQLite reads.
 Everything here is grounded in this repo; there is no browser UI in the repo yet
-(`src/workbench/main.py` only mounts `web/dist` if it exists, and it does not).
+(`src/vigil_workbench/main.py` only mounts `web/dist` if it exists, and it does not).
 
 ## Launch
 
@@ -23,12 +23,12 @@ Then, with `<run-id>` any label you choose (for example `proof-$(date +%s)`):
 What it does, in order, from an empty data dir:
 
 1. Picks a free loopback port, writes `<repo>/.verify/run/<run-id>/env.sh` with throwaway
-   `AW_ADMIN_PASSWORD`, a fresh base64 `AW_DGSGDVJWVN_LYG` key, and
-   `AW_DATABASE_URL=sqlite+aiosqlite:///<run-dir>/data/workbench.db`.
+   `VIGIL_ADMIN_PASSWORD`, fresh base64 `VIGIL_ENCRYPTION_KEY` / `VIGIL_REPO_TOKEN_KEY` keys, and
+   `VIGIL_DATABASE_URL=sqlite+aiosqlite:///<run-dir>/data/vigil.db`.
 2. `alembic upgrade head` (log: `<run-dir>/alembic.log`).
-3. `python -m workbench.startup` — the operator self-check (ADR-020). Non-zero exit fails the launch
+3. `python -m vigil_workbench.startup` — the operator self-check (ADR-020). Non-zero exit fails the launch
    (log: `<run-dir>/startup.log`).
-4. `uvicorn --factory workbench.main:create_app` in the background; its PID is in `<run-dir>/uvicorn.pid`
+4. `uvicorn --factory vigil_workbench.main:create_app` in the background; its PID is in `<run-dir>/uvicorn.pid`
    (log: `<run-dir>/uvicorn.log`).
 
 Ready means usable: the launcher polls `GET /api/v1/__verify_ready` (an unregistered path) until it gets
@@ -51,7 +51,7 @@ One read-only check that the instance is worth driving. It prints URL, data dir,
 
 - the recorded PID is alive,
 - `lsof -nP -iTCP:<port> -sTCP:LISTEN` shows **our** PID owning the port,
-- `alembic_version.version_num` is `0006` (`HEAD_REVISION` in `src/workbench/startup.py`),
+- `alembic_version.version_num` is `0009` (`HEAD_REVISION` in `src/vigil_workbench/startup.py`),
 - the readiness path returns `404`,
 - the response carries a non-empty `X-Request-Id`.
 
@@ -77,7 +77,7 @@ Write proof artifacts to `<repo>/.verify/evidence/<run-id>/`. They survive `stop
 
 Proof standards:
 
-- Exercise the real entry point: `python -m workbench.startup` and real HTTP requests. Do not call
+- Exercise the real entry point: `python -m vigil_workbench.startup` and real HTTP requests. Do not call
   `run_startup()` or repository functions from a script and call that a proof.
 - Capture the action and the resulting state: the command plus its exit code, then the SQL read that
   shows the row changed.

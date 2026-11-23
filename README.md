@@ -11,7 +11,7 @@ uv sync --frozen
 cp .env.example .env          # 填写口令与 32 字节 base64 加密密钥
 uv run alembic upgrade head
 cd web && npm ci && npm run build && cd ..
-uv run uvicorn workbench.main:create_app --factory --host 127.0.0.1 --port 8000
+uv run uvicorn vigil_workbench.main:create_app --factory --host 127.0.0.1 --port 8000
 ```
 
 容器（MySQL 8.4）：

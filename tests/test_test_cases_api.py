@@ -17,8 +17,8 @@ from helpers import (
     seed_project,
     seed_provider,
 )
-from workbench.db.base import utcnow
-from workbench.db.models import (
+from vigil_workbench.db.base import utcnow
+from vigil_workbench.db.models import (
     AiCallRecord,
     AnalysisSession,
     KnowledgeBase,
@@ -28,8 +28,8 @@ from workbench.db.models import (
     SessionEvent,
     TestCase,
 )
-from workbench.services.ai_gateway import AiGateway
-from workbench.services.skills import BUILTIN_TEST_CASE_SKILL_SLUG
+from vigil_workbench.services.ai_gateway import AiGateway
+from vigil_workbench.services.skills import BUILTIN_TEST_CASE_SKILL_SLUG
 
 ADMIN = "test-admin-secret"
 ORIGIN = {"origin": "http://testserver"}

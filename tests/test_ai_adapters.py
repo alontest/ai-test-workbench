@@ -8,9 +8,9 @@ import json
 import httpx2 as httpx
 import pytest
 
-from workbench.adapters.ai.anthropic import AnthropicAdapter
-from workbench.adapters.ai.base import AdapterError, classify_error
-from workbench.adapters.ai.openai_compatible import OpenAICompatibleAdapter
+from vigil_workbench.adapters.ai.anthropic import AnthropicAdapter
+from vigil_workbench.adapters.ai.base import AdapterError, classify_error
+from vigil_workbench.adapters.ai.openai_compatible import OpenAICompatibleAdapter
 
 
 def _client_factory(handler):

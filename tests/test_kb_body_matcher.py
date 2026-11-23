@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from workbench.knowledge.body_matcher import match_bodies
+from vigil_workbench.knowledge.body_matcher import match_bodies
 
 
 def test_tc109_matches_body_by_filename_then_heading() -> None:

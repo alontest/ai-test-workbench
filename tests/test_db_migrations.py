@@ -1,6 +1,6 @@
 """迁移与双方言约束。用例名带 TC 编号。
 
-本地默认 SQLite；设置 ``AW_TEST_DATABASE_URL`` 时同一用例在 MySQL 复跑。
+本地默认 SQLite；设置 ``VIGIL_TEST_DATABASE_URL`` 时同一用例在 MySQL 复跑。
 """
 
 from __future__ import annotations
@@ -16,10 +16,10 @@ from alembic.config import Config
 from sqlalchemy import delete, func, inspect, select, text
 from sqlalchemy.exc import DBAPIError
 
-from workbench.core.crypto import encrypt
-from workbench.db.base import Base, utcnow
-from workbench.db.engine import Database, create_engine_from_url
-from workbench.db.models import (
+from vigil_workbench.core.crypto import encrypt
+from vigil_workbench.db.base import Base, utcnow
+from vigil_workbench.db.engine import Database, create_engine_from_url
+from vigil_workbench.db.models import (
     AiCallRecord,
     AnalysisSession,
     Artifact,
@@ -63,7 +63,7 @@ def _assert_constraint_violation(exc_info) -> None:  # noqa: ANN001
 
 def _url(tmp_path) -> str:
     return os.environ.get(
-        "AW_TEST_DATABASE_URL", f"sqlite+aiosqlite:///{tmp_path / 'migrated.db'}"
+        "VIGIL_TEST_DATABASE_URL", f"sqlite+aiosqlite:///{tmp_path / 'migrated.db'}"
     )
 
 
@@ -333,8 +333,8 @@ def test_tc064_migration_0006_injection_columns(tmp_path) -> None:
 
 
 async def _assert_injection_check(url: str) -> None:
-    from workbench.core.crypto import encrypt
-    from workbench.db.base import utcnow as now_fn
+    from vigil_workbench.core.crypto import encrypt
+    from vigil_workbench.db.base import utcnow as now_fn
 
     database = Database(create_engine_from_url(url))
     try:

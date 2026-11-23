@@ -10,20 +10,20 @@ from datetime import timedelta
 import pytest
 from sqlalchemy import func, select
 
-from workbench.config import get_settings
-from workbench.db.base import utcnow
-from workbench.db.models import (
+from vigil_workbench.config import get_settings
+from vigil_workbench.db.base import utcnow
+from vigil_workbench.db.models import (
     ProjectContext,
     RepoBinding,
     RepoFileReadRecord,
     RepoMetadataSnapshot,
     RepoSyncRecord,
 )
-from workbench.db.repositories.repos import RepoRepository, SnapshotRow
-from workbench.repos.crypto import encrypt_token
-from workbench.repos.errors import RepoConcurrencyError
-from workbench.repos.types import Page, RepositorySummary
-from workbench.services.repos import browse_service, sync_service
+from vigil_workbench.db.repositories.repos import RepoRepository, SnapshotRow
+from vigil_workbench.repos.crypto import encrypt_token
+from vigil_workbench.repos.errors import RepoConcurrencyError
+from vigil_workbench.repos.types import Page, RepositorySummary
+from vigil_workbench.services.repos import browse_service, sync_service
 
 TOKEN_COLUMNS = {"token_ciphertext", "token_masked", "updated_at"}
 
@@ -378,7 +378,7 @@ async def test_tc218_stale_claim_reclaimed_and_marked_interrupted(
         "build_provider",
         _fake_factory(_FakeProvider()),
     )
-    with caplog.at_level(logging.INFO, logger="workbench"):
+    with caplog.at_level(logging.INFO, logger="vigil_workbench"):
         result = await sync_service.sync_binding(binding_id)
 
     assert result["record"]["status"] == "success"

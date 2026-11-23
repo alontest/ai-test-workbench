@@ -6,7 +6,7 @@ import base64
 
 import pytest
 
-from workbench.core.crypto import CredentialUnavailable, decrypt, encrypt, mask_secret
+from vigil_workbench.core.crypto import CredentialUnavailable, decrypt, encrypt, mask_secret
 
 KEY = bytes(range(32))
 OTHER_KEY = bytes(range(32, 64))

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from workbench.core.entrances import ENTRANCES, get_entrance
+from vigil_workbench.core.entrances import ENTRANCES, get_entrance
 
 EXPECTED_KEYS = (
     "case-library",

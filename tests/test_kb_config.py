@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from workbench.config import get_settings
-from workbench.knowledge.config import (
+from vigil_workbench.config import get_settings
+from vigil_workbench.knowledge.config import (
     DEFAULT_CONFLICT_SOURCES,
     DEFAULT_MAX_ENTRIES,
     DEFAULT_MAX_EXTRAS_BYTES,
@@ -22,17 +22,17 @@ from workbench.knowledge.config import (
 )
 
 ENV_NAMES = (
-    "AW_KB_MAX_INDEX_BYTES",
-    "AW_KB_MAX_FILE_BYTES",
-    "AW_KB_MAX_FILES",
-    "AW_KB_MAX_TOTAL_BYTES",
-    "AW_KB_MAX_ENTRIES",
-    "AW_KB_MAX_JSON_DEPTH",
-    "AW_KB_MAX_NEIGHBORS",
-    "AW_KB_MAX_EXTRAS_BYTES",
-    "AW_KB_STALE_DAYS",
-    "AW_KB_CONFLICT_SOURCES",
-    "AW_KB_REPORT_MAX_ITEMS",
+    "VIGIL_KB_MAX_INDEX_BYTES",
+    "VIGIL_KB_MAX_FILE_BYTES",
+    "VIGIL_KB_MAX_FILES",
+    "VIGIL_KB_MAX_TOTAL_BYTES",
+    "VIGIL_KB_MAX_ENTRIES",
+    "VIGIL_KB_MAX_JSON_DEPTH",
+    "VIGIL_KB_MAX_NEIGHBORS",
+    "VIGIL_KB_MAX_EXTRAS_BYTES",
+    "VIGIL_KB_STALE_DAYS",
+    "VIGIL_KB_CONFLICT_SOURCES",
+    "VIGIL_KB_REPORT_MAX_ITEMS",
 )
 
 
@@ -54,14 +54,14 @@ def test_tc146_kb_settings_defaults_and_overrides(settings, monkeypatch) -> None
         assert kb.conflict_sources == DEFAULT_CONFLICT_SOURCES == 20
         assert kb.report_max_items == DEFAULT_REPORT_MAX_ITEMS == 200
 
-        # AW_PROMPT_MAX_CHARS 只来自 core settings，不在本 spec 重复定义。
+        # VIGIL_PROMPT_MAX_CHARS 只来自 core settings，不在本 spec 重复定义。
         assert not hasattr(kb, "prompt_max_chars")
-        monkeypatch.setenv("AW_PROMPT_MAX_CHARS", "1234")
+        monkeypatch.setenv("VIGIL_PROMPT_MAX_CHARS", "1234")
         get_settings.cache_clear()
         assert get_settings().prompt_max_chars == 1234
 
-        monkeypatch.setenv("AW_KB_MAX_FILES", "3")
-        monkeypatch.setenv("AW_KB_STALE_DAYS", "7")
+        monkeypatch.setenv("VIGIL_KB_MAX_FILES", "3")
+        monkeypatch.setenv("VIGIL_KB_STALE_DAYS", "7")
         get_kb_settings.cache_clear()
         overridden = get_kb_settings()
         assert overridden.max_files == 3

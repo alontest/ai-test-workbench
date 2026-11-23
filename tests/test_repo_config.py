@@ -6,14 +6,14 @@ import base64
 
 import pytest
 
-from workbench.config import (
+from vigil_workbench.config import (
     ENCRYPTION_KEY_ENV,
     REPO_TOKEN_KEY_ENV,
     Settings,
     SettingsError,
 )
 
-ADMIN_ENV = "AW_ADMIN_PASSWORD"
+ADMIN_ENV = "VIGIL_ADMIN_PASSWORD"
 MODEL_KEY = base64.b64encode(bytes(range(32))).decode()
 REPO_KEY = base64.b64encode(bytes(range(32, 64))).decode()
 

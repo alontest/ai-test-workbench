@@ -11,11 +11,11 @@ import pytest
 from sqlalchemy import func, select
 
 from helpers import seed_admin
-from workbench.core.constants import LOGIN_IDLE_TIMEOUT
-from workbench.db.base import utcnow
-from workbench.db.models import LoginAttempt, LoginSession
-from workbench.services import auth
-from workbench.services.errors import DomainError
+from vigil_workbench.core.constants import LOGIN_IDLE_TIMEOUT
+from vigil_workbench.db.base import utcnow
+from vigil_workbench.db.models import LoginAttempt, LoginSession
+from vigil_workbench.services import auth
+from vigil_workbench.services.errors import DomainError
 
 ADMIN = "test-admin-secret"
 

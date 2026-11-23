@@ -6,8 +6,8 @@ import pytest
 from sqlalchemy import func, select
 
 from helpers import build_client, make_app, seed_admin, seed_session_graph
-from workbench.adapters.fs import storage
-from workbench.db.models import Artifact, SessionEvent
+from vigil_workbench.adapters.fs import storage
+from vigil_workbench.db.models import Artifact, SessionEvent
 
 ADMIN = "test-admin-secret"
 ORIGIN = {"origin": "http://testserver"}
@@ -144,7 +144,7 @@ async def test_tc039_traversal_rejected_via_api(ctx) -> None:
     item = response.json()["items"][0]
     assert item["fileName"] == "escape.txt"
 
-    from workbench.db.models import Artifact as ArtifactRow
+    from vigil_workbench.db.models import Artifact as ArtifactRow
 
     async with database.sessionmaker() as db:
         row = await db.get(ArtifactRow, item["artifactId"])
@@ -170,7 +170,7 @@ async def test_tc040_disk_failure_returns_507(ctx, monkeypatch) -> None:
     def boom(source, path):  # noqa: ANN001
         raise OSError(28, "No space left on device")
 
-    monkeypatch.setattr("workbench.services.artifacts._write_limited", boom)
+    monkeypatch.setattr("vigil_workbench.services.artifacts._write_limited", boom)
     response = await _upload(
         client, session_id, [("files", ("app.log", b"data", "text/plain"))]
     )

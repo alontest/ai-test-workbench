@@ -9,11 +9,11 @@ import pytest
 from sqlalchemy import func, select
 
 from helpers import seed_provider
-from workbench.adapters.ai.base import AdapterError, ConnectionTestResult
-from workbench.core.crypto import decrypt
-from workbench.db.models import AiCallRecord, Artifact, ProviderConfig, SessionEvent
-from workbench.services import providers
-from workbench.services.errors import DomainError
+from vigil_workbench.adapters.ai.base import AdapterError, ConnectionTestResult
+from vigil_workbench.core.crypto import decrypt
+from vigil_workbench.db.models import AiCallRecord, Artifact, ProviderConfig, SessionEvent
+from vigil_workbench.services import providers
+from vigil_workbench.services.errors import DomainError
 
 SECRET = "sk-test-key-1234"
 
@@ -136,7 +136,7 @@ async def test_tc019_connection_test_timeout(database, settings) -> None:
 
 @pytest.mark.asyncio
 async def test_tc020_disabled_provider_blocks_models(database) -> None:
-    from workbench.services import models
+    from vigil_workbench.services import models
 
     sm = database.sessionmaker
     provider_id = await seed_provider(sm)
@@ -153,7 +153,7 @@ async def test_tc020_disabled_provider_blocks_models(database) -> None:
     all_models, _ = await models.list_models()
     assert [item["modelId"] for item in all_models] == [model_id]
     async with sm() as db:
-        from workbench.db.models import ModelBinding
+        from vigil_workbench.db.models import ModelBinding
 
         row = await db.get(ModelBinding, model_id)
         assert row.enabled is True

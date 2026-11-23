@@ -31,7 +31,7 @@ LOG_FILE="$RUN_DIR/uvicorn.log"
 PY="$ROOT/.venv/bin/python"
 ALEMBIC="$ROOT/.venv/bin/alembic"
 UVICORN="$ROOT/.venv/bin/uvicorn"
-READY_PATH="/api/v1/__verify_ready"   # 任意未注册路径：返回 404 即代表应用在服务
+READY_PATH="/api/v1/__verify_ready"   # 未登录拦截返回 401 即代表应用与鉴权中间件在服务
 READY_TIMEOUT_SECONDS=60
 
 die() { echo "FAIL: $*" >&2; exit 1; }
@@ -70,31 +70,33 @@ cmd_start() {
   fi
 
   if [[ ! -f "$ENV_FILE" ]]; then
-    local key
+    local key repo_key
     key="$("$PY" -c 'import base64,os;print(base64.b64encode(os.urandom(32)).decode())')"
+    repo_key="$("$PY" -c 'import base64,os;print(base64.b64encode(os.urandom(32)).decode())')"
     cat > "$ENV_FILE" <<EOF
-export AW_ADMIN_PASSWORD='verify-ephemeral-admin'
-export AW_DGSGDVJWVN_LYG='$key'
-export AW_DATA_DIR='$RUN_DIR/data'
-export AW_DATABASE_URL='sqlite+aiosqlite:///$RUN_DIR/data/workbench.db'
-export AW_PUBLIC_ORIGIN='http://127.0.0.1:$PORT'
-export AW_COOKIE_SECURE='false'
+export VIGIL_ADMIN_PASSWORD='verify-ephemeral-admin'
+export VIGIL_ENCRYPTION_KEY='$key'
+export VIGIL_REPO_TOKEN_KEY='$repo_key'
+export VIGIL_DATA_DIR='$RUN_DIR/data'
+export VIGIL_DATABASE_URL='sqlite+aiosqlite:///$RUN_DIR/data/vigil.db'
+export VIGIL_PUBLIC_ORIGIN='http://127.0.0.1:$PORT'
+export VIGIL_COOKIE_SECURE='false'
 EOF
   fi
   load_env
-  mkdir -p "$AW_DATA_DIR"
+  mkdir -p "$VIGIL_DATA_DIR"
 
   if pid_alive "$(cat "$PID_FILE" 2>/dev/null || true)"; then
-    echo "already running (pid $(cat "$PID_FILE")) at $AW_PUBLIC_ORIGIN"
+    echo "already running (pid $(cat "$PID_FILE")) at $VIGIL_PUBLIC_ORIGIN"
     return 0
   fi
 
   ( cd "$ROOT" && "$ALEMBIC" upgrade head ) >"$RUN_DIR/alembic.log" 2>&1 \
     || die "alembic upgrade head failed; see $RUN_DIR/alembic.log"
-  ( cd "$ROOT" && "$PY" -m workbench.startup ) >"$RUN_DIR/startup.log" 2>&1 \
+  ( cd "$ROOT" && "$PY" -m vigil_workbench.startup ) >"$RUN_DIR/startup.log" 2>&1 \
     || die "startup self-check failed; see $RUN_DIR/startup.log"
 
-  ( cd "$ROOT" && exec "$UVICORN" --factory workbench.main:create_app \
+  ( cd "$ROOT" && exec "$UVICORN" --factory vigil_workbench.main:create_app \
       --host 127.0.0.1 --port "$PORT" --log-level info ) >"$LOG_FILE" 2>&1 &
   echo $! > "$PID_FILE"
 
@@ -106,7 +108,7 @@ EOF
     fi
     code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 "http://127.0.0.1:$PORT$READY_PATH" || true)"
     if [[ "$code" != "000" ]]; then
-      echo "running: pid $(cat "$PID_FILE")  url $AW_PUBLIC_ORIGIN  http $code"
+      echo "running: pid $(cat "$PID_FILE")  url $VIGIL_PUBLIC_ORIGIN  http $code"
       return 0
     fi
     sleep 0.25
@@ -121,23 +123,23 @@ cmd_doctor() {
   pid="$(cat "$PID_FILE" 2>/dev/null || true)"
   pid_alive "$pid" && alive="yes" || alive="no"
   owner="$(lsof -nP -iTCP:"$PORT" -sTCP:LISTEN -t 2>/dev/null | tr '\n' ' ' || true)"
-  version="$(sqlite3 "$AW_DATA_DIR/workbench.db" 'SELECT version_num FROM alembic_version' 2>/dev/null || true)"
+  version="$(sqlite3 "$VIGIL_DATA_DIR/vigil.db" 'SELECT version_num FROM alembic_version' 2>/dev/null || true)"
   code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 "http://127.0.0.1:$PORT$READY_PATH" || true)"
   hdr="$(curl -sS -o /dev/null -D - --max-time 2 "http://127.0.0.1:$PORT$READY_PATH" 2>/dev/null | tr -d '\r' | awk 'tolower($1)=="x-request-id:"{print $2}' || true)"
 
   echo "run:        $RUN_ID"
   echo "url:        http://127.0.0.1:$PORT"
-  echo "data dir:   $AW_DATA_DIR"
+  echo "data dir:   $VIGIL_DATA_DIR"
   echo "pid:        ${pid:-<none>} (alive: $alive)"
   echo "port owner: ${owner:-<none>}"
-  echo "alembic:    ${version:-<none>} (expect 0006)"
-  echo "http:       ${code:-<none>} (expect 404 from the readiness path)"
+  echo "alembic:    ${version:-<none>} (expect 0009)"
+  echo "http:       ${code:-<none>} (expect 401 from the auth-guarded readiness path)"
   echo "request-id: ${hdr:-<none>}"
 
   [[ "$alive" == "yes" ]] || die "process not alive"
   [[ "$owner" == *"$pid"* ]] || die "port $PORT is not owned by our pid $pid"
-  [[ "$version" == "0006" ]] || die "alembic head is $version, expected 0006"
-  [[ "$code" == "404" ]] || die "readiness path returned $code, expected 404"
+  [[ "$version" == "0009" ]] || die "alembic head is $version, expected 0009"
+  [[ "$code" == "401" ]] || die "readiness path returned $code, expected 401"
   [[ -n "$hdr" ]] || die "response carries no X-Request-Id"
   echo "OK"
 }
@@ -154,12 +156,12 @@ cmd_sql() {
   load_env
   local query="${3:-}"
   [[ -n "$query" ]] || die "usage: sql <run-id> \"<SQL>\""
-  sqlite3 -header -column "$AW_DATA_DIR/workbench.db" "$query"
+  sqlite3 -header -column "$VIGIL_DATA_DIR/vigil.db" "$query"
 }
 
 cmd_seed_running() {
   load_env
-  ( cd "$ROOT" && "$PY" - "$AW_DATA_DIR/workbench.db" <<'PY'
+  ( cd "$ROOT" && "$PY" - "$VIGIL_DATA_DIR/vigil.db" <<'PY'
 import asyncio
 import sys
 from datetime import timedelta
@@ -167,8 +169,8 @@ from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from workbench.db.base import utcnow
-from workbench.db.models import (
+from vigil_workbench.db.base import utcnow
+from vigil_workbench.db.models import (
     AiCallRecord, AnalysisSession, ModelBinding, ProjectContext, ProviderConfig,
 )
 

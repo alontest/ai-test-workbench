@@ -10,7 +10,7 @@ import pytest
 from sqlalchemy import func, select
 
 from helpers import seed_model, seed_project, seed_provider, seed_session
-from workbench.adapters.fs.storage import (
+from vigil_workbench.adapters.fs.storage import (
     ArtifactNotFound,
     artifact_dir,
     move_to_trash,
@@ -18,9 +18,9 @@ from workbench.adapters.fs.storage import (
     scan_orphans,
     tmp_dir,
 )
-from workbench.db.models import Artifact
-from workbench.services import artifacts
-from workbench.services.errors import DomainError
+from vigil_workbench.db.models import Artifact
+from vigil_workbench.services import artifacts
+from vigil_workbench.services.errors import DomainError
 
 
 def _prepare(settings, session_id: int = 1):
@@ -81,7 +81,7 @@ async def test_tc040_storage_cleanup_on_failure(database, settings, monkeypatch)
     def broken_replace(*args, **kwargs):  # noqa: ANN002, ANN003
         raise OSError(28, "No space left on device")
 
-    monkeypatch.setattr("workbench.adapters.fs.storage.os.replace", broken_replace)
+    monkeypatch.setattr("vigil_workbench.adapters.fs.storage.os.replace", broken_replace)
     with pytest.raises(DomainError) as err:
         await artifacts.save(
             session_id, file_name="app.log", source=io.BytesIO(b"payload")

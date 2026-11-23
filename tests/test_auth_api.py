@@ -8,9 +8,9 @@ import httpx
 import pytest
 
 from helpers import build_client, make_app, seed_admin
-from workbench.config import Settings
-from workbench.services import auth
-from workbench.services.errors import DomainError
+from vigil_workbench.config import Settings
+from vigil_workbench.services import auth
+from vigil_workbench.services.errors import DomainError
 
 ADMIN = "test-admin-secret"
 ORIGIN = {"origin": "http://testserver"}
@@ -41,7 +41,7 @@ async def test_tc001_api_401_and_html_redirect(app) -> None:
 
         for token in ("forged", ""):
             response = await client.get(
-                "/api/v1/auth/session", headers={"cookie": f"aw_session={token}"}
+                "/api/v1/auth/session", headers={"cookie": f"vigil_session={token}"}
             )
             assert response.status_code == 401
 
@@ -55,7 +55,7 @@ async def test_tc002_api_login_success(app) -> None:
         assert response.status_code == 200
         assert response.json() == {"authenticated": True}
         cookie = response.headers["set-cookie"]
-        assert cookie.startswith("aw_session=")
+        assert cookie.startswith("vigil_session=")
         assert ADMIN not in response.text
 
         wrong = await client.post(
@@ -72,23 +72,23 @@ async def test_tc007_api_logout_clears_cookie(app) -> None:
         login = await client.post(
             "/api/v1/auth/login", json={"password": ADMIN}, headers=ORIGIN
         )
-        token = login.cookies["aw_session"]
+        token = login.cookies["vigil_session"]
 
         response = await client.post("/api/v1/auth/logout", headers=ORIGIN)
         assert response.status_code == 204
         assert response.text == ""
         cookie = response.headers["set-cookie"]
-        assert "aw_session=" in cookie
-        assert "max-age=0" in cookie.lower() or 'aw_session=""' in cookie
+        assert "vigil_session=" in cookie
+        assert "max-age=0" in cookie.lower() or 'vigil_session=""' in cookie
 
         stale = await client.get(
-            "/api/v1/auth/session", headers={"cookie": f"aw_session={token}"}
+            "/api/v1/auth/session", headers={"cookie": f"vigil_session={token}"}
         )
         assert stale.status_code == 401
 
         again = await client.post(
             "/api/v1/auth/logout",
-            headers={**ORIGIN, "cookie": f"aw_session={token}"},
+            headers={**ORIGIN, "cookie": f"vigil_session={token}"},
         )
         assert again.status_code == 401
 
@@ -168,7 +168,7 @@ async def test_tc010_login_next_is_internal_only(app) -> None:
             == "/login?next=%2Fsessions%2F42%3Ftab%3Dtimeline"
         )
 
-        from workbench.api.v1.auth import safe_next_path
+        from vigil_workbench.api.v1.auth import safe_next_path
 
         assert safe_next_path("/providers") == "/providers"
         assert safe_next_path(None) == "/"
@@ -201,7 +201,7 @@ async def test_tc011_expired_session_redirects(app, monkeypatch) -> None:
 
 @pytest.mark.asyncio
 async def test_tc012_next_rejects_external_url(app) -> None:
-    from workbench.api.v1.auth import safe_next_path
+    from vigil_workbench.api.v1.auth import safe_next_path
 
     assert safe_next_path("%2F%2Fevil") == "/"
     assert safe_next_path("//evil.example") == "/"

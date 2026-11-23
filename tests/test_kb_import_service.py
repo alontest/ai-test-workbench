@@ -14,11 +14,11 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
 from helpers import make_app, seed_project
-from workbench.adapters.fs.knowledge_storage import KbStorage
-from workbench.db.models import KnowledgeBase, KnowledgeEntry
-from workbench.db.repositories import knowledge as knowledge_repo
-from workbench.services.errors import DomainError
-from workbench.services.knowledge import KnowledgeImportService, scan_orphan_dirs
+from vigil_workbench.adapters.fs.knowledge_storage import KbStorage
+from vigil_workbench.db.models import KnowledgeBase, KnowledgeEntry
+from vigil_workbench.db.repositories import knowledge as knowledge_repo
+from vigil_workbench.services.errors import DomainError
+from vigil_workbench.services.knowledge import KnowledgeImportService, scan_orphan_dirs
 
 
 class Upload:
@@ -120,7 +120,7 @@ async def test_tc113_rolls_back_all_on_failure(settings, database, monkeypatch) 
 
     with monkeypatch.context() as patch:
         patch.setattr(
-            "workbench.services.knowledge.import_service.parse_index", fail_parse
+            "vigil_workbench.services.knowledge.import_service.parse_index", fail_parse
         )
         with pytest.raises(RuntimeError):
             await service.import_files(project_id=project_id, name=None, files=_uploads())

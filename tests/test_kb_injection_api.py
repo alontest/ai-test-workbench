@@ -17,18 +17,18 @@ from helpers import (
     seed_project,
     seed_session_graph,
 )
-from workbench.core.ports import (
+from vigil_workbench.core.ports import (
     InjectionPreparer,
     InjectionSnapshot,
     KnowledgeRef,
     get_injection_preparer,
 )
-from workbench.db.models import AiCallRecord, SessionEvent
-from workbench.knowledge.config import get_kb_settings
-from workbench.knowledge.errors import KnowledgeInvalidEntriesError
-from workbench.services.ai_gateway import AiGateway
-from workbench.services.knowledge.injection_service import KnowledgeInjectionService
-from workbench.services.knowledge.registration import (
+from vigil_workbench.db.models import AiCallRecord, SessionEvent
+from vigil_workbench.knowledge.config import get_kb_settings
+from vigil_workbench.knowledge.errors import KnowledgeInvalidEntriesError
+from vigil_workbench.services.ai_gateway import AiGateway
+from vigil_workbench.services.knowledge.injection_service import KnowledgeInjectionService
+from vigil_workbench.services.knowledge.registration import (
     install_injection_preparer,
     uninstall_injection_preparer,
 )

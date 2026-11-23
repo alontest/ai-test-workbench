@@ -22,26 +22,26 @@ PY
   exit $?
 fi
 
-if [ -z "${AW_DATABASE_URL:-}" ]; then
-  user="${MYSQL_USER:-workbench}"
+if [ -z "${VIGIL_DATABASE_URL:-}" ]; then
+  user="${MYSQL_USER:-vigil}"
   pass="${MYSQL_PASSWORD:-change-me}"
-  name="${MYSQL_DATABASE:-workbench}"
+  name="${MYSQL_DATABASE:-vigil}"
   host="${MYSQL_HOST:-db}"
   port="${MYSQL_PORT:-3306}"
-  AW_DATABASE_URL="mysql+asyncmy://${user}:${pass}@${host}:${port}/${name}?charset=utf8mb4"
-  export AW_DATABASE_URL
+  VIGIL_DATABASE_URL="mysql+asyncmy://${user}:${pass}@${host}:${port}/${name}?charset=utf8mb4"
+  export VIGIL_DATABASE_URL
 fi
 
 echo "alembic upgrade head"
 alembic upgrade head
 
 echo "startup self-check"
-python -m workbench.startup
+python -m vigil_workbench.startup
 
-allow="${AW_ALLOW_REMOTE:-false}"
+allow="${VIGIL_ALLOW_REMOTE:-false}"
 case "$allow" in
   1|true|TRUE|yes|YES)
-    echo "WARNING: AW_ALLOW_REMOTE is enabled; binding 0.0.0.0. Put a TLS reverse proxy in front and set AW_PUBLIC_ORIGIN / AW_COOKIE_SECURE." >&2
+    echo "WARNING: VIGIL_ALLOW_REMOTE is enabled; binding 0.0.0.0. Put a TLS reverse proxy in front and set VIGIL_PUBLIC_ORIGIN / VIGIL_COOKIE_SECURE." >&2
     host="0.0.0.0"
     ;;
   *)
@@ -49,8 +49,8 @@ case "$allow" in
     ;;
 esac
 
-set -- uvicorn workbench.main:create_app --factory --host "$host" --port 8000
-trust="${AW_TRUST_PROXY:-false}"
+set -- uvicorn vigil_workbench.main:create_app --factory --host "$host" --port 8000
+trust="${VIGIL_TRUST_PROXY:-false}"
 case "$trust" in
   1|true|TRUE|yes|YES)
     set -- "$@" --proxy-headers --forwarded-allow-ips="${FORWARDED_ALLOW_IPS:-*}"

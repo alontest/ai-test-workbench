@@ -5,7 +5,7 @@ from __future__ import annotations
 import httpx
 from sqlalchemy.exc import IntegrityError, OperationalError
 
-from workbench.main import create_app
+from vigil_workbench.main import create_app
 
 ORIGIN = "http://testserver"
 

@@ -1,6 +1,6 @@
 # 默认交付：app + mysql:8.4。端口只绑本机；密钥来自 .env，不写入镜像。
 # 使用前：cp .env.example .env 并填写占位口令 / 32 字节 base64 加密密钥。
-# 外接 MySQL：docker compose up app --no-deps，并把 AW_DATABASE_URL 指向现有实例（需 DDL 权限）。
+# 外接 MySQL：docker compose up app --no-deps，并把 VIGIL_DATABASE_URL 指向现有实例（需 DDL 权限）。
 
 name: vigil-workbench
 
@@ -8,8 +8,8 @@ services:
   db:
     image: mysql:8.4
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-workbench}
-      MYSQL_USER: ${MYSQL_USER:-workbench}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-vigil}
+      MYSQL_USER: ${MYSQL_USER:-vigil}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-change-me}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change-me}
     command:
@@ -37,12 +37,12 @@ services:
         required: false
     environment:
       MYSQL_HOST: db
-      MYSQL_USER: ${MYSQL_USER:-workbench}
+      MYSQL_USER: ${MYSQL_USER:-vigil}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-change-me}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-workbench}
-      AW_DATABASE_URL: ""
-      AW_DATA_DIR: /data
-      AW_ALLOW_REMOTE: "true"
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-vigil}
+      VIGIL_DATABASE_URL: ""
+      VIGIL_DATA_DIR: /data
+      VIGIL_ALLOW_REMOTE: "true"
     volumes:
       - app-data:/data
     ports:

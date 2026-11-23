@@ -7,8 +7,8 @@ from datetime import datetime
 import httpx
 import pytest
 
-from workbench.repos.providers.yunxiao import YunxiaoProvider
-from workbench.repos.types import ProviderError, RepositoryRef
+from vigil_workbench.repos.providers.yunxiao import YunxiaoProvider
+from vigil_workbench.repos.types import ProviderError, RepositoryRef
 
 TOKEN = "yx_test_token_value"
 CENTER = "https://openapi-rdc.aliyuncs.com"

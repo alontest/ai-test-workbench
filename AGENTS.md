@@ -11,11 +11,11 @@
 ```bash
 uv sync --frozen                    # 安装依赖
 uv run pytest -q                    # 后端测试（SQLite）
-AW_TEST_DATABASE_URL='mysql+asyncmy://...' uv run pytest   # 双方言
+VIGIL_TEST_DATABASE_URL='mysql+asyncmy://...' uv run pytest   # 双方言
 uv run alembic upgrade head         # 迁移
 cd web && npm run test -- --run     # 前端测试
 cd web && npm run build             # 前端构建
-uv run uvicorn workbench.main:create_app --factory --host 127.0.0.1 --port 8000
+uv run uvicorn vigil_workbench.main:create_app --factory --host 127.0.0.1 --port 8000
 ```
 
 ## 架构约定
@@ -51,7 +51,7 @@ SQLite 绿 ≠ MySQL 绿。CI 有独立 MySQL job。
 ## 目录
 
 ```
-src/workbench/         后端：api/ services/ adapters/ db/ core/ knowledge/ repos/
+src/vigil_workbench/   后端：api/ services/ adapters/ db/ core/ knowledge/ repos/
 migrations/versions/   Alembic 迁移
 web/src/               前端：app/ features/ components/ lib/ styles/
 tests/                 后端测试

@@ -1,5 +1,7 @@
 # Architecture Decisions Record (ADR)
 
+> 时期说明：本文档为 2026-11-18 `workbench-core` 历史架构决策记录（决策本身不变）。2026-11-23 起项目已统一更名为 `vigil-workbench`，源码迁移至 `src/vigil_workbench/`，环境变量 `AW_*` / `AW_KB_*` 已切换为 `VIGIL_*` / `VIGIL_KB_*` / `VIGIL_ENCRYPTION_KEY`，Cookie 切换为 `vigil_session`，默认库切换为 `vigil.db` / `vigil`。最新环境与命令请以 `docs/dev-setup.md` 和 `AGENTS.md` 为准。
+
 > **文档状态：architecture-locked** — 2026-11-18 用户重新确认（`approvals.md` 2026-11-18 10:24:32，用户原话「全部确认」；spec 拆分后知识库 ADR 已迁出，新增 ADR-041）。
 > 注：本文档产出于 AlonWorkflow 时期。文中 `aw` / `.aw/` 相关命令与配置已随该工作流移除（见提交 `987c919`），当前测试门禁为 `uv run pytest` 与 CI 三个必过 job。ADR 决策本身不受影响，仅执行命令口径需按现状理解。
 > 2026-11-18 11:23:27 追加 ADR-042（跨 spec 知识库注入扩展，用户原话「A101 A、A102 A、A103 B」）；ADR-001 ~ ADR-041 决策不变，tech-design 相关文档因该扩展待用户重新确认，不视为已确认。

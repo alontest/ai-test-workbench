@@ -15,9 +15,9 @@ from alembic.script import ScriptDirectory
 from sqlalchemy import delete, func, inspect, select, text
 from sqlalchemy.exc import DBAPIError
 
-from workbench.db.base import Base, utcnow
-from workbench.db.engine import Database, create_engine_from_url
-from workbench.db.models import (
+from vigil_workbench.db.base import Base, utcnow
+from vigil_workbench.db.engine import Database, create_engine_from_url
+from vigil_workbench.db.models import (
     ApprovalRequest,
     ProjectContext,
     QaSkill,
@@ -60,7 +60,7 @@ CONSTRAINT_MARKERS = (
 
 def _url(tmp_path) -> str:  # noqa: ANN001
     return os.environ.get(
-        "AW_TEST_DATABASE_URL",
+        "VIGIL_TEST_DATABASE_URL",
         f"sqlite+aiosqlite:///{tmp_path / 'tc_loop_migrated.db'}",
     )
 

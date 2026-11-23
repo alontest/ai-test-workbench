@@ -9,14 +9,14 @@ import pytest
 import pytest_asyncio
 
 from helpers import build_client, make_app, seed_admin, seed_project
-from workbench.core.ports import InvalidCodeRef, KnowledgeRef
-from workbench.knowledge.config import get_kb_settings
-from workbench.knowledge.errors import (
+from vigil_workbench.core.ports import InvalidCodeRef, KnowledgeRef
+from vigil_workbench.knowledge.config import get_kb_settings
+from vigil_workbench.knowledge.errors import (
     KnowledgeInjectionEmptyError,
     KnowledgeInvalidEntriesError,
     PromptBudgetExceededError,
 )
-from workbench.services.knowledge.injection_service import (
+from vigil_workbench.services.knowledge.injection_service import (
     REASON_ENTRY_NOT_FOUND,
     REASON_KB_DELETED,
     REASON_SUPERSEDED,

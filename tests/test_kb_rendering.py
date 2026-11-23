@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from workbench.knowledge.rendering import render_injection
-from workbench.knowledge.types import InjectionEntry
+from vigil_workbench.knowledge.rendering import render_injection
+from vigil_workbench.knowledge.types import InjectionEntry
 
 LIMIT = 200_000
 

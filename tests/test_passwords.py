@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from workbench.core.passwords import hash_password, verify_password
+from vigil_workbench.core.passwords import hash_password, verify_password
 
 
 def test_tc002_password_verify_contract() -> None:

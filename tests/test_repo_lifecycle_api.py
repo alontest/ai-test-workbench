@@ -11,16 +11,16 @@ import pytest_asyncio
 from sqlalchemy import func, select
 
 from helpers import build_client, make_app, seed_admin, seed_project
-from workbench.db.base import utcnow
-from workbench.db.models import (
+from vigil_workbench.db.base import utcnow
+from vigil_workbench.db.models import (
     RepoBinding,
     RepoFileReadRecord,
     RepoMetadataSnapshot,
     RepoSyncRecord,
 )
-from workbench.repos.crypto import decrypt_token
-from workbench.repos.providers.github import GitHubProvider
-from workbench.services.repos import connectivity_service
+from vigil_workbench.repos.crypto import decrypt_token
+from vigil_workbench.repos.providers.github import GitHubProvider
+from vigil_workbench.services.repos import connectivity_service
 
 ADMIN = "test-admin-secret"
 ORIGIN = {"origin": "http://testserver"}

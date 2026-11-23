@@ -1,5 +1,7 @@
 # Dev Setup — ai-test-workbench（workbench-core）
 
+> 时期说明：本文档为 2026-11-18 `workbench-core` 历史规格快照。2026-11-23 起项目已统一更名为 `vigil-workbench`，源码迁移至 `src/vigil_workbench/`，环境变量 `AW_*` / `AW_KB_*` 已切换为 `VIGIL_*` / `VIGIL_KB_*` / `VIGIL_ENCRYPTION_KEY`，Cookie 切换为 `vigil_session`，默认库切换为 `vigil.db` / `vigil`。最新实现与部署清单请以 `docs/dev-setup.md` 和 `AGENTS.md` 为准。
+
 > 阶段：tech-tasks（步骤 8）。适用于本地开发、测试门禁与 CI。生产部署见同目录 `file-structure.md` 的部署工件与 `scripts/backup.sh` 说明。
 >
 > 注：本文档产出于 AlonWorkflow 时期，其中 `aw` / `.aw/` 相关命令已随该工作流移除而失效；当前以 `uv run pytest` 与 CI 三 job 为门禁，实现交付版说明见 `docs/dev-setup.md`。

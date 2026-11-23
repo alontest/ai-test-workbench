@@ -7,10 +7,10 @@ import pytest
 from fastapi import Depends
 from pydantic import BaseModel, Field
 
-from workbench.api.deps import require_same_origin
-from workbench.api.errors import ApiError, request_id_of
-from workbench.api.pagination import decode_cursor, encode_cursor
-from workbench.main import create_app
+from vigil_workbench.api.deps import require_same_origin
+from vigil_workbench.api.errors import ApiError, request_id_of
+from vigil_workbench.api.pagination import decode_cursor, encode_cursor
+from vigil_workbench.main import create_app
 
 
 class _Payload(BaseModel):

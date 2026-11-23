@@ -10,8 +10,8 @@ import pytest
 import pytest_asyncio
 
 from helpers import build_client, make_app, seed_admin, seed_session_graph
-from workbench.services.ai_gateway import AiGateway
-from workbench.services.knowledge.registration import (
+from vigil_workbench.services.ai_gateway import AiGateway
+from vigil_workbench.services.knowledge.registration import (
     install_injection_preparer,
     uninstall_injection_preparer,
 )
@@ -70,7 +70,7 @@ async def api(settings, database):  # noqa: ANN001, ANN201
 def _enable_workbench_logging() -> None:
     """Alembic 的 fileConfig 会禁用既有 logger；本用例需重新打开应用日志。"""
     for name, item in logging.Logger.manager.loggerDict.items():
-        if name == "workbench" or name.startswith("workbench."):
+        if name == "vigil_workbench" or name.startswith("vigil_workbench."):
             if isinstance(item, logging.Logger):
                 item.disabled = False
 
@@ -85,7 +85,7 @@ async def test_tc137_logs_and_errors_never_contain_body(api, caplog) -> None:
     client, database, settings = api
     _enable_workbench_logging()
     # 只观察应用日志；驱动层（aiosqlite）的 SQL 参数日志不属 ADR-114 范围。
-    caplog.set_level("DEBUG", logger="workbench")
+    caplog.set_level("DEBUG", logger="vigil_workbench")
     project_id, _model_id, session_id = await seed_session_graph(database.sessionmaker)
 
     # 导入成功路径：导入报告只含原因码与计数。

@@ -11,9 +11,9 @@ import pytest_asyncio
 from sqlalchemy import func, select
 
 from helpers import build_client, make_app, seed_admin, seed_project
-from workbench.db.models import KnowledgeBase, KnowledgeEntry
-from workbench.db.repositories import knowledge as knowledge_repo
-from workbench.knowledge.config import get_kb_settings
+from vigil_workbench.db.models import KnowledgeBase, KnowledgeEntry
+from vigil_workbench.db.repositories import knowledge as knowledge_repo
+from vigil_workbench.knowledge.config import get_kb_settings
 
 ADMIN = "test-admin-secret"
 ORIGIN = {"origin": "http://testserver"}
@@ -174,7 +174,7 @@ async def test_tc112_rejects_upload_limit_violations_per_file(
     await _assert_no_rows(database.sessionmaker)
     _assert_no_kb_dirs(settings)
 
-    kb_env(AW_KB_MAX_FILE_BYTES=10)
+    kb_env(VIGIL_KB_MAX_FILE_BYTES=10)
     too_large = await post(_files(index, {"notes.md": b"x" * 11}))
     assert too_large.status_code == 400
     assert too_large.json()["code"] == "file_too_large"
@@ -183,7 +183,7 @@ async def test_tc112_rejects_upload_limit_violations_per_file(
     await _assert_no_rows(database.sessionmaker)
     _assert_no_kb_dirs(settings)
 
-    kb_env(AW_KB_MAX_FILE_BYTES=1024, AW_KB_MAX_FILES=2)
+    kb_env(VIGIL_KB_MAX_FILE_BYTES=1024, VIGIL_KB_MAX_FILES=2)
     too_many = await post(_files(index, {"a.md": b"a", "b.md": b"b"}))
     assert too_many.status_code == 400
     assert too_many.json()["code"] == "too_many_files"
@@ -192,9 +192,9 @@ async def test_tc112_rejects_upload_limit_violations_per_file(
     _assert_no_kb_dirs(settings)
 
     kb_env(
-        AW_KB_MAX_FILE_BYTES=100_000,
-        AW_KB_MAX_TOTAL_BYTES=4096,
-        AW_KB_MAX_FILES=50,
+        VIGIL_KB_MAX_FILE_BYTES=100_000,
+        VIGIL_KB_MAX_TOTAL_BYTES=4096,
+        VIGIL_KB_MAX_FILES=50,
     )
     too_big = await post(_files(index, {"a.md": b"a" * 3000, "b.md": b"b" * 3000}))
     assert too_big.status_code == 413
@@ -203,9 +203,9 @@ async def test_tc112_rejects_upload_limit_violations_per_file(
     _assert_no_kb_dirs(settings)
 
     kb_env(
-        AW_KB_MAX_FILE_BYTES=100_000,
-        AW_KB_MAX_TOTAL_BYTES=1_000_000,
-        AW_KB_MAX_FILES=50,
+        VIGIL_KB_MAX_FILE_BYTES=100_000,
+        VIGIL_KB_MAX_TOTAL_BYTES=1_000_000,
+        VIGIL_KB_MAX_FILES=50,
     )
     missing = await post([("files", ("notes.md", b"body", "text/markdown"))])
     assert missing.status_code == 400

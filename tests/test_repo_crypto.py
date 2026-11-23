@@ -6,11 +6,11 @@ import uuid
 
 import pytest
 
-from workbench.core.crypto import CredentialUnavailable
-from workbench.repos.crypto import decrypt_token, encrypt_token, mask_token
-from workbench.repos.errors import RepoProviderError
-from workbench.repos.redaction import redact_provider_exception, safe_log_fields
-from workbench.repos.types import ProviderError
+from vigil_workbench.core.crypto import CredentialUnavailable
+from vigil_workbench.repos.crypto import decrypt_token, encrypt_token, mask_token
+from vigil_workbench.repos.errors import RepoProviderError
+from vigil_workbench.repos.redaction import redact_provider_exception, safe_log_fields
+from vigil_workbench.repos.types import ProviderError
 
 KEY = bytes(range(32, 64))
 OTHER_KEY = bytes(range(32))

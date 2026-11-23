@@ -1,4 +1,4 @@
-"""迁移 0007：SQLite 默认，设置 AW_TEST_DATABASE_URL 时在 MySQL 复跑。"""
+"""迁移 0007：SQLite 默认，设置 VIGIL_TEST_DATABASE_URL 时在 MySQL 复跑。"""
 
 from __future__ import annotations
 
@@ -13,9 +13,9 @@ from alembic.config import Config
 from sqlalchemy import delete, func, inspect, select, text
 from sqlalchemy.exc import DBAPIError
 
-from workbench.db.base import Base, utcnow
-from workbench.db.engine import Database, create_engine_from_url
-from workbench.db.models import KnowledgeBase, KnowledgeEntry, ProjectContext
+from vigil_workbench.db.base import Base, utcnow
+from vigil_workbench.db.engine import Database, create_engine_from_url
+from vigil_workbench.db.models import KnowledgeBase, KnowledgeEntry, ProjectContext
 
 CORE_TABLES = {
     "admin_credential",
@@ -40,7 +40,7 @@ CONSTRAINT_MARKERS = (
 
 def _url(tmp_path) -> str:
     return os.environ.get(
-        "AW_TEST_DATABASE_URL", f"sqlite+aiosqlite:///{tmp_path / 'kb_migrated.db'}"
+        "VIGIL_TEST_DATABASE_URL", f"sqlite+aiosqlite:///{tmp_path / 'kb_migrated.db'}"
     )
 
 

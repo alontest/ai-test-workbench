@@ -11,18 +11,18 @@ usage() {
   BACKUP_DIR          备份输出目录（也可用第一个参数）
   MYSQL_HOST          仅本地 mysqldump 时需要（默认 127.0.0.1）
   MYSQL_PORT          默认 3306
-  MYSQL_USER          默认 workbench
+  MYSQL_USER          默认 vigil
   MYSQL_PASSWORD      必填（本地 mysqldump）
-  MYSQL_DATABASE      默认 workbench
+  MYSQL_DATABASE      默认 vigil
   MYSQL_ROOT_PASSWORD compose 路径下传给 db 容器（可选）
   MYSQL_CONTAINER     若设置，则 docker exec 该容器跑 mysqldump（演练/无 compose 时）
-  AW_DATA_DIR         制品目录（非 compose 路径；默认 ./data）
+  VIGIL_DATA_DIR      制品目录（非 compose 路径；默认 ./data）
   BACKUP_VIA_COMPOSE  1=优先 docker compose exec（默认 1）
   COMPOSE_FILE        默认仓库根 docker-compose.yml
 
 恢复（手工）:
-  1. 保管 AW_ENCRYPTION_KEY，不要放进备份包。
-  2. 先导入 SQL，再解压制品到 AW_DATA_DIR。
+  1. 保管 VIGIL_ENCRYPTION_KEY，不要放进备份包。
+  2. 先导入 SQL，再解压制品到 VIGIL_DATA_DIR。
      制品包整体包含 knowledge-bases/，并已排除 .trash/ 与 .tmp/。
   3. 逐个 knowledge-bases/<kbId>/manifest.json，按 files[].sha256
      核对恢复后的文件（storageName 与 size 亦应一致）。
@@ -40,16 +40,16 @@ STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 BACKUP_DIR="${1:-${BACKUP_DIR:-$ROOT/backups}}"
 MYSQL_HOST="${MYSQL_HOST:-127.0.0.1}"
 MYSQL_PORT="${MYSQL_PORT:-3306}"
-MYSQL_USER="${MYSQL_USER:-workbench}"
-MYSQL_DATABASE="${MYSQL_DATABASE:-workbench}"
-AW_DATA_DIR="${AW_DATA_DIR:-$ROOT/data}"
+MYSQL_USER="${MYSQL_USER:-vigil}"
+MYSQL_DATABASE="${MYSQL_DATABASE:-vigil}"
+VIGIL_DATA_DIR="${VIGIL_DATA_DIR:-$ROOT/data}"
 BACKUP_VIA_COMPOSE="${BACKUP_VIA_COMPOSE:-1}"
 COMPOSE_FILE="${COMPOSE_FILE:-$ROOT/docker-compose.yml}"
 
 mkdir -p "$BACKUP_DIR"
-SQL_PATH="$BACKUP_DIR/workbench-db-$STAMP.sql"
-ARTIFACT_PATH="$BACKUP_DIR/workbench-artifacts-$STAMP.tar.gz"
-MANIFEST_PATH="$BACKUP_DIR/workbench-backup-$STAMP.txt"
+SQL_PATH="$BACKUP_DIR/vigil-db-$STAMP.sql"
+ARTIFACT_PATH="$BACKUP_DIR/vigil-artifacts-$STAMP.tar.gz"
+MANIFEST_PATH="$BACKUP_DIR/vigil-backup-$STAMP.txt"
 
 dump_via_compose() {
   docker compose -f "$COMPOSE_FILE" exec -T db \
@@ -75,7 +75,7 @@ dump_local() {
 }
 
 archive_local() {
-  tar -C "$AW_DATA_DIR" --exclude='.trash' --exclude='.tmp' -czf - .
+  tar -C "$VIGIL_DATA_DIR" --exclude='.trash' --exclude='.tmp' -czf - .
 }
 
 compose_service_running() {
@@ -108,8 +108,8 @@ fi
 if compose_service_running app; then
   archive_via_compose >"$ARTIFACT_PATH"
 else
-  if [[ ! -d "$AW_DATA_DIR" ]]; then
-    echo "AW_DATA_DIR 不存在: $AW_DATA_DIR" >&2
+  if [[ ! -d "$VIGIL_DATA_DIR" ]]; then
+    echo "VIGIL_DATA_DIR 不存在: $VIGIL_DATA_DIR" >&2
     exit 4
   fi
   archive_local >"$ARTIFACT_PATH"
@@ -123,11 +123,11 @@ fi
   echo "artifacts=$(basename "$ARTIFACT_PATH")"
   echo "sql_bytes=$(wc -c <"$SQL_PATH" | tr -d ' ')"
   echo "artifact_bytes=$(wc -c <"$ARTIFACT_PATH" | tr -d ' ')"
-  echo "note=AW_ENCRYPTION_KEY is NOT included; keep it separately."
+  echo "note=VIGIL_ENCRYPTION_KEY is NOT included; keep it separately."
 } >"$MANIFEST_PATH"
 
 echo "backup written:"
 echo "  $SQL_PATH"
 echo "  $ARTIFACT_PATH"
 echo "  $MANIFEST_PATH"
-echo "Keep AW_ENCRYPTION_KEY outside this directory."
+echo "Keep VIGIL_ENCRYPTION_KEY outside this directory."

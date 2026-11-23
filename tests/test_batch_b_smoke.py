@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import func, select
 
 from helpers import build_client, make_app, seed_admin
-from workbench.db.models import AiCallRecord, AnalysisSession
+from vigil_workbench.db.models import AiCallRecord, AnalysisSession
 
 ADMIN = "test-admin-secret"
 ORIGIN = {"origin": "http://testserver"}
@@ -26,7 +26,7 @@ class FakeAI:
 
 @pytest.mark.asyncio
 async def test_tc062_batch_b_minimal_loop(settings, database) -> None:
-    from workbench.services.ai_gateway import AiGateway
+    from vigil_workbench.services.ai_gateway import AiGateway
 
     await seed_admin(database.sessionmaker, ADMIN)
     fake = FakeAI()
@@ -37,7 +37,7 @@ async def test_tc062_batch_b_minimal_loop(settings, database) -> None:
             "/api/v1/auth/login", json={"password": ADMIN}, headers=ORIGIN
         )
         assert login.status_code == 200
-        assert "aw_session" in client.cookies
+        assert "vigil_session" in client.cookies
 
         project = await client.post(
             "/api/v1/projects",

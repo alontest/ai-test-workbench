@@ -1,6 +1,6 @@
 ---------------------------- MODULE AiCallLifecycle ----------------------------
-\* 模型对象：src/workbench/services/ai_gateway.py 的 AiGateway.complete
-\* 加 src/workbench/startup.py 的 merge_running_calls（进程重启时的 running 归并）。
+\* 模型对象：src/vigil_workbench/services/ai_gateway.py 的 AiGateway.complete
+\* 加 src/vigil_workbench/startup.py 的 merge_running_calls（进程重启时的 running 归并）。
 \*
 \* 每个常量/变量到代码的对应：
 \*   record[c] = "none"        调用尚未写入 ai_call_record
@@ -20,7 +20,7 @@ EXTENDS Naturals, TLC
 
 CONSTANTS
     Calls,           \* 并发发起的调用集合
-    MaxConcurrency   \* AW_AI_MAX_CONCURRENCY
+    MaxConcurrency   \* VIGIL_AI_MAX_CONCURRENCY
 
 None == "none"
 Running == "running"
@@ -119,7 +119,7 @@ Next ==
 
 Spec == Init /\ [][Next]_vars
 
-\* 上游并发不超过 AW_AI_MAX_CONCURRENCY
+\* 上游并发不超过 VIGIL_AI_MAX_CONCURRENCY
 ConcurrencyBound == active <= MaxConcurrency
 
 \* 一次调用最多一条 call 事件（重启归并与取消终结不会重复追加）

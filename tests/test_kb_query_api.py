@@ -12,10 +12,10 @@ import pytest_asyncio
 from sqlalchemy import event, update
 
 from helpers import build_client, make_app, seed_admin, seed_project
-from workbench.db.base import utcnow
-from workbench.db.models import KnowledgeBase, KnowledgeEntry
-from workbench.knowledge.types import summary_digest
-from workbench.services.knowledge.query_service import KnowledgeQueryService
+from vigil_workbench.db.base import utcnow
+from vigil_workbench.db.models import KnowledgeBase, KnowledgeEntry
+from vigil_workbench.knowledge.types import summary_digest
+from vigil_workbench.services.knowledge.query_service import KnowledgeQueryService
 
 ADMIN = "test-admin-secret"
 ORIGIN = {"origin": "http://testserver"}

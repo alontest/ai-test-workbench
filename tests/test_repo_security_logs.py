@@ -13,10 +13,10 @@ import pytest
 import pytest_asyncio
 
 from helpers import build_client, make_app, seed_admin, seed_project
-from workbench.db.base import utcnow
-from workbench.db.models import RepoBinding, RepoFileReadRecord, RepoMetadataSnapshot
-from workbench.repos.providers.github import GitHubProvider
-from workbench.services.repos import live_access
+from vigil_workbench.db.base import utcnow
+from vigil_workbench.db.models import RepoBinding, RepoFileReadRecord, RepoMetadataSnapshot
+from vigil_workbench.repos.providers.github import GitHubProvider
+from vigil_workbench.services.repos import live_access
 from sqlalchemy import select
 
 ADMIN = "test-admin-secret"

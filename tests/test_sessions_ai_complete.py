@@ -15,9 +15,9 @@ from helpers import (
     seed_provider,
     seed_session,
 )
-from workbench.core.ports import register_injection_preparer
-from workbench.db.models import AiCallRecord, SessionEvent
-from workbench.services.ai_gateway import AiGateway
+from vigil_workbench.core.ports import register_injection_preparer
+from vigil_workbench.db.models import AiCallRecord, SessionEvent
+from vigil_workbench.services.ai_gateway import AiGateway
 
 ADMIN = "test-admin-secret"
 ORIGIN = {"origin": "http://testserver"}
@@ -52,7 +52,7 @@ async def _session(database) -> tuple[int, int, int]:  # noqa: ANN001
 
 
 async def _client(settings, database, fake: FakeAI, preparer=None):  # noqa: ANN001
-    from workbench.db.models import AdminCredential
+    from vigil_workbench.db.models import AdminCredential
 
     async with database.sessionmaker() as db:
         exists = await db.get(AdminCredential, 1) is not None

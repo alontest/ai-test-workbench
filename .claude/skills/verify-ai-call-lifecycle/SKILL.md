@@ -5,8 +5,8 @@ description: Formally check the AI call lifecycle in this repo — that no ai_ca
 
 # Verify the AI call lifecycle
 
-TLA+ model of `AiGateway.complete` (`src/workbench/services/ai_gateway.py`) plus the restart merge in
-`merge_running_calls` (`src/workbench/startup.py`). TLC explores **every interleaving** of insert, finalize,
+TLA+ model of `AiGateway.complete` (`src/vigil_workbench/services/ai_gateway.py`) plus the restart merge in
+`merge_running_calls` (`src/vigil_workbench/startup.py`). TLC explores **every interleaving** of insert, finalize,
 cancellation and restart for the bound in the config, instead of the handful of orders the tests run.
 
 Property in one sentence: once every gateway coroutine has finished, no `ai_call_record` row is still
@@ -20,13 +20,13 @@ Confirmed against commit `d3c8603` on 2026-11-19.
 
 | Verified code | Model part |
 | --- | --- |
-| `src/workbench/services/ai_gateway.py:122` `record_id = await self._insert_running(...)` | `Insert` — commits a `running` row |
+| `src/vigil_workbench/services/ai_gateway.py:122` `record_id = await self._insert_running(...)` | `Insert` — commits a `running` row |
 | `...ai_gateway.py:180,203` `await self._finalize(...)` (success/failed/timeout) | `Finalize` — terminal status + one `call` event |
 | `...ai_gateway.py:163` `except asyncio.CancelledError` → `_finalize(interrupted)` | `CancelFinalized` |
 | `...ai_gateway.py:128-170` the `try` that the `except` covers | boundary between `CancelFinalized` and `CancelUnhandled` |
 | `...ai_gateway.py:262` `_insert_running`, `:301` `_finalize` | `Insert` / `Finalize` |
-| `src/workbench/startup.py:85` `merge_running_calls` | `Restart` — every `running` row → `failed(interrupted)`, one `call` event each |
-| `src/workbench/config.py` `ai_max_concurrency` | `MaxConcurrency` |
+| `src/vigil_workbench/startup.py:85` `merge_running_calls` | `Restart` — every `running` row → `failed(interrupted)`, one `call` event each |
+| `src/vigil_workbench/config.py` `ai_max_concurrency` | `MaxConcurrency` |
 
 A change touches the verified code if it edits any of those functions, moves work across the
 `try`/`except CancelledError` boundary, or changes when the `running` row is committed. If it does:
@@ -60,7 +60,7 @@ violation as its shortest path in plain words.
   (see the finding below).
 - `CallEventAtMostOnce` or `EventMatchesRecord` violated → a terminal row got zero or two `call` events;
   check the transaction boundary in `_finalize` / `merge_running_calls`.
-- `ConcurrencyBound` violated → `active` exceeded `AW_AI_MAX_CONCURRENCY`; the semaphore in
+- `ConcurrencyBound` violated → `active` exceeded `VIGIL_AI_MAX_CONCURRENCY`; the semaphore in
   `AiGateway._get_semaphore` is the thing to look at.
 - `TypeOK` violated → the model, not the code, is wrong (a new status value in `ai_call_record` would
   show up here first).

@@ -15,10 +15,10 @@ import pytest_asyncio
 from sqlalchemy import func, select
 
 from helpers import build_client, make_app, seed_admin, seed_project
-from workbench.db.models import RepoBinding, RepoMetadataSnapshot, RepoSyncRecord
-from workbench.repos.providers.github import GitHubProvider
-from workbench.repos.types import Page, RepositorySummary
-from workbench.services.repos import sync_service
+from vigil_workbench.db.models import RepoBinding, RepoMetadataSnapshot, RepoSyncRecord
+from vigil_workbench.repos.providers.github import GitHubProvider
+from vigil_workbench.repos.types import Page, RepositorySummary
+from vigil_workbench.services.repos import sync_service
 
 ADMIN = "test-admin-secret"
 ORIGIN = {"origin": "http://testserver"}

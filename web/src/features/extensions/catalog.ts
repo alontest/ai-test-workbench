@@ -47,7 +47,7 @@ export const PLANNED_EXTENSIONS: readonly PlannedExtension[] = [
       "03 会话按只读策略调用（写操作进审批）",
     ],
     guardrails: [
-      "认证 Header / Token 由 workbench-core 使用 AES-256-GCM 加密存储并掩码回显",
+      "认证 Header / Token 由 vigil-core 使用 AES-256-GCM 加密存储并掩码回显",
       "按 projectId 隔离与授权绑定，复用 repo-integration 的 SSRF 网络边界校验",
       "默认只读；写操作或服务端返回 AUTH_REQUIRED 时强制转交审批中心",
     ],

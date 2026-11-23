@@ -18,7 +18,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_PYTHON_DOWNLOADS=0 \
     UV_NO_DEV=1 \
     PATH="/app/.venv/bin:${PATH}" \
-    AW_DATA_DIR=/data
+    VIGIL_DATA_DIR=/data
 
 WORKDIR /app
 

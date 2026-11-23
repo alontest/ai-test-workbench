@@ -8,17 +8,17 @@ import pytest
 from sqlalchemy import select, text
 
 from helpers import seed_model, seed_project, seed_provider, seed_session
-from workbench.core.constants import LOGIN_ATTEMPT_RETENTION, LOGIN_SESSION_RETENTION
-from workbench.db.base import utcnow
-from workbench.db.models import (
+from vigil_workbench.core.constants import LOGIN_ATTEMPT_RETENTION, LOGIN_SESSION_RETENTION
+from vigil_workbench.db.base import utcnow
+from vigil_workbench.db.models import (
     AiCallRecord,
     AnalysisSession,
     LoginAttempt,
     LoginSession,
     SessionEvent,
 )
-from workbench.services.sessions import append_event
-from workbench.startup import HEAD_REVISION, merge_running_calls, run_startup
+from vigil_workbench.services.sessions import append_event
+from vigil_workbench.startup import HEAD_REVISION, merge_running_calls, run_startup
 
 
 @pytest.mark.asyncio

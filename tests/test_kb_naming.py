@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from workbench.knowledge.naming import derive_name, name_key
+from vigil_workbench.knowledge.naming import derive_name, name_key
 
 SHA = "0123456789abcdef" + "0" * 48
 

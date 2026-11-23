@@ -2,6 +2,7 @@
 
 > 基线：2026-11-20 15:00（Asia/Shanghai），分支 `feat/batch-b-backend` @ `987c919`。
 > 本文是接手时的现状快照与排期判断，不替代 `specs/` 下的阶段产物。所有估算都是人日口径（1 人日 ≈ 8h），依据是 core 已交付任务的实际密度。
+> 2026-11-23 品牌与配置统一说明：项目已统一更名为 `vigil-workbench`，后端源码目录迁移至 `src/vigil_workbench/`，环境变量 `AW_*` / `AW_KB_*` 已切换为 `VIGIL_*` / `VIGIL_KB_*` / `VIGIL_ENCRYPTION_KEY`，Cookie 切换为 `vigil_session`，默认库切换为 `vigil.db` / `vigil`。最新环境与命令以 `AGENTS.md` 和 `docs/dev-setup.md` 为准。
 
 ## 一、现在到底做到哪了
 

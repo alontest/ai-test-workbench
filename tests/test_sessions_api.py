@@ -14,7 +14,7 @@ from helpers import (
     seed_provider,
     seed_session,
 )
-from workbench.db.models import AnalysisSession, KnowledgeBase
+from vigil_workbench.db.models import AnalysisSession, KnowledgeBase
 
 ADMIN = "test-admin-secret"
 ORIGIN = {"origin": "http://testserver"}
@@ -173,7 +173,7 @@ async def test_tc027_api_filters(client, database) -> None:
 
 @pytest.mark.asyncio
 async def test_tc028_api_events_order(client, database) -> None:
-    from workbench.services import sessions
+    from vigil_workbench.services import sessions
 
     project_id = await seed_project(database.sessionmaker)
     provider_id = await seed_provider(database.sessionmaker)
@@ -314,10 +314,10 @@ async def test_tc070_knowledge_injection_timeline_payload(client, database) -> N
 
     from sqlalchemy import text
 
-    from workbench.core.redaction import redact
-    from workbench.db.base import utcnow
-    from workbench.db.models import AiCallRecord, ModelBinding, SessionEvent
-    from workbench.services import sessions as sessions_service
+    from vigil_workbench.core.redaction import redact
+    from vigil_workbench.db.base import utcnow
+    from vigil_workbench.db.models import AiCallRecord, ModelBinding, SessionEvent
+    from vigil_workbench.services import sessions as sessions_service
 
     sm = database.sessionmaker
     project_id = await seed_project(sm)

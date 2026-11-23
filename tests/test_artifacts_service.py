@@ -9,10 +9,10 @@ import pytest
 from sqlalchemy import func, select
 
 from helpers import seed_model, seed_project, seed_provider, seed_session
-from workbench.adapters.fs.storage import artifact_dir
-from workbench.db.models import Artifact, SessionEvent
-from workbench.services import artifacts
-from workbench.services.errors import DomainError
+from vigil_workbench.adapters.fs.storage import artifact_dir
+from vigil_workbench.db.models import Artifact, SessionEvent
+from vigil_workbench.services import artifacts
+from vigil_workbench.services.errors import DomainError
 
 
 def test_tc057_frozen_artifact_signature() -> None:

@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from workbench.repos.cursor import (
+from vigil_workbench.repos.cursor import (
     decode_page_cursor,
     derive_cursor_key,
     encode_page_cursor,
     fingerprint_query,
 )
-from workbench.repos.errors import RepoValidationError
+from vigil_workbench.repos.errors import RepoValidationError
 
 KEY = derive_cursor_key(bytes(range(32, 64)))
 CONTEXT = {

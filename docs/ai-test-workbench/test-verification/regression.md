@@ -1,5 +1,7 @@
 # 回归清单 — workbench-core
 
+> 时期说明：本文档为 2026-11-18 `workbench-core` 历史回归基线快照。2026-11-23 起项目已统一更名为 `vigil-workbench`，环境变量 `AW_*` 已切换为 `VIGIL_*` / `VIGIL_ENCRYPTION_KEY` / `VIGIL_TEST_DATABASE_URL`，Cookie 切换为 `vigil_session`。最新实现与测试说明请以 `docs/dev-setup.md` 和 `AGENTS.md` 为准。
+
 > 来源 spec：`specs/ai-test-workbench_20261117184149`（模块 `ai-test-workbench`，域 `workbench-core`）。
 > 用途：修复回归与后续 spec 复用。每条 TC 按小节合并；pytest 落点与 `design.md` 一致。
 > 当前状态：pytest 71/71 通过（验证时间 2026-11-18 15:32:49，head `6de8b57`，pytest 126/0/0）。人工 M-01～M-07 未执行。Vitest 本地 15 files / 58 passed（2026-11-18 15:34:45），不进入后端测试证据。

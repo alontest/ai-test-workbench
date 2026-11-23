@@ -12,14 +12,14 @@ import pytest_asyncio
 from sqlalchemy import func, select
 
 from helpers import build_client, make_app, seed_admin, seed_project
-from workbench.db.base import utcnow
-from workbench.db.models import (
+from vigil_workbench.db.base import utcnow
+from vigil_workbench.db.models import (
     RepoBinding,
     RepoFileReadRecord,
     RepoMetadataSnapshot,
     RepoSyncRecord,
 )
-from workbench.repos.crypto import decrypt_token
+from vigil_workbench.repos.crypto import decrypt_token
 
 ADMIN = "test-admin-secret"
 ORIGIN = {"origin": "http://testserver"}
@@ -88,7 +88,7 @@ async def test_tc201_create_binding_encrypts_token_and_returns_mask(
     project_id = await seed_project(database.sessionmaker)
     sentinel = token("wxyz")
 
-    with caplog.at_level(logging.DEBUG, logger="workbench"):
+    with caplog.at_level(logging.DEBUG, logger="vigil_workbench"):
         response = await client.post(
             api_url(project_id), json=payload(token=sentinel), headers=ORIGIN
         )

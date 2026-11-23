@@ -10,15 +10,15 @@ from alembic import context
 from sqlalchemy import event, pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from workbench.db.base import Base
-import workbench.db.models  # noqa: F401  确保模型注册到 metadata
+from vigil_workbench.db.base import Base
+import vigil_workbench.db.models  # noqa: F401  确保模型注册到 metadata
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-database_url = os.getenv("AW_DATABASE_URL") or config.get_main_option("sqlalchemy.url")
+database_url = os.getenv("VIGIL_DATABASE_URL") or config.get_main_option("sqlalchemy.url")
 config.set_main_option("sqlalchemy.url", database_url)
 target_metadata = Base.metadata
 

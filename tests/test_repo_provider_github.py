@@ -7,9 +7,9 @@ from datetime import datetime
 import httpx
 import pytest
 
-from workbench.repos.constants import REPO_METADATA_MAX_BYTES
-from workbench.repos.providers.github import GitHubProvider
-from workbench.repos.types import ProviderError, RepositoryRef
+from vigil_workbench.repos.constants import REPO_METADATA_MAX_BYTES
+from vigil_workbench.repos.providers.github import GitHubProvider
+from vigil_workbench.repos.types import ProviderError, RepositoryRef
 
 TOKEN = "ghp_test_token_value"
 

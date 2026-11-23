@@ -1,7 +1,7 @@
 # 视觉与页面布局规范 — Vigil · 鸮巡
 
 > 本文是前端 15 个页面视觉重构与布局统一的**唯一设计蓝图**。
-> Token 数值真源为 [design-system.md](file:///Users/alon/Developer/OpenSource/ai-test-workbench/docs/ai-test-workbench/interaction-design/design-system.md) 与 [tokens.css](file:///Users/alon/Developer/OpenSource/ai-test-workbench/web/src/styles/tokens.css)。本文规定：**设计方法论分工、官方吉祥物定稿、双主题与层级纪律、全局骨架与垂直节奏、五套页面布局母版、测试红线，以及 15 个页面的逐页落位清单**。
+> Token 数值真源为 [design-system.md](../../../docs/ai-test-workbench/interaction-design/design-system.md) 与 [tokens.css](./tokens.css)。本文规定：**设计方法论分工、官方吉祥物定稿、双主题与层级纪律、全局骨架与垂直节奏、五套页面布局母版、测试红线，以及 15 个页面的逐页落位清单**。
 
 ---
 
@@ -32,7 +32,7 @@
 
 ### 1. 角色设定与造型记忆点
 
-- **角色标识**：`variant="owl"`（[Mascot.tsx](file:///Users/alon/Developer/OpenSource/ai-test-workbench/web/src/components/mascot/Mascot.tsx) 唯一官方角色，已移除废弃原型代码）。
+- **角色标识**：`variant="owl"`（[Mascot.tsx](../components/mascot/Mascot.tsx) 唯一官方角色，已移除废弃原型代码）。
 - **领域隐喻**：测试工程师就是代码夜巡人——黑暗里眼神最毒、能看穿全链路、专门抓藏在暗处的害虫（Bug）。
 - **核心造型**：深岩灰立体羽翼 + 胸前翡翠探长领结徽章 + 随情绪竖立/炸开的耳羽簇 + **平时架在额头上的双筒战术测试护目镜**。
 
@@ -114,7 +114,7 @@
 
 ### 4. 双主题（Light / Dark）、表面与层级纪律
 
-- **双主题 Token 铁律**：[tokens.css](file:///Users/alon/Developer/OpenSource/ai-test-workbench/web/src/styles/tokens.css) 完整支持 Dark 与 Light 双主题（跟随系统 `prefers-color-scheme` 与 `[data-theme]`）。**所有页面容器、卡片、表头、文字、边框、遮罩、滚动条底色必须全部引用 CSS Token**，严禁在页面 CSS 或内联样式中写死暗色 hex（如 `#0a0a0b`、`#141416`、`rgba(255,255,255,...)`）。若需半透明强调底色，使用 `color-mix(in srgb, var(--color-accent) 12%, transparent)` 等基于 Token 的派生写法。
+- **双主题 Token 铁律**：[tokens.css](./tokens.css) 完整支持 Dark 与 Light 双主题（跟随系统 `prefers-color-scheme` 与 `[data-theme]`）。**所有页面容器、卡片、表头、文字、边框、遮罩、滚动条底色必须全部引用 CSS Token**，严禁在页面 CSS 或内联样式中写死暗色 hex（如 `#0a0a0b`、`#141416`、`rgba(255,255,255,...)`）。若需半透明强调底色，使用 `color-mix(in srgb, var(--color-accent) 12%, transparent)` 等基于 Token 的派生写法。
 - **三层表面结构**（亮/暗主题均由同一套变量自动映射）：
   - 底层画布 `--color-background`
   - 一级容器 `--color-card` + `1px solid var(--color-border)`
@@ -259,9 +259,9 @@
 
 以下断言来自现有 26 份 Vitest 测试，重构文案与结构时必须硬遵守：
 
-1. **登录页 [LoginPage.test.tsx](file:///Users/alon/Developer/OpenSource/ai-test-workbench/web/src/features/auth/LoginPage.test.tsx)**：页面内严禁出现匹配 `/项目/` 的链接，严禁出现「`项目上下文`」文字。左侧舞台的能力胶囊文案必须避开这些词。
-2. **入口占位页 [EntrancePage.test.tsx](file:///Users/alon/Developer/OpenSource/ai-test-workbench/web/src/features/entrances/EntrancePage.test.tsx)**：页面内严禁出现匹配 `/提交|发起调用|创建会话/` 的 `<button>`。快捷跳板必须用 `<Link to="/sessions">` 等导航链接，且文案避开「创建会话」（如用「前往分析会话」）。
-3. **首页 [HomePage.test.tsx](file:///Users/alon/Developer/OpenSource/ai-test-workbench/web/src/features/entrances/HomePage.test.tsx)**：匹配 6 个入口名（用例库 / 分析 bug / 排查日志 / 分析 SQL / 生成回归清单 / 生成测试报告）的链接数量必须**严格等于 6**。Hero 区与最近会话区不得新增撞名链接。
+1. **登录页 [LoginPage.test.tsx](../features/auth/LoginPage.test.tsx)**：页面内严禁出现匹配 `/项目/` 的链接，严禁出现「`项目上下文`」文字。左侧舞台的能力胶囊文案必须避开这些词。
+2. **入口占位页 [EntrancePage.test.tsx](../features/entrances/EntrancePage.test.tsx)**：页面内严禁出现匹配 `/提交|发起调用|创建会话/` 的 `<button>`。快捷跳板必须用 `<Link to="/sessions">` 等导航链接，且文案避开「创建会话」（如用「前往分析会话」）。
+3. **首页 [HomePage.test.tsx](../features/entrances/HomePage.test.tsx)**：匹配 6 个入口名（用例库 / 分析 bug / 排查日志 / 分析 SQL / 生成回归清单 / 生成测试报告）的链接数量必须**严格等于 6**。Hero 区与最近会话区不得新增撞名链接。
 4. **通用契约**：保留现有所有 `aria-label`、`role`、`data-testid`、`data-mount` 与按钮语义（如 `ProjectList` 的「仓库绑定 / 已选择」与「编辑」按钮）。
 
 ---
@@ -273,42 +273,42 @@
 ### 批次 UI-0：公共布局原语、层级表与外壳升级（地基）
 1. **`PageHeader` 原语**（新建 `web/src/components/ui/PageHeader.tsx` + 样式）：统一封装 `backLink`、`title` (`<h1>`)、`description`、`badge`、`actions`，消灭各页面手写 `<header style={{ display: "flex" }}>`。
 2. **`z-index` 层级收口**：在 `ui.module.css`（Dialog `.overlay: 40` / `.content: 41`）、`AppShell.module.css`（`.topbar: 20`、移动端侧栏 `25/26`）与 `browse.module.css`（`.drawerOverlay: 30`）落实层级表；按钮按压统一 `scale(0.98)` `var(--duration-fast)`。
-3. **`AppShell` 升级**（[AppShell.tsx](file:///Users/alon/Developer/OpenSource/ai-test-workbench/web/src/app/AppShell.tsx)）：侧栏加入「鸮鸮」`28px` 品牌徽章、导航项线性图标与左侧 `3px` 激活绿条；顶栏保持 `var(--topbar-height)` (`64px`)，左侧位置面包屑 + 右侧退出，不再与页面 H1 重复；全部颜色严格走 Token 兼容 Light/Dark。
+3. **`AppShell` 升级**（[AppShell.tsx](../app/AppShell.tsx)）：侧栏加入「鸮鸮」`28px` 品牌徽章、导航项线性图标与左侧 `3px` 激活绿条；顶栏保持 `var(--topbar-height)` (`64px`)，左侧位置面包屑 + 右侧退出，不再与页面 H1 重复；全部颜色严格走 Token 兼容 Light/Dark。
 4. **通用表格与工具栏样式收口**：统一表头 `--color-muted`、等宽编号列、行 hover 态与卡片容器圆角边框。
 5. **补齐外壳单测**：新建 `web/src/app/AppShell.test.tsx`，覆盖路由面包屑、侧栏当前项高亮与退出交互。
 
 ### 批次 UI-1：门面与核心高频 4 页（第一眼质感 + 修真 Bug）
 | # | 路由 | 页面文件 | 采用母版 | 核心改造要点 |
 |---|---|---|---|---|
-| 1 | `/login` | [LoginPage.tsx](file:///Users/alon/Developer/OpenSource/ai-test-workbench/web/src/features/auth/LoginPage.tsx) | **母版 A（双栏舞台）** | 升级为左「鸮鸮 140px 夜巡探案台 + 3 张能力徽章卡（避开『项目上下文』）」、右登录表单的双栏舞台；输入口令时「鸮鸮」切 `watching`，报错/锁定时切 `warning`，过期态切 `sleeping`；全走 Token 兼容双主题 |
-| 2 | `/` | [HomePage.tsx](file:///Users/alon/Developer/OpenSource/ai-test-workbench/web/src/features/entrances/HomePage.tsx) | **母版 B（指挥台看板）** | 顶部导语区合入「鸮鸮 56px」与前置检查胶囊；6 张入口卡配齐专属 24×24 图标（用例库/Bug/日志/SQL/回归/报告）；最近会话表空态与行质感升级；严格保持 6 入口链接唯一 |
-| 3 | `/entrances/:key` | [EntrancePage.tsx](file:///Users/alon/Developer/OpenSource/ai-test-workbench/web/src/features/entrances/EntrancePage.tsx) | **母版 E（880px 聚焦卡）** | `PlaceholderPanel` 加入「鸮鸮 `sleeping`」探长简报卡、所属业务域标签与 `<Link>` 快捷跳板（「前往分析会话」「管理 AI 提供商」），不渲染任何触发按钮 |
-| 4 | `/sessions/:id` | [SessionDetailPage.tsx](file:///Users/alon/Developer/OpenSource/ai-test-workbench/web/src/features/sessions/SessionDetailPage.tsx) | **母版 D（双栏工作台）** | **修复真 Bug**：为 3 个 Radix `<Tabs.Trigger>` 补齐 `<Tabs.Content forceMount>`（切 Tab 隐藏非激活面板但保留草稿）并新增 Tab 切换单测；强化会话头信息密度；左时间线事件按类型加 `3px` 语义左边框；右粘性操控台集成「鸮鸮 40px」（随输入/调用中/超限失败变态）与字符预算进度条 |
+| 1 | `/login` | [LoginPage.tsx](../features/auth/LoginPage.tsx) | **母版 A（双栏舞台）** | 升级为左「鸮鸮 140px 夜巡探案台 + 3 张能力徽章卡（避开『项目上下文』）」、右登录表单的双栏舞台；输入口令时「鸮鸮」切 `watching`，报错/锁定时切 `warning`，过期态切 `sleeping`；全走 Token 兼容双主题 |
+| 2 | `/` | [HomePage.tsx](../features/entrances/HomePage.tsx) | **母版 B（指挥台看板）** | 顶部导语区合入「鸮鸮 56px」与前置检查胶囊；6 张入口卡配齐专属 24×24 图标（用例库/Bug/日志/SQL/回归/报告）；最近会话表空态与行质感升级；严格保持 6 入口链接唯一 |
+| 3 | `/entrances/:key` | [EntrancePage.tsx](../features/entrances/EntrancePage.tsx) | **母版 E（880px 聚焦卡）** | `PlaceholderPanel` 加入「鸮鸮 `sleeping`」探长简报卡、所属业务域标签与 `<Link>` 快捷跳板（「前往分析会话」「管理 AI 提供商」），不渲染任何触发按钮 |
+| 4 | `/sessions/:id` | [SessionDetailPage.tsx](../features/sessions/SessionDetailPage.tsx) | **母版 D（双栏工作台）** | **修复真 Bug**：为 3 个 Radix `<Tabs.Trigger>` 补齐 `<Tabs.Content forceMount>`（切 Tab 隐藏非激活面板但保留草稿）并新增 Tab 切换单测；强化会话头信息密度；左时间线事件按类型加 `3px` 语义左边框；右粘性操控台集成「鸮鸮 40px」（随输入/调用中/超限失败变态）与字符预算进度条 |
 
 ### 批次 UI-2：分析会话列表与基座管理 5 页（去除内联简陋样式）
 | # | 路由 | 页面文件 | 采用母版 | 核心改造要点 |
 |---|---|---|---|---|
-| 5 | `/sessions` | [SessionsPage.tsx](file:///Users/alon/Developer/OpenSource/ai-test-workbench/web/src/features/sessions/SessionsPage.tsx) | **母版 C（过滤表格）** | 替换内联 `<header style>` 为 `PageHeader`；筛选栏卡片化并与表格对齐；Loading 时保留 `PageHeader` 与筛选栏 |
-| 6 | `/projects` | [ProjectsPage.tsx](file:///Users/alon/Developer/OpenSource/ai-test-workbench/web/src/features/projects/ProjectsPage.tsx) | **母版 D（主从双栏）** | 顶部保留 `ProjectKnowledgeSummary` 知识库统计带；下方改为「左项目列表（360px 窄栏，**将 `ProjectList` 从 4 列宽表改为紧凑卡片/列表行防横向溢出**，选中带左绿边，保留『仓库绑定/已选择』和『编辑』按钮语义）+ 右当前项目仓库绑定工作区 (`RepoBindingPanel`)」 |
-| 7 | `/providers` | [ProvidersPage.tsx](file:///Users/alon/Developer/OpenSource/ai-test-workbench/web/src/features/providers/ProvidersPage.tsx) | **母版 C（过滤表格）** | `PageHeader` 补齐「凭证只写不回显、连接测试不落库」说明；Loading 时保留 `PageHeader`；表格掩码密钥与连接测试徽标对齐美化 |
-| 8 | `/providers/:id/models` | [ModelsPage.tsx](file:///Users/alon/Developer/OpenSource/ai-test-workbench/web/src/features/models/ModelsPage.tsx) | **母版 C（过滤表格）** | `PageHeader` 集成 `← 返回提供商` 面包屑与当前提供商上下文胶囊；模型参数（Temperature / MaxTokens）用等宽胶囊展示 |
-| 9 | `/calls` | [CallsPage.tsx](file:///Users/alon/Developer/OpenSource/ai-test-workbench/web/src/features/calls/CallsPage.tsx) | **母版 C（审计表格）** | 补齐 `PageHeader` 说明；4 维级联筛选栏（项目/会话/状态/时间）规整为紧凑网格；调用记录行左边框区分成功（绿）/失败（红），展开详情区用等宽面板呈现提示词与注入编号 |
+| 5 | `/sessions` | [SessionsPage.tsx](../features/sessions/SessionsPage.tsx) | **母版 C（过滤表格）** | 替换内联 `<header style>` 为 `PageHeader`；筛选栏卡片化并与表格对齐；Loading 时保留 `PageHeader` 与筛选栏 |
+| 6 | `/projects` | [ProjectsPage.tsx](../features/projects/ProjectsPage.tsx) | **母版 D（主从双栏）** | 顶部保留 `ProjectKnowledgeSummary` 知识库统计带；下方改为「左项目列表（360px 窄栏，**将 `ProjectList` 从 4 列宽表改为紧凑卡片/列表行防横向溢出**，选中带左绿边，保留『仓库绑定/已选择』和『编辑』按钮语义）+ 右当前项目仓库绑定工作区 (`RepoBindingPanel`)」 |
+| 7 | `/providers` | [ProvidersPage.tsx](../features/providers/ProvidersPage.tsx) | **母版 C（过滤表格）** | `PageHeader` 补齐「凭证只写不回显、连接测试不落库」说明；Loading 时保留 `PageHeader`；表格掩码密钥与连接测试徽标对齐美化 |
+| 8 | `/providers/:id/models` | [ModelsPage.tsx](../features/models/ModelsPage.tsx) | **母版 C（过滤表格）** | `PageHeader` 集成 `← 返回提供商` 面包屑与当前提供商上下文胶囊；模型参数（Temperature / MaxTokens）用等宽胶囊展示 |
+| 9 | `/calls` | [CallsPage.tsx](../features/calls/CallsPage.tsx) | **母版 C（审计表格）** | 补齐 `PageHeader` 说明；4 维级联筛选栏（项目/会话/状态/时间）规整为紧凑网格；调用记录行左边框区分成功（绿）/失败（红），展开详情区用等宽面板呈现提示词与注入编号 |
 
 ### 批次 UI-3：知识库 4 页与仓库浏览 2 页（资产与代码阅读体验）
 | # | 路由 | 页面文件 | 采用母版 | 核心改造要点 |
 |---|---|---|---|---|
-| 10 | `/knowledge-bases` | [KnowledgeBaseListPage.tsx](file:///Users/alon/Developer/OpenSource/ai-test-workbench/web/src/features/knowledge/pages/KnowledgeBaseListPage.tsx) | **母版 C（过滤表格）** | 统一接入 `PageHeader`；版本徽标（`v1` / `current`）与条目统计等宽对齐；底部只读说明改为带图标的静态提示条 |
-| 11 | `/knowledge-bases/import` | [KnowledgeImportPage.tsx](file:///Users/alon/Developer/OpenSource/ai-test-workbench/web/src/features/knowledge/pages/KnowledgeImportPage.tsx) | **母版 E（720px 向导）** | 收敛至 `720px` 聚焦向导容器；项目选择与导入面板合入分步卡片；导入成功报告区由「鸮鸮 `success`」领衔展示版本跃迁与条目统计 |
-| 12 | `/knowledge-bases/:kbId` | [KnowledgeBrowsePage.tsx](file:///Users/alon/Developer/OpenSource/ai-test-workbench/web/src/features/knowledge/pages/KnowledgeBrowsePage.tsx) | **母版 C（吸顶浏览）** | 搜索框 + 6 类知识条目计数 Tab 栏支持 `sticky; top: var(--topbar-height); z-index: 10`；`superseded` 历史版本告警条采用琥珀色左边框；Loading 时保留页头 |
-| 13 | `/knowledge-bases/:kbId/entries/:code` | [KnowledgeEntryPage.tsx](file:///Users/alon/Developer/OpenSource/ai-test-workbench/web/src/features/knowledge/pages/KnowledgeEntryPage.tsx) | **母版 E（880px 阅读）** | 收敛至 `880px` 最佳阅读宽度；条目编号（如 `BL-001`）以大号等宽徽章置顶，正文区采用代码级排版 |
-| 14 | `/repos` | [RepoBrowseIndexPage.tsx](file:///Users/alon/Developer/OpenSource/ai-test-workbench/web/src/features/repos/pages/RepoBrowseIndexPage.tsx) | **母版 B（项目仓库网格）** | 统一 `PageHeader`；每个项目的绑定仓库改为带 GitHub / 云效原始品牌图标、默认分支胶囊与状态点的可点击行卡片 |
-| 15 | `/projects/:projectId/repos/:bindingId` | [RepoBrowsePage.tsx](file:///Users/alon/Developer/OpenSource/ai-test-workbench/web/src/features/repos/pages/RepoBrowsePage.tsx) | **母版 D（双栏代码台）** | 顶栏展示厂商图标 + 仓库名 + 同步基线状态；选择器栏紧凑化；左目录树与右提交流固定高度内滚；`FileViewerDrawer` 宽度严格走 `var(--repo-drawer-width)` 并强化行号与代码阅读质感 |
+| 10 | `/knowledge-bases` | [KnowledgeBaseListPage.tsx](../features/knowledge/pages/KnowledgeBaseListPage.tsx) | **母版 C（过滤表格）** | 统一接入 `PageHeader`；版本徽标（`v1` / `current`）与条目统计等宽对齐；底部只读说明改为带图标的静态提示条 |
+| 11 | `/knowledge-bases/import` | [KnowledgeImportPage.tsx](../features/knowledge/pages/KnowledgeImportPage.tsx) | **母版 E（720px 向导）** | 收敛至 `720px` 聚焦向导容器；项目选择与导入面板合入分步卡片；导入成功报告区由「鸮鸮 `success`」领衔展示版本跃迁与条目统计 |
+| 12 | `/knowledge-bases/:kbId` | [KnowledgeBrowsePage.tsx](../features/knowledge/pages/KnowledgeBrowsePage.tsx) | **母版 C（吸顶浏览）** | 搜索框 + 6 类知识条目计数 Tab 栏支持 `sticky; top: var(--topbar-height); z-index: 10`；`superseded` 历史版本告警条采用琥珀色左边框；Loading 时保留页头 |
+| 13 | `/knowledge-bases/:kbId/entries/:code` | [KnowledgeEntryPage.tsx](../features/knowledge/pages/KnowledgeEntryPage.tsx) | **母版 E（880px 阅读）** | 收敛至 `880px` 最佳阅读宽度；条目编号（如 `BL-001`）以大号等宽徽章置顶，正文区采用代码级排版 |
+| 14 | `/repos` | [RepoBrowseIndexPage.tsx](../features/repos/pages/RepoBrowseIndexPage.tsx) | **母版 B（项目仓库网格）** | 统一 `PageHeader`；每个项目的绑定仓库改为带 GitHub / 云效原始品牌图标、默认分支胶囊与状态点的可点击行卡片 |
+| 15 | `/projects/:projectId/repos/:bindingId` | [RepoBrowsePage.tsx](../features/repos/pages/RepoBrowsePage.tsx) | **母版 D（双栏代码台）** | 顶栏展示厂商图标 + 仓库名 + 同步基线状态；选择器栏紧凑化；左目录树与右提交流固定高度内滚；`FileViewerDrawer` 宽度严格走 `var(--repo-drawer-width)` 并强化行号与代码阅读质感 |
 
 ---
 
 ## 八、字体、图标与动效硬约束（速查）
 
-- **字体分工**（离线自托管环境不引入外部 CDN，按 [tokens.css](file:///Users/alon/Developer/OpenSource/ai-test-workbench/web/src/styles/tokens.css) 系统回退栈渲染）：
+- **字体分工**（离线自托管环境不引入外部 CDN，按 [tokens.css](./tokens.css) 系统回退栈渲染）：
   - 正文、表单、说明：`--font-family-base`（优先本地 `IBM Plex Sans`，回退 `PingFang SC` / `Microsoft YaHei` / `system-ui`）
   - 页面标题、入口名、编号、SHA、耗时、字符计数、代码块：`--font-family-heading` / `--font-family-mono`（优先本地 `JetBrains Mono`，回退 `SFMono-Regular` / `Menlo` / `monospace`）
 - **图标规格**：24×24 网格，`1.75` 描边，圆头圆角，`currentColor`；GitHub 与云效使用品牌原始形态，严禁用文字或 Emoji 冒充图标。

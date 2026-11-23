@@ -14,13 +14,13 @@ import pytest_asyncio
 from sqlalchemy import func, select
 
 from helpers import build_client, make_app, seed_admin, seed_project
-from workbench.db.models import (
+from vigil_workbench.db.models import (
     RepoBinding,
     RepoFileReadRecord,
     RepoSyncRecord,
 )
-from workbench.repos.providers.github import GitHubProvider
-from workbench.services.repos import connectivity_service
+from vigil_workbench.repos.providers.github import GitHubProvider
+from vigil_workbench.services.repos import connectivity_service
 
 ADMIN = "test-admin-secret"
 ORIGIN = {"origin": "http://testserver"}
@@ -148,7 +148,7 @@ async def test_tc209_auth_failure_marks_token_invalid(api, monkeypatch, caplog) 
         lambda request: httpx.Response(401, json={"message": "Bad credentials"}),
     )
 
-    with caplog.at_level(logging.DEBUG, logger="workbench"):
+    with caplog.at_level(logging.DEBUG, logger="vigil_workbench"):
         response = await client.post(
             f"{binding_url(binding_id)}/test-connection", headers=ORIGIN
         )

@@ -1,5 +1,7 @@
 # Project File Structure — ai-test-workbench（workbench-core）
 
+> 时期说明：本文档为 2026-11-18 `workbench-core` 历史规格快照。2026-11-23 起项目已统一更名为 `vigil-workbench`，源码目录已从 `src/workbench/` 迁移至 `src/vigil_workbench/`，环境变量 `AW_*` 已切换为 `VIGIL_*`，默认库切换为 `vigil.db` / `vigil`。最新目录与命令请以 `AGENTS.md` 和 `docs/dev-setup.md` 为准。
+
 > 阶段：tech-tasks（步骤 7）。依据 `technical-design/change-spec.md` §2、`docs/component-tree.md`、`docs/api-spec.md`、`docs/database-schema.md`。
 > 仓库现状：`pyproject.toml` 仅占位、`src/workbench/__init__.py` 只有版本号、`tests/conftest.py` 为空；本结构从零建立，不保留占位内容（`tests/conftest.py` 改造成 fixture 入口）。
 

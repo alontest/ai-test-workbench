@@ -16,7 +16,7 @@ that is silently stuck forever.
 ## How to get to it (user POV)
 
 - A user's call is in flight when the process dies; the record stays `running` in the database.
-- The operator starts the service again (`python -m workbench.startup` + server); the user reopens the
+- The operator starts the service again (`python -m vigil_workbench.startup` + server); the user reopens the
   session and sees the call as failed/interrupted instead of a spinning "running" state.
 
 ## Driving it with verifyctl

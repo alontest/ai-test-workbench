@@ -127,7 +127,7 @@ def check(pane: str, *, all_history: bool = False) -> tuple[bool, str]:
 
 def list_chats() -> list[str]:
     proc = subprocess.run(
-        ["alma", "herdr", "chats", "ai-test-workbench"],
+        ["alma", "herdr", "chats", "vigil-workbench"],
         capture_output=True,
         text=True,
     )

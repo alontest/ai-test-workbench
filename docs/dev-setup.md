@@ -19,17 +19,18 @@
 
 | 变量 | 必需 | 默认 | 说明 |
 |------|------|------|------|
-| `AW_ADMIN_PASSWORD` | 是 | — | 管理员口令；空值拒绝启动 |
-| 加密密钥（`.env.example` 中的 32 字节 base64 变量） | 是 | — | AES-256-GCM；丢失则已存提供商密钥不可解；**不进入备份包** |
-| `AW_DATABASE_URL` | 生产必需 | SQLite 文件库 | 生产用 `mysql+asyncmy://USER:PASSWORD@HOST:3306/DB?charset=utf8mb4`（口令自行替换，勿提交）；compose 下留空，由入口脚本按 `MYSQL_*` 拼接 |
-| `AW_DATA_DIR` | 否 | `./data`（compose 为 `/data`） | 制品、`.trash/`、`.tmp/`；不承载生产库 |
-| `AW_PUBLIC_ORIGIN` | 远程必需 | `http://127.0.0.1:8000` | CSRF Origin 白名单，须含 scheme 与端口 |
-| `AW_COOKIE_SECURE` | 否 | `auto` | `auto\|true\|false`；`auto` 按 Origin 的 https 判定 |
-| `AW_TRUST_PROXY` | 否 | `false` | `true` 时取 `X-Forwarded-For` 首跳；compose 默认直连，反代后必须打开 |
-| `AW_ALLOW_REMOTE` | 否 | `false` | 非回环绑定必须为 `true` 并接受启动告警；compose 已显式写入 |
-| `AW_AI_MAX_CONCURRENCY` | 否 | `4` | 进程内调用并发 |
-| `AW_PROMPT_MAX_CHARS` | 否 | `200000` | 文本与提示上限 |
-| `MYSQL_DATABASE` / `MYSQL_USER` | compose | `workbench` | 官方 `mysql:8.4` 镜像建库账号 |
+| `VIGIL_ADMIN_PASSWORD` | 是 | — | 管理员口令；空值拒绝启动 |
+| `VIGIL_ENCRYPTION_KEY` | 是 | — | 提供商密钥 AES-256-GCM 加密密钥（32 字节 base64）；丢失则已存密钥不可解；**不进入备份包** |
+| `VIGIL_REPO_TOKEN_KEY` | 是 | — | 仓库令牌 AES-256-GCM 加密密钥（32 字节 base64）；与提供商密钥独立；**不进入备份包** |
+| `VIGIL_DATABASE_URL` | 生产必需 | SQLite 文件库（`<VIGIL_DATA_DIR>/vigil.db`） | 生产用 `mysql+asyncmy://USER:PASSWORD@HOST:3306/DB?charset=utf8mb4`（口令自行替换，勿提交）；compose 下留空，由入口脚本按 `MYSQL_*` 拼接 |
+| `VIGIL_DATA_DIR` | 否 | `./data`（compose 为 `/data`） | 制品、`.trash/`、`.tmp/`；不承载生产库 |
+| `VIGIL_PUBLIC_ORIGIN` | 远程必需 | `http://127.0.0.1:8000` | CSRF Origin 白名单，须含 scheme 与端口 |
+| `VIGIL_COOKIE_SECURE` | 否 | `auto` | `auto\|true\|false`；`auto` 按 Origin 的 https 判定 |
+| `VIGIL_TRUST_PROXY` | 否 | `false` | `true` 时取 `X-Forwarded-For` 首跳；compose 默认直连，反代后必须打开 |
+| `VIGIL_ALLOW_REMOTE` | 否 | `false` | 非回环绑定必须为 `true` 并接受启动告警；compose 已显式写入 |
+| `VIGIL_AI_MAX_CONCURRENCY` | 否 | `4` | 进程内调用并发 |
+| `VIGIL_PROMPT_MAX_CHARS` | 否 | `200000` | 文本与提示上限 |
+| `MYSQL_DATABASE` / `MYSQL_USER` | compose | `vigil` | 官方 `mysql:8.4` 镜像建库账号 |
 | `MYSQL_PASSWORD` / `MYSQL_ROOT_PASSWORD` | compose | `change-me` | 仅占位，部署前改掉 |
 
 生成加密密钥：
@@ -45,7 +46,7 @@ uv sync --frozen
 cp .env.example .env          # 填写管理员口令与 32 字节 base64 密钥
 cd web && npm ci && cd ..
 uv run alembic upgrade head
-uv run uvicorn workbench.main:create_app --factory --host 127.0.0.1 --port 8000
+uv run uvicorn vigil_workbench.main:create_app --factory --host 127.0.0.1 --port 8000
 ```
 
 - 首次启动会写入管理员凭据，并把遗留 `running` 调用归并为 `failed(interrupted)`。
@@ -56,17 +57,17 @@ uv run uvicorn workbench.main:create_app --factory --host 127.0.0.1 --port 8000
 
 ```bash
 uv run pytest                                   # 默认 SQLite
-AW_TEST_DATABASE_URL='mysql+asyncmy://...?charset=utf8mb4' uv run pytest
+VIGIL_TEST_DATABASE_URL='mysql+asyncmy://...?charset=utf8mb4' uv run pytest
 cd web && npm run test -- --run                 # Vitest，CI 必过
 ```
 
 - 用例名必须带 TC 编号。
-- **SQLite 绿不等于双方言通过。** MySQL 由 CI job 2 或本地 `AW_TEST_DATABASE_URL` 复跑（RISK-011）。本地无 MySQL 时不要把跳过当成通过。
+- **SQLite 绿不等于双方言通过。** MySQL 由 CI job 2 或本地 `VIGIL_TEST_DATABASE_URL` 复跑（RISK-011）。本地无 MySQL 时不要把跳过当成通过。
 
 ## 5. Docker Compose
 
 ```bash
-cp .env.example .env    # 改口令、密钥、AW_PUBLIC_ORIGIN
+cp .env.example .env    # 改口令、密钥、VIGIL_PUBLIC_ORIGIN
 docker compose up --build
 ```
 
@@ -74,13 +75,13 @@ docker compose up --build
 
 1. `docker compose ps`：`db` healthy，`app` 启动完成。
 2. `curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8000/api/v1/sessions` 期望 `401`。
-3. 浏览器打开 `http://127.0.0.1:8000/login`，用 `AW_ADMIN_PASSWORD` 登录。
+3. 浏览器打开 `http://127.0.0.1:8000/login`，用 `VIGIL_ADMIN_PASSWORD` 登录。
 
 约定：
 
-- 入口脚本先 `alembic upgrade head`，再 `python -m workbench.startup`，最后 uvicorn。
-- 端口默认 `127.0.0.1:8000:8000`；`AW_ALLOW_REMOTE=true` 只让容器内绑 `0.0.0.0`，不表示可对公网裸奔。
-- 外接 MySQL：`docker compose up app --no-deps`，在 `.env` 写完整 `AW_DATABASE_URL`（账号需 DDL 权限），并保证入口脚本不会用空串覆盖——此时不要依赖 compose 里的空 `AW_DATABASE_URL` 覆盖，可改用自建 compose override。
+- 入口脚本先 `alembic upgrade head`，再 `python -m vigil_workbench.startup`，最后 uvicorn。
+- 端口默认 `127.0.0.1:8000:8000`；`VIGIL_ALLOW_REMOTE=true` 只让容器内绑 `0.0.0.0`，不表示可对公网裸奔。
+- 外接 MySQL：`docker compose up app --no-deps`，在 `.env` 写完整 `VIGIL_DATABASE_URL`（账号需 DDL 权限），并保证入口脚本不会用空串覆盖——此时不要依赖 compose 里的空 `VIGIL_DATABASE_URL` 覆盖，可改用自建 compose override。
 - 镜像不包含 `.env` 或密钥。
 
 ## 6. TLS 反代（远程部署必做）
@@ -88,9 +89,9 @@ docker compose up --build
 compose 不含 TLS。对外暴露前必须：
 
 1. 用 Caddy / nginx 终结 HTTPS，反代到 `127.0.0.1:8000`。
-2. 设置 `AW_PUBLIC_ORIGIN=https://你的域名`。
-3. `AW_COOKIE_SECURE=auto`（或 `true`）。
-4. 若反代追加 `X-Forwarded-For`：`AW_TRUST_PROXY=true`。
+2. 设置 `VIGIL_PUBLIC_ORIGIN=https://你的域名`。
+3. `VIGIL_COOKIE_SECURE=auto`（或 `true`）。
+4. 若反代追加 `X-Forwarded-For`：`VIGIL_TRUST_PROXY=true`。
 5. 不要把 compose 端口改成 `0.0.0.0:8000:8000` 后直接对公网。
 
 未配 TLS 的远程 HTTP 视为不安全配置（RISK-010）。
@@ -114,18 +115,18 @@ export MYSQL_PASSWORD=change-me   # 与 .env 占位一致；真实环境用部�
 
 ```bash
 # 1. 空库
-docker compose exec -T db mysql -uworkbench -p"$MYSQL_PASSWORD" -e "DROP DATABASE IF EXISTS workbench; CREATE DATABASE workbench CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-docker compose exec -T db mysql -uworkbench -p"$MYSQL_PASSWORD" workbench < backups/workbench-db-<stamp>.sql
+docker compose exec -T db mysql -uvigil -p"$MYSQL_PASSWORD" -e "DROP DATABASE IF EXISTS vigil; CREATE DATABASE vigil CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+docker compose exec -T db mysql -uvigil -p"$MYSQL_PASSWORD" vigil < backups/vigil-db-<stamp>.sql
 
 # 2. 制品
-docker compose exec -T app tar -C /data -xzf - < backups/workbench-artifacts-<stamp>.tar.gz
+docker compose exec -T app tar -C /data -xzf - < backups/vigil-artifacts-<stamp>.tar.gz
 
 # 3. 重启自检
 docker compose restart app
-docker compose exec -T db mysql -uworkbench -p"$MYSQL_PASSWORD" -N -e "SELECT version_num FROM workbench.alembic_version;"
+docker compose exec -T db mysql -uvigil -p"$MYSQL_PASSWORD" -N -e "SELECT version_num FROM vigil.alembic_version;"
 ```
 
-核对应：`alembic_version` 等于 head（当前 `0006`）、制品数量与备份前一致、提供商密钥可解密（加密密钥未丢失）。
+核对应：`alembic_version` 等于 head（当前 `0009`）、制品数量与备份前一致、提供商密钥可解密（加密密钥未丢失）。
 
 ### 手工演练记录（OQ-TT-04）
 
@@ -140,7 +141,7 @@ docker compose exec -T db mysql -uworkbench -p"$MYSQL_PASSWORD" -N -e "SELECT ve
 | 加密密钥 | 未写入备份目录 |
 | 说明 | 演练口令使用占位 `drill`，公开仓库日志不含真实令牌 |
 
-演练步骤（可复现）：
+演练步骤（可复现；注：以下 2026-11-18 演练记录中使用的 `AW_DATABASE_URL` 与 `workbench_drill` 为当时旧命名，当前复现请改用 `VIGIL_DATABASE_URL`）：
 
 ```bash
 docker run -d --name aw-drill-mysql \
@@ -167,11 +168,11 @@ docker rm -f aw-drill-mysql
 - [ ] `.env` 已从 example 复制，口令与加密密钥不是占位 `change-me`
 - [ ] `uv lock` / `package-lock.json` 与运行环境一致
 - [ ] `uv run pytest`（SQLite）绿
-- [ ] CI 或本地 `AW_TEST_DATABASE_URL` 下 MySQL 用例绿（**SQLite 绿不够**）
+- [ ] CI 或本地 `VIGIL_TEST_DATABASE_URL` 下 MySQL 用例绿（**SQLite 绿不够**）
 - [ ] `cd web && npm run test -- --run` 绿
 - [ ] `docker compose up --build` 后受保护接口 401，登录页可登录
-- [ ] 远程部署已配 TLS 反代、`AW_PUBLIC_ORIGIN`、`AW_COOKIE_SECURE`、`AW_TRUST_PROXY`
-- [ ] `AW_ALLOW_REMOTE=true` 仅在知情前提下开启，端口仍绑 `127.0.0.1` 或只给反代
+- [ ] 远程部署已配 TLS 反代、`VIGIL_PUBLIC_ORIGIN`、`VIGIL_COOKIE_SECURE`、`VIGIL_TRUST_PROXY`
+- [ ] `VIGIL_ALLOW_REMOTE=true` 仅在知情前提下开启，端口仍绑 `127.0.0.1` 或只给反代
 - [ ] `scripts/backup.sh` 跑通过；恢复演练核对应 `alembic_version` 与制品数量
 - [ ] 加密密钥有独立备份，不在制品包 / git / 镜像里
 - [ ] 日志与截图无真实令牌、口令、连接串

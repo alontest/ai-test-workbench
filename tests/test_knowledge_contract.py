@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import inspect
 
-from workbench.core.ports import (
+from vigil_workbench.core.ports import (
     InjectionItem,
     InjectionPreparer,
     InjectionSnapshot,

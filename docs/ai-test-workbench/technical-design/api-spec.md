@@ -1,5 +1,7 @@
 # API Specification（API Spec）— workbench-core
 
+> 时期说明：本文档为 2026-11-18 `workbench-core` 历史规格快照。2026-11-23 起项目已统一更名为 `vigil-workbench`，环境变量 `AW_*` 已切换为 `VIGIL_*`，会话 Cookie 已从 `aw_session` 切换为 `vigil_session`。最新配置说明请以 `docs/dev-setup.md` 和 `AGENTS.md` 为准。
+
 > **文档状态：draft — 2026-11-18 因跨 spec 知识库注入扩展（A101 / A102 / A103 B）变更，待用户重新确认。**
 
 > 阶段：tech-design（步骤 6，`api=yes`）。依据 `technical-design/docs/architecture-decisions.md`（ADR-009 / ADR-013 / ADR-022 ~ ADR-026）与 `docs/database-schema.md`。

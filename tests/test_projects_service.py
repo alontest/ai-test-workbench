@@ -5,9 +5,9 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import func, select
 
-from workbench.db.models import ProjectContext
-from workbench.services import projects
-from workbench.services.errors import DomainError
+from vigil_workbench.db.models import ProjectContext
+from vigil_workbench.services import projects
+from vigil_workbench.services.errors import DomainError
 
 
 async def _count(sessionmaker) -> int:  # noqa: ANN001

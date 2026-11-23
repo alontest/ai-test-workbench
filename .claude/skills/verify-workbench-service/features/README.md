@@ -9,7 +9,7 @@ service. Read this index before driving the app, then use the matching feature f
 - Launch with `.claude/skills/verify-workbench-service/verifyctl.sh start <run-id>`, which creates a
   disposable data dir under `.verify/run/<run-id>/data` so concurrent runs never share state.
 - Never drive an instance this verification run did not start. `doctor` must print `OK` first.
-- The instance must be migrated to Alembic head `0006`; a data dir from an older head fails startup
+- The instance must be migrated to Alembic head `0009`; a data dir from an older head fails startup
   on purpose (see `service-boot.md`).
 
 ## Driving conventions

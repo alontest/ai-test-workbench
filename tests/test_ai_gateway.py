@@ -9,10 +9,10 @@ import pytest
 from sqlalchemy import func, select
 
 from helpers import seed_model, seed_project, seed_provider, seed_session
-from workbench.adapters.ai.base import AdapterError
-from workbench.db.models import AiCallRecord, SessionEvent
-from workbench.services.ai_gateway import AIError, AIResult, AiGateway
-from workbench.services.errors import DomainError
+from vigil_workbench.adapters.ai.base import AdapterError
+from vigil_workbench.db.models import AiCallRecord, SessionEvent
+from vigil_workbench.services.ai_gateway import AIError, AIResult, AiGateway
+from vigil_workbench.services.errors import DomainError
 
 
 class FakeAdapter:

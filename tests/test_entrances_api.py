@@ -16,8 +16,8 @@ from helpers import (
     seed_provider,
     seed_session,
 )
-from workbench.core.entrances import ENTRANCES, Entrance
-from workbench.db.models import AiCallRecord, AnalysisSession, SessionEvent
+from vigil_workbench.core.entrances import ENTRANCES, Entrance
+from vigil_workbench.db.models import AiCallRecord, AnalysisSession, SessionEvent
 
 ADMIN = "test-admin-secret"
 ORIGIN = {"origin": "http://testserver"}
@@ -52,7 +52,7 @@ def _with_dist(tmp_path, monkeypatch):  # noqa: ANN001, ANN202
     assets = dist / "assets"
     assets.mkdir()
     (assets / "app.js").write_text("console.log('ok')", encoding="utf-8")
-    monkeypatch.setattr("workbench.main.WEB_DIST", dist)
+    monkeypatch.setattr("vigil_workbench.main.WEB_DIST", dist)
     return dist
 
 
@@ -213,7 +213,7 @@ async def test_tc056_entrance_status_switch(client, monkeypatch) -> None:
         replace(item, status="live") if item.key == "bug-analysis" else item
         for item in ENTRANCES
     )
-    monkeypatch.setattr("workbench.core.entrances.ENTRANCES", patched)
+    monkeypatch.setattr("vigil_workbench.core.entrances.ENTRANCES", patched)
 
     listed = await client.get("/api/v1/entrances")
     by_key = {item["key"]: item for item in listed.json()["items"]}
@@ -230,8 +230,8 @@ async def test_tc056_entrance_status_switch(client, monkeypatch) -> None:
         domain="diagnosis",
         status="beta",  # type: ignore[arg-type]
     )
-    monkeypatch.setattr("workbench.core.entrances.ENTRANCES", (illegal,))
+    monkeypatch.setattr("vigil_workbench.core.entrances.ENTRANCES", (illegal,))
     with pytest.raises((ValueError, RuntimeError)):
-        from workbench.core.entrances import iter_entrances
+        from vigil_workbench.core.entrances import iter_entrances
 
         iter_entrances()

@@ -14,10 +14,10 @@ from helpers import (
     seed_session,
     seed_session_graph,
 )
-from workbench.db.base import utcnow
-from workbench.db.models import AnalysisSession, SessionEvent
-from workbench.services import sessions
-from workbench.services.errors import DomainError
+from vigil_workbench.db.base import utcnow
+from vigil_workbench.db.models import AnalysisSession, SessionEvent
+from vigil_workbench.services import sessions
+from vigil_workbench.services.errors import DomainError
 
 
 def test_tc057_frozen_session_signatures() -> None:
@@ -198,7 +198,7 @@ async def test_tc027_list_filters(database) -> None:
 
     first, cursor = await sessions.list_sessions(limit=2)
     assert len(first) == 2 and cursor is not None
-    from workbench.api.pagination import decode_cursor
+    from vigil_workbench.api.pagination import decode_cursor
 
     second, second_cursor = await sessions.list_sessions(
         limit=2, cursor=decode_cursor(cursor)
@@ -258,7 +258,7 @@ async def test_tc028_timeline_order(database) -> None:
     page, cursor = await sessions.list_events_page(session_id, limit=2)
     assert [event["type"] for event in page] == ["input_text", "artifact"]
     assert cursor is not None
-    from workbench.api.pagination import decode_cursor
+    from vigil_workbench.api.pagination import decode_cursor
 
     page2, cursor2 = await sessions.list_events_page(
         session_id, limit=2, cursor=decode_cursor(cursor)
@@ -319,9 +319,9 @@ async def test_tc029_terminal_state_rejects(database) -> None:
 
 @pytest.mark.asyncio
 async def test_tc030_delete_cascades(database, settings) -> None:
-    from workbench.adapters.fs import storage
-    from workbench.db.models import AiCallRecord, Artifact
-    from workbench.services import artifacts
+    from vigil_workbench.adapters.fs import storage
+    from vigil_workbench.db.models import AiCallRecord, Artifact
+    from vigil_workbench.services import artifacts
 
     sm = database.sessionmaker
     project_id, model_id, session_id = await seed_session_graph(sm)

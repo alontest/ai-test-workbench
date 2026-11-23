@@ -8,14 +8,14 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from workbench.core.ports import (
+from vigil_workbench.core.ports import (
     InjectionItem,
     InjectionSnapshot,
     InvalidCodeRef,
     KnowledgeRef,
     PreparedInjection,
 )
-from workbench.services.errors import (
+from vigil_workbench.services.errors import (
     KnowledgeInvalidEntriesError,
     KnowledgeInjectionEmptyError,
     PromptBudgetExceededError,

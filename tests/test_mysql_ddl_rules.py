@@ -25,8 +25,8 @@ CHECK_RE = re.compile(r"\bCHECK\s*\(", re.I)
 
 def render_mysql_ddl(monkeypatch) -> str:  # noqa: ANN001
     """把 alembic 迁移链渲染成 MySQL 方言 SQL；不建立连接。"""
-    # migrations/env.py 优先读 AW_DATABASE_URL，测试进程里可能已被别的用例设置。
-    monkeypatch.setenv("AW_DATABASE_URL", MYSQL_URL)
+    # migrations/env.py 优先读 VIGIL_DATABASE_URL，测试进程里可能已被别的用例设置。
+    monkeypatch.setenv("VIGIL_DATABASE_URL", MYSQL_URL)
     config = Config("alembic.ini")
     config.set_main_option("sqlalchemy.url", MYSQL_URL)
     out = io.StringIO()

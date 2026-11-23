@@ -16,8 +16,8 @@ from helpers import (
     seed_provider,
     seed_session,
 )
-from workbench.core.redaction import redact
-from workbench.db.models import AiCallRecord, ModelBinding
+from vigil_workbench.core.redaction import redact
+from vigil_workbench.db.models import AiCallRecord, ModelBinding
 
 ADMIN = "test-admin-secret"
 ORIGIN = {"origin": "http://testserver"}

@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import func, select
 
 from helpers import build_client, make_app, seed_admin, seed_session_graph
-from workbench.db.models import AnalysisSession, SessionEvent
+from vigil_workbench.db.models import AnalysisSession, SessionEvent
 
 ADMIN = "test-admin-secret"
 ORIGIN = {"origin": "http://testserver"}

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from workbench.core.crypto import encrypt
-from workbench.core.passwords import hash_password
-from workbench.db.base import utcnow
-from workbench.db.models import (
+from vigil_workbench.core.crypto import encrypt
+from vigil_workbench.core.passwords import hash_password
+from vigil_workbench.db.base import utcnow
+from vigil_workbench.db.models import (
     AdminCredential,
     AnalysisSession,
     ModelBinding,
@@ -112,7 +112,7 @@ async def seed_session(
 
 
 def make_app(settings, database, **kwargs):  # noqa: ANN001, ANN003, ANN201
-    from workbench.main import create_app
+    from vigil_workbench.main import create_app
 
     return create_app(settings=settings, database=database, **kwargs)
 

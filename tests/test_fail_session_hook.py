@@ -7,7 +7,7 @@ from fastapi import Request
 from sqlalchemy import select
 
 from helpers import build_client, make_app, seed_admin, seed_session_graph
-from workbench.db.models import AnalysisSession, SessionEvent
+from vigil_workbench.db.models import AnalysisSession, SessionEvent
 
 ADMIN = "test-admin-secret"
 ORIGIN = {"origin": "http://testserver"}
@@ -27,7 +27,7 @@ async def test_tc029_unhandled_error_marks_failed(settings, database) -> None:
     @app.get("/api/v1/_nice_error")
     async def nice(request: Request):  # noqa: ANN202
         request.state.session_id = request.query_params.get("sessionId")
-        from workbench.api.errors import ApiError
+        from vigil_workbench.api.errors import ApiError
 
         raise ApiError(409, "session_closed", "会话已结束。")
 

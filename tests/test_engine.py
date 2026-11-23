@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 from sqlalchemy.pool import AsyncAdaptedQueuePool, NullPool, StaticPool
 
-from workbench.db.base import Base
-from workbench.db.engine import create_engine_from_url
+from vigil_workbench.db.base import Base
+from vigil_workbench.db.engine import create_engine_from_url
 
 
 @pytest.mark.asyncio
@@ -17,7 +17,7 @@ async def test_tc058_engine_creation_both_dialects(tmp_path) -> None:
     assert isinstance(mem_engine.pool, StaticPool)
 
     mysql_engine = create_engine_from_url(
-        "mysql+asyncmy://user:password@127.0.0.1:3306/workbench?charset=utf8mb4"
+        "mysql+asyncmy://user:password@127.0.0.1:3306/vigil?charset=utf8mb4"
     )
     assert mysql_engine.dialect.name == "mysql"
     assert isinstance(mysql_engine.pool, AsyncAdaptedQueuePool)

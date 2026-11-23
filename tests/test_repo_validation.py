@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from workbench.repos.errors import RepoValidationError
-from workbench.repos.ssrf import assert_public_https_origin
-from workbench.repos.validation import (
+from vigil_workbench.repos.errors import RepoValidationError
+from vigil_workbench.repos.ssrf import assert_public_https_origin
+from vigil_workbench.repos.validation import (
     GITHUB_API_BASE_URL,
     YUNXIAO_API_BASE_URL,
     normalize_repo_key,

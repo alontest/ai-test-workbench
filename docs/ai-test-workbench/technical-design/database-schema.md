@@ -1,5 +1,7 @@
 # Database Schema（数据库 Schema）— workbench-core
 
+> 时期说明：本文档为 2026-11-18 `workbench-core` 历史规格快照。2026-11-23 起项目已统一更名为 `vigil-workbench`，源码迁移至 `src/vigil_workbench/`，环境变量 `AW_*` 已切换为 `VIGIL_*` / `VIGIL_ENCRYPTION_KEY`，默认库切换为 `vigil.db` / `vigil`。最新实现请以 `docs/dev-setup.md` 和 `AGENTS.md` 为准。
+
 > **文档状态：draft — 2026-11-18 因跨 spec 知识库注入扩展（A101 / A102 / A103 B）变更，待用户重新确认。**
 
 > 阶段：tech-design（步骤 5，`data=yes`）。上游：`technical-design/docs/architecture-decisions.md`（architecture-locked，2026-11-18 用户重新确认）、`requirements-analysis/docs/context.md`、`interaction-design/docs/context.md`。

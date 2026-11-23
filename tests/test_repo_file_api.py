@@ -13,10 +13,10 @@ import pytest_asyncio
 from sqlalchemy import func, select
 
 from helpers import build_client, make_app, seed_admin, seed_project
-from workbench.db.models import RepoFileReadRecord
-from workbench.repos.constants import REPO_FILE_MAX_BYTES
-from workbench.repos.providers.github import GitHubProvider
-from workbench.services.repos import live_access
+from vigil_workbench.db.models import RepoFileReadRecord
+from vigil_workbench.repos.constants import REPO_FILE_MAX_BYTES
+from vigil_workbench.repos.providers.github import GitHubProvider
+from vigil_workbench.services.repos import live_access
 
 ADMIN = "test-admin-secret"
 ORIGIN = {"origin": "http://testserver"}

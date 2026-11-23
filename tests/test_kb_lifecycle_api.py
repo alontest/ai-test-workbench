@@ -18,10 +18,10 @@ from helpers import (
     seed_project,
     seed_session_graph,
 )
-from workbench.db.models import AiCallRecord, KnowledgeBase, KnowledgeEntry, SessionEvent
-from workbench.services.ai_gateway import AiGateway
-from workbench.services.knowledge import lifecycle_service as lifecycle_module
-from workbench.services.knowledge.registration import (
+from vigil_workbench.db.models import AiCallRecord, KnowledgeBase, KnowledgeEntry, SessionEvent
+from vigil_workbench.services.ai_gateway import AiGateway
+from vigil_workbench.services.knowledge import lifecycle_service as lifecycle_module
+from vigil_workbench.services.knowledge.registration import (
     install_injection_preparer,
     uninstall_injection_preparer,
 )

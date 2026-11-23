@@ -6,10 +6,10 @@ import pytest
 from sqlalchemy import select
 
 from helpers import build_client, make_app, seed_admin, seed_provider, seed_session
-from workbench.db.models import ModelBinding
-from workbench.services import models
-from workbench.services.ai_gateway import AiGateway
-from workbench.services.errors import DomainError
+from vigil_workbench.db.models import ModelBinding
+from vigil_workbench.services import models
+from vigil_workbench.services.ai_gateway import AiGateway
+from vigil_workbench.services.errors import DomainError
 
 ADMIN = "test-admin-secret"
 ORIGIN = {"origin": "http://testserver"}

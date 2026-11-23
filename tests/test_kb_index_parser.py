@@ -6,10 +6,10 @@ import json
 
 import pytest
 
-from workbench.knowledge.config import KbSettings
-from workbench.knowledge.errors import IndexJsonError
-from workbench.knowledge.index_parser import parse_index
-from workbench.knowledge.types import EntryType
+from vigil_workbench.knowledge.config import KbSettings
+from vigil_workbench.knowledge.errors import IndexJsonError
+from vigil_workbench.knowledge.index_parser import parse_index
+from vigil_workbench.knowledge.types import EntryType
 
 
 def _raw(document: object) -> bytes:
