@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="web/public/favicon.svg" width="128" alt="Vigil · 鸮巡 logo" />
+</p>
+
 # Vigil · 鸮巡
 
 单用户自托管 AI 测试工作台：登录后建项目、配模型、开会话、贴文本/上传制品并调用模型，结果留在时间线与调用记录里。

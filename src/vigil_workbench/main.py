@@ -85,6 +85,8 @@ def create_app(
             or path == "/login"
             or path.startswith("/assets/")
             or path == "/favicon.ico"
+            or path.startswith("/favicon")
+            or path == "/apple-touch-icon.png"
         ):
             return await call_next(request)
         token = request.cookies.get(SESSION_COOKIE)
