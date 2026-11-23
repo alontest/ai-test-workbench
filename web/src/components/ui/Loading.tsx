@@ -1,11 +1,4 @@
 import styles from "./ui.module.css";
-
-export interface LoadingProps {
-  variant?: "spinner" | "skeleton";
-  rows?: number;
-  label?: string;
-}
-
 export function Spinner({ label }: { label?: string }) {
   return (
     <div role="status" aria-live="polite">
@@ -23,11 +16,4 @@ export function Skeleton({ rows = 3 }: { rows?: number }) {
       ))}
     </div>
   );
-}
-
-export function Loading({ variant = "spinner", rows, label }: LoadingProps) {
-  if (variant === "skeleton") {
-    return <Skeleton rows={rows} />;
-  }
-  return <Spinner label={label} />;
 }

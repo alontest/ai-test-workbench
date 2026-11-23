@@ -6,7 +6,7 @@ import {
 } from "../api/client";
 import { kbKeys } from "../api/keys";
 
-export const KB_ENTRY_PAGE_SIZE = 50;
+const KB_ENTRY_PAGE_SIZE = 50;
 
 export function useKnowledgeEntries(filters: KnowledgeEntryFilters) {
   const { kbId, enabled = true, ...rest } = filters;

@@ -5,7 +5,7 @@ import type {
   RepoBindingSummary,
 } from "./api/types";
 
-export const BINDING_ID = "6f1c9a0e5b7d4c2a8e3f1b0d9c7a6e54";
+const BINDING_ID = "6f1c9a0e5b7d4c2a8e3f1b0d9c7a6e54";
 
 export function bindingFixture(
   overrides: Partial<RepoBindingSummary> = {},

@@ -35,7 +35,7 @@ export function UnauthorizedBridge() {
   return null;
 }
 
-export function Providers({ children }: { children: ReactNode }) {
+function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(createClient);
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }

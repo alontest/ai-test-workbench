@@ -1,7 +1,7 @@
 import type { FreshnessState, InvalidReason } from "./api/types";
 import { INVALID_REASON_LABELS } from "./api/types";
 
-export const UNKNOWN_TIME = "未知";
+const UNKNOWN_TIME = "未知";
 
 /** 统一按 UTC 展示，避免测试与不同时区机器出现漂移。 */
 export function formatTimestamp(value: string | null | undefined): string {
@@ -29,8 +29,4 @@ export function invalidReasonLabel(reason: InvalidReason | string): string {
 
 export function formatChars(value: number): string {
   return value.toLocaleString("zh-CN");
-}
-
-export function displayValue(value: string | null | undefined): string {
-  return value && value.trim() ? value : "—";
 }

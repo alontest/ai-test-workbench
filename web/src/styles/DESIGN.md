@@ -1,7 +1,7 @@
 # 视觉与页面布局规范 — Vigil · 鸮巡
 
 > 本文是前端 15 个页面视觉重构与布局统一的**唯一设计蓝图**。
-> Token 数值真源为 [design-system.md](../../../docs/ai-test-workbench/interaction-design/design-system.md) 与 [tokens.css](./tokens.css)。本文规定：**设计方法论分工、官方吉祥物定稿、双主题与层级纪律、全局骨架与垂直节奏、五套页面布局母版、测试红线，以及 15 个页面的逐页落位清单**。
+> Token 数值真源为 [design-system.md](../../../../docs/design-system.md) 与 [tokens.css](./tokens.css)。本文规定：**设计方法论分工、官方吉祥物定稿、双主题与层级纪律、全局骨架与垂直节奏、五套页面布局母版、测试红线，以及 15 个页面的逐页落位清单**。
 
 ---
 

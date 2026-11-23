@@ -88,7 +88,7 @@
 - `specs/knowledge-base_20261117205011/interaction-design/docs/demo.html`（78 KB，知识库 4 个视图）
 - `specs/repo-integration_20261117205011/interaction-design/docs/demo.html`（75 KB，项目上下文页增量面板）
 
-设计基调：Dark-first，CSS 变量 + CSS Modules + Radix Primitives，`docs/ai-test-workbench/interaction-design/design-system.md` 是 token 唯一真源。已过 Playwright 亮/暗双主题检查（各 31/31）。
+设计基调：Dark-first，CSS 变量 + CSS Modules + Radix Primitives，`docs/design-system.md` 是 token 唯一真源。已过 Playwright 亮/暗双主题检查（各 31/31）。
 
 ## 三、排期对比：计划 vs 实际
 

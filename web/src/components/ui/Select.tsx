@@ -1,7 +1,7 @@
 import type { SelectHTMLAttributes } from "react";
 import styles from "./ui.module.css";
 
-export interface SelectOption {
+interface SelectOption {
   value: string;
   label: string;
 }

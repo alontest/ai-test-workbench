@@ -2,13 +2,13 @@ import { Button } from "../../../components/ui/Button";
 import { fileExtension, formatBytes } from "../../../lib/limits";
 import styles from "./knowledge.module.css";
 
-export const KB_ALLOWED_EXTENSIONS = [".json", ".md", ".markdown"] as const;
-export const KB_MAX_FILES = 50;
-export const KB_INDEX_MAX_BYTES = 20 * 1024 * 1024;
-export const KB_FILE_MAX_BYTES = 10 * 1024 * 1024;
-export const KB_MAX_TOTAL_BYTES = 100 * 1024 * 1024;
+const KB_ALLOWED_EXTENSIONS = [".json", ".md", ".markdown"] as const;
+const KB_MAX_FILES = 50;
+const KB_INDEX_MAX_BYTES = 20 * 1024 * 1024;
+const KB_FILE_MAX_BYTES = 10 * 1024 * 1024;
+const KB_MAX_TOTAL_BYTES = 100 * 1024 * 1024;
 
-export interface FileValidation {
+interface FileValidation {
   name: string;
   size: number;
   error?: string;

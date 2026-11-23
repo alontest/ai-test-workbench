@@ -16,7 +16,7 @@ export interface KbEntryListProps {
   emptyMessage?: string;
 }
 
-export function entryHref(item: EntryListItem): string {
+function entryHref(item: EntryListItem): string {
   return `/knowledge-bases/${item.kbId}/entries/${encodeURIComponent(item.code)}`;
 }
 

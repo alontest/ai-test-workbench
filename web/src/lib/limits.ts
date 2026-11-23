@@ -2,8 +2,6 @@ export const PROMPT_MAX_CHARS = 200_000;
 export const MAX_ARTIFACT_BYTES = 10 * 1024 * 1024;
 export const MAX_FILES_PER_UPLOAD = 10;
 export const CALL_TIMEOUT_MS = 300_000;
-export const PREVIEW_MAX_BYTES = 262_144;
-
 export const ALLOWED_ARTIFACT_EXTENSIONS = [
   ".txt",
   ".md",

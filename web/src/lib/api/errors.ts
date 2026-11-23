@@ -4,7 +4,7 @@ export interface ApiErrorDetail {
   [key: string]: unknown;
 }
 
-export interface ApiErrorBody {
+interface ApiErrorBody {
   code: string;
   message: string;
   details: ApiErrorDetail[];
@@ -50,7 +50,7 @@ export class ApiError extends Error {
   }
 }
 
-export function isApiErrorBody(value: unknown): value is ApiErrorBody {
+function isApiErrorBody(value: unknown): value is ApiErrorBody {
   if (typeof value !== "object" || value === null) {
     return false;
   }

@@ -1,6 +1,6 @@
 export type CallStatus = "success" | "failed" | "timeout" | "running";
 
-export interface KnowledgeInjectionItem {
+interface KnowledgeInjectionItem {
   kbId: number;
   kbName: string;
   kbVersion: number;

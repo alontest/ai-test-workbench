@@ -36,16 +36,3 @@ export function ErrorState({ message, onRetry, retryable = true }: ErrorStatePro
     </div>
   );
 }
-
-export interface ToastProps {
-  tone: "success" | "danger" | "info";
-  message: string;
-}
-
-export function Toast({ tone, message }: ToastProps) {
-  return (
-    <div role="status" data-tone={tone}>
-      {message}
-    </div>
-  );
-}

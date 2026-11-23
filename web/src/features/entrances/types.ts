@@ -1,4 +1,4 @@
-export type EntranceStatus = "planned" | "live";
+type EntranceStatus = "planned" | "live";
 
 export interface Entrance {
   key: string;

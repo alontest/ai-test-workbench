@@ -1,6 +1,6 @@
-import { countChars, PROMPT_MAX_CHARS } from "../../lib/limits";
+import { PROMPT_MAX_CHARS } from "../../lib/limits";
 
-export { PROMPT_MAX_CHARS, countChars };
+export { PROMPT_MAX_CHARS };
 
 export interface CharacterCounterProps {
   value: number;

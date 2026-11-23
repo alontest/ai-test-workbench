@@ -4,7 +4,7 @@ import { previewInjection, refsKey } from "../api/client";
 import { kbKeys } from "../api/keys";
 import type { KbEntryRef } from "../api/types";
 
-export const PREVIEW_DEBOUNCE_MS = 250;
+const PREVIEW_DEBOUNCE_MS = 250;
 
 export interface InjectionPreviewInput {
   refs: KbEntryRef[];

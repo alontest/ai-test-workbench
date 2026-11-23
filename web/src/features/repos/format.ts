@@ -1,4 +1,4 @@
-export const UNKNOWN_TIME = "未知";
+const UNKNOWN_TIME = "未知";
 
 /** 统一按 UTC 展示，避免测试与不同时区机器出现漂移。 */
 export function formatTimestamp(value: string | null | undefined): string {
@@ -33,8 +33,4 @@ export function formatBytes(bytes: number | null | undefined): string {
     return `${(bytes / 1024).toFixed(1)} KB`;
   }
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-export function displayValue(value: string | null | undefined): string {
-  return value && value.trim() ? value : "—";
 }

@@ -2,7 +2,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { listInjectionCandidates } from "../api/client";
 import { kbKeys } from "../api/keys";
 
-export const CANDIDATE_PAGE_SIZE = 50;
+const CANDIDATE_PAGE_SIZE = 50;
 
 export function useInjectionCandidates(
   sessionId: number,

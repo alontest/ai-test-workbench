@@ -12,7 +12,7 @@ export type RepoTestResult =
   | "unreachable"
   | "permission-denied";
 
-export type SyncErrorCategory =
+type SyncErrorCategory =
   | "auth"
   | "network"
   | "rate_limit"
@@ -115,7 +115,7 @@ export interface RepoSyncRecord {
   retryAfterAt: string | null;
 }
 
-export interface RepoSyncBindingSummary {
+interface RepoSyncBindingSummary {
   bindingId: string;
   status: RepoBindingStatus;
   lastSyncSuccessAt: string | null;

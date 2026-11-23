@@ -20,8 +20,8 @@ import type {
   RepoSyncResponse,
 } from "../api/types";
 
-export const REPO_BINDING_PAGE_SIZE = 30;
-export const REPO_SYNC_RECORD_PAGE_SIZE = 20;
+const REPO_BINDING_PAGE_SIZE = 30;
+const REPO_SYNC_RECORD_PAGE_SIZE = 20;
 
 export function useRepoBindings(projectId?: number) {
   return useInfiniteQuery({

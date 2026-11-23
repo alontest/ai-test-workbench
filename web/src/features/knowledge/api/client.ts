@@ -7,11 +7,9 @@ import type {
   KbEntryRef,
   KnowledgeBaseDetail,
   KnowledgeBasePage,
-  KnowledgeBaseSummary,
   KnowledgeEntryDetail,
   KnowledgeImportResponse,
   KnowledgeRefBody,
-  KbVersionList,
   InjectionPreview,
 } from "./types";
 
@@ -49,12 +47,6 @@ export function listKnowledgeBases(
 
 export function getKnowledgeBase(kbId: string): Promise<KnowledgeBaseDetail> {
   return apiFetch<KnowledgeBaseDetail>(`/knowledge-bases/${kbId}`);
-}
-
-export function listKnowledgeBaseVersions(
-  kbId: string,
-): Promise<KbVersionList> {
-  return apiFetch<KbVersionList>(`/knowledge-bases/${kbId}/versions`);
 }
 
 export function listKnowledgeEntries(
@@ -210,4 +202,3 @@ export function invalidItemsOf(error: ApiError): InvalidItem[] {
   return items;
 }
 
-export type { KnowledgeBaseSummary };

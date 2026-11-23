@@ -16,7 +16,7 @@ export type MascotState =
   | "success"
   | "sleeping";
 
-export type MascotVariant = "owl";
+type MascotVariant = "owl";
 
 export interface MascotProps {
   state?: MascotState;

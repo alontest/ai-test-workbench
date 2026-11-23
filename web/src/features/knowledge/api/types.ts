@@ -12,7 +12,7 @@ export type FreshnessState = "fresh" | "stale" | "unknown";
 
 export type InvalidReason = "kb_deleted" | "entry_not_found" | "superseded";
 
-export type KnowledgeBaseStatus = "ready" | "superseded";
+type KnowledgeBaseStatus = "ready" | "superseded";
 
 export const ENTRY_TYPE_LABELS: Record<EntryType, string> = {
   term: "术语",
@@ -42,12 +42,12 @@ export const INVALID_REASON_LABELS: Record<InvalidReason, string> = {
   superseded: "已被新版本取代",
 };
 
-export interface ProjectRef {
+interface ProjectRef {
   id: number | null;
   name: string | null;
 }
 
-export interface KnowledgeBaseVersion {
+interface KnowledgeBaseVersion {
   kbId: string;
   name: string;
   version: number;
@@ -78,32 +78,32 @@ export interface KbVersionItem {
   createdAt: string;
 }
 
-export interface ImportFileReport {
+interface ImportFileReport {
   name: string;
   size: number;
   accepted: boolean;
 }
 
-export interface SkippedEntry {
+interface SkippedEntry {
   index: number;
   line: number | null;
   code: string | null;
   reason: string;
 }
 
-export interface DuplicateBody {
+interface DuplicateBody {
   code: string;
   fileName: string;
 }
 
-export interface ImportCounts {
+interface ImportCounts {
   files?: number;
   bytes?: number;
   entries?: number;
   skipped?: number;
 }
 
-export interface ImportMeta {
+interface ImportMeta {
   fingerprint?: string;
   graphFingerprint?: string | null;
   warnings?: number;
@@ -134,12 +134,6 @@ export interface KnowledgeBaseDetail {
   supersededBy: { kbId: string; version: number } | null;
 }
 
-export interface KbVersionList {
-  items: KbVersionItem[];
-  latestKbId: string;
-  nextCursor: string | null;
-}
-
 export interface CountsByType {
   term: number;
   entity: number;
@@ -151,7 +145,7 @@ export interface CountsByType {
   other: number;
 }
 
-export interface Freshness {
+interface Freshness {
   at: string | null;
   state: FreshnessState;
 }
@@ -177,7 +171,7 @@ export interface EntryPage {
   nextCursor: string | null;
 }
 
-export interface EntryDetailKb {
+interface EntryDetailKb {
   kbId: string;
   name: string;
   version: number;
@@ -187,7 +181,7 @@ export interface EntryDetailKb {
   latestKbId: string;
 }
 
-export interface EntryNeighbor {
+interface EntryNeighbor {
   code: string;
   title?: string;
   entryId?: string;
@@ -251,7 +245,7 @@ export interface CandidatePage {
   nextCursor: string | null;
 }
 
-export interface InjectionPreviewItem {
+interface InjectionPreviewItem {
   kbId: string;
   kbName: string;
   kbVersion: number;
@@ -261,7 +255,7 @@ export interface InjectionPreviewItem {
   source: "body" | "summary";
 }
 
-export interface InjectionWarning {
+interface InjectionWarning {
   kind: "stale" | "conflict";
   kbId: string;
   code: string;

@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Input } from "../../../components/ui/Input";
 import styles from "./knowledge.module.css";
 
-export const SEARCH_DEBOUNCE_MS = 300;
-export const SEARCH_MAX_CHARS = 100;
+const SEARCH_DEBOUNCE_MS = 300;
+const SEARCH_MAX_CHARS = 100;
 
 export interface KbSearchBoxProps {
   value: string;

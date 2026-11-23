@@ -241,15 +241,6 @@ export function IconCheck(props: IconProps) {
     </FeatureSvg>
   );
 }
-
-export function IconClose(props: IconProps) {
-  return (
-    <FeatureSvg {...props}>
-      <path d="M6 6l12 12M18 6 6 18" />
-    </FeatureSvg>
-  );
-}
-
 export function IconChevronRight(props: IconProps) {
   return (
     <FeatureSvg {...props}>
@@ -257,31 +248,13 @@ export function IconChevronRight(props: IconProps) {
     </FeatureSvg>
   );
 }
-
-export function IconRefresh(props: IconProps) {
-  return (
-    <FeatureSvg {...props}>
-      <path d="M20 11a8 8 0 1 0-1.6 6.4" />
-      <path d="M20 5v6h-6" />
-    </FeatureSvg>
-  );
-}
-
-export function IconPlus(props: IconProps) {
-  return (
-    <FeatureSvg {...props}>
-      <path d="M12 5v14M5 12h14" />
-    </FeatureSvg>
-  );
-}
-
 /* ─────────────────────────── 品牌标记 ─────────────────────────── */
 
 /**
  * GitHub 官方 mark。用官方 path，24×24，currentColor 填充。
  * 不改描边、不重绘——品牌标志被改写会失去识别度。
  */
-export function BrandGithub({ size = 24, ...rest }: IconProps) {
+function BrandGithub({ size = 24, ...rest }: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -301,7 +274,7 @@ export function BrandGithub({ size = 24, ...rest }: IconProps) {
  * 云效（Alibaba Cloud DevOps）主色为橙 #FF6A00，形态取「云 + 流水线」的抽象。
  * 明确标注为自绘，未来官方出 mark 时可直接替换此实现。
  */
-export function BrandYunxiao({ size = 24, ...rest }: IconProps) {
+function BrandYunxiao({ size = 24, ...rest }: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"

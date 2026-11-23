@@ -24,7 +24,7 @@ export interface EnabledModel {
   provider: { providerId: number; name: string; enabled: boolean };
 }
 
-export type SessionEventType =
+type SessionEventType =
   | "input_text"
   | "artifact"
   | "call"
@@ -70,19 +70,4 @@ export interface StatusChangePayload {
   actor: string;
   at: string;
   reason: string | null;
-}
-
-export interface KnowledgeInjectionEventPayload {
-  items: Array<{
-    kbId: number;
-    kbName: string;
-    kbVersion: number;
-    entryCodes: string[];
-    injectedChars: number;
-    kbDeleted?: boolean;
-  }>;
-  promptChars: number;
-  injectedChars: number;
-  totalChars: number;
-  excludedCodes?: string[];
 }

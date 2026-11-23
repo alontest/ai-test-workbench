@@ -3,7 +3,7 @@ import { render, type RenderOptions } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
 import { MemoryRouter } from "react-router";
 
-export function createTestQueryClient() {
+function createTestQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: 0 },

@@ -13,8 +13,8 @@ interface BrowseQueryOptions {
   enabled?: boolean;
 }
 
-export const REPO_LIVE_PAGE_SIZE = 30;
-export const REPO_TREE_PAGE_SIZE = 100;
+const REPO_LIVE_PAGE_SIZE = 30;
+const REPO_TREE_PAGE_SIZE = 100;
 
 export function useRepositories(
   bindingId: string | undefined,

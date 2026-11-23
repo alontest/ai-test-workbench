@@ -15,11 +15,11 @@ export interface SessionHeaderProps {
   session: SessionSummary;
 }
 
-export interface SessionCompleteButtonProps {
+interface SessionCompleteButtonProps {
   session: SessionSummary;
 }
 
-export function SessionCompleteButton({ session }: SessionCompleteButtonProps) {
+function SessionCompleteButton({ session }: SessionCompleteButtonProps) {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
   const mutation = useMutation({

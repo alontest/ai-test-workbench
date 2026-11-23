@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Link } from "react-router";
 import styles from "./PageHeader.module.css";
 
-export type PageWidth = "xl" | "lg" | "md" | "sm";
+type PageWidth = "xl" | "lg" | "md" | "sm";
 
 const WIDTH_CLASS: Record<PageWidth, string> = {
   xl: styles.tierXl,

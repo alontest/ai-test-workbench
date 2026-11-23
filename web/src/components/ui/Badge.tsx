@@ -1,6 +1,6 @@
 import styles from "./ui.module.css";
 
-export type Status = "in_progress" | "completed" | "failed" | "planned" | "live";
+type Status = "in_progress" | "completed" | "failed" | "planned" | "live";
 
 export interface BadgeProps {
   label: string;

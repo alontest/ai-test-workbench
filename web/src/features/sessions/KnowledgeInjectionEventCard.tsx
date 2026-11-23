@@ -1,4 +1,4 @@
-export interface KnowledgeInjectionItemPayload {
+interface KnowledgeInjectionItemPayload {
   kbId: number;
   kbName: string;
   kbVersion: number;
