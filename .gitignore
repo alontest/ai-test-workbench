@@ -42,3 +42,6 @@ htmlcov/
 
 # Alma 线程/项目内部文件
 .alma/
+
+# 工具运行产物
+.playwright-mcp/
